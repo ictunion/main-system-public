@@ -1,8 +1,16 @@
 # -*- restclient -*-
 #
+# Configure host
+:host = http://localhost:8000
+#
+# Check status of the service
+GET :host/status
+User-Agent: Emacs
+Content-Type: application/json
+
 # Register new user
 # This request should succeeed
-POST http://localhost:8000/member/join
+POST :host/member/join
 User-Agent: Emacs
 Content-Type: application/json
 
@@ -19,3 +27,7 @@ Content-Type: application/json
     "occupation": "bussy man",
     "local": "en"
 }
+
+# Confirm registration from link
+:token=O6q9LjXu7SNzMOvaUN2F0FshDR4mXVXSOFYFPub8S8l93oZs2QSaBzEf6yYWER4e
+GET :host/confirm/:token
