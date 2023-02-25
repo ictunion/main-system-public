@@ -1,0 +1,21 @@
+# -*- restclient -*-
+#
+# Register new user
+# This request should succeeed
+POST http://localhost:8000/member/join
+User-Agent: Emacs
+Content-Type: application/json
+
+{
+    "email": "test@test.com",
+    "first_name": "Tester",
+    "last_name": "Testovic",
+    "date_of_birth": "1979-01-31",
+    "address": "Bezrucova 12",
+    "city": "Of Lost Heaven",
+    "postal_code": "82232",
+    "phone_number": "+420777888999",
+    "company_name": "The Corporate Overlords",
+    "occupation": "bussy man",
+    "local": "en"
+}
