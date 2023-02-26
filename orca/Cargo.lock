@@ -1272,6 +1272,7 @@ dependencies = [
  "rocket-validation",
  "sqlx",
  "time",
+ "validator",
 ]
 
 [[package]]

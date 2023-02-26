@@ -6,13 +6,13 @@ use std::net::SocketAddr;
 use std::ops::Deref;
 
 use rand::{distributions::Alphanumeric, Rng};
-use rocket::response::status;
-use rocket::response::Redirect;
 use time::Date;
 
 use rocket::request::{FromRequest, Outcome, Request};
+use rocket::response::{status, Redirect};
 use rocket::serde::{json::Json, Deserialize};
 use rocket::State;
+use rocket_validation::{Validate, Validated};
 
 use sqlx::{postgres::PgPoolOptions, Error, PgPool};
 
@@ -30,20 +30,27 @@ impl<'r> FromRequest<'r> for UserAgent<'r> {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(crate = "rocket::serde")]
 struct RegistrationRequest<'r> {
+    #[validate(email)]
     email: &'r str,
+    #[validate(length(min = 1))]
     first_name: &'r str,
+    #[validate(length(min = 1))]
     last_name: &'r str,
-    date_of_birth: Date,
-    address: &'r str,
-    city: &'r str,
-    postal_code: &'r str,
-    phone_number: &'r str,
-    company_name: &'r str,
-    occupation: &'r str,
+    // We use option here so that `null` value goes
+    // through the parser into validator
+    #[validate(required)]
+    date_of_birth: Option<Date>,
+    address: Option<&'r str>,
+    city: Option<&'r str>,
+    postal_code: Option<&'r str>,
+    phone_number: Option<&'r str>,
+    company_name: Option<&'r str>,
+    occupation: Option<&'r str>,
     // TODO: add image base 64
+    #[validate(length(min = 2, max = 2))]
     local: &'r str,
 }
 
@@ -88,13 +95,14 @@ returning
     Redirect::found("https://union.planning-game.com")
 }
 
-#[post("/member/join", format = "json", data = "<user>")]
+#[post("/member/join", format = "json", data = "<validated_user>")]
 async fn member_join(
     remote_addr: SocketAddr,
     user_agent: UserAgent<'_>,
     db_pool: &State<PgPool>,
-    user: Json<RegistrationRequest<'_>>,
+    validated_user: Validated<Json<RegistrationRequest<'_>>>,
 ) -> status::Accepted<&'static str> {
+    let user = validated_user.0;
     loop {
         let confirmation_token = get_random_string(64);
         let res = sqlx::query(
@@ -172,6 +180,7 @@ async fn main() {
 
     let _ = rocket::build()
         .mount("/", routes![status_api, member_join, confirm,])
+        .register("/", catchers![rocket_validation::validation_catcher])
         .manage(db_pool)
         .launch()
         .await
