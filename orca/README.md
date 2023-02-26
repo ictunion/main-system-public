@@ -1,6 +1,6 @@
 # Orca
 
-__OR__ganization __C__ontact __A__cquirement
+**OR**ganization **C**ontact **A**cquirement
 
 > The orca or killer whale (Orcinus orca) is a [toothed whale](https://en.wikipedia.org/wiki/Toothed_whale)
 > belonging to the [oceanic dolphin](https://en.wikipedia.org/wiki/Oceanic_dolphin) family, of which it is the largest member.
@@ -9,7 +9,8 @@ __OR__ganization __C__ontact __A__cquirement
 > and is recognizable by its black-and-white patterned body.
 
 Orca is registration processor and members management system with [Web API](https://en.wikipedia.org/wiki/Web_API).
-Orca web server based service build in [Rust](rust-lang.org) programming language.
+
+Orca is web server based service build in [Rust](rust-lang.org) programming language.
 
 ## Setup
 
@@ -36,6 +37,12 @@ or that your toolchain is up to date:
 
 ```
 rustup update
+```
+
+__Generate Documentation__ for all dependecies and code:
+
+```
+cargo doc --open
 ```
 
 __Run project:__

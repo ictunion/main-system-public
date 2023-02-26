@@ -11,7 +11,7 @@ Accept: application/json
 
 # Register new user
 # This request should succeeed
-POST :host/member/join
+POST :host/registration/join
 User-Agent: Emacs
 Content-Type: application/json
 Accept: application/json
@@ -31,16 +31,17 @@ Accept: application/json
 }
 
 # Confirm registration from link
-:token=O6q9LjXu7SNzMOvaUN2F0FshDR4mXVXSOFYFPub8S8l93oZs2QSaBzEf6yYWER4e
+:token=J0piF4t3J6lEHt56NgQWYzPwlgVk31zxAweY06WKYIArYP41uuTsTEVtlfR4Q88d
 User-Agent: Emacs
-GET :host/confirm/:token
+Accept: text/html
+GET :host/registration/:token/confirm
 
 #
 # Testing validations Validations
 #
 
 # Minimal requirements request field
-POST :host/member/join
+POST :host/registration/join
 User-Agent: Emacs
 Content-Type: application/json
 Accept: application/json
@@ -54,7 +55,7 @@ Accept: application/json
 }
 
 # Names are required
-POST :host/member/join
+POST :host/registration/join
 User-Agent: Emacs
 Content-Type: application/json
 Accept: application/json
@@ -65,7 +66,7 @@ Accept: application/json
 }
 
 # Date of birth is required
-POST :host/member/join
+POST :host/registration/join
 User-Agent: Emacs
 Content-Type: application/json
 Accept: application/json
@@ -78,7 +79,7 @@ Accept: application/json
 }
 
 # Empty values
-POST :host/member/join
+POST :host/registration/join
 User-Agent: Emacs
 Content-Type: application/json
 Accept: application/json
