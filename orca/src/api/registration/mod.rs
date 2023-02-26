@@ -6,6 +6,7 @@ use rocket::serde::{json::Json, Deserialize};
 use rocket::{Route, State};
 use rocket_validation::{Validate, Validated};
 
+use super::Response;
 use crate::db::{self, DbPool};
 use crate::generate;
 use crate::server::UserAgent;
@@ -42,7 +43,7 @@ async fn api_join(
     user_agent: UserAgent<'_>,
     db_pool: &State<DbPool>,
     validated_user: Validated<Json<RegistrationRequest<'_>>>,
-) -> status::Accepted<&'static str> {
+) -> Response<status::Accepted<&'static str>> {
     let user = validated_user.0;
     loop {
         let confirmation_token = generate::string(64);
@@ -51,29 +52,46 @@ async fn api_join(
             .await;
 
         if db::fail_duplicated(&res) {
+            // We won't the loterry and generated confirmation token
+            // which already exists...
+            // lets just try a new one
             continue;
         } else {
-            break;
+            match res {
+                Err(err) => {
+                    // Shoot some issue with DB query...
+                    return Err(err.into());
+                }
+                Ok(_) => {
+                    // All went well...
+                    // break the loop so we can respond with Ok
+                    break;
+                }
+            }
         }
     }
-    status::Accepted(Some("ok"))
+    Ok(status::Accepted(Some("ok")))
 }
 
 #[get("/<code>/confirm")]
-async fn api_confirm(db_pool: &State<DbPool>, code: &'_ str) -> Redirect {
-    query::confirm_email(code)
-        .fetch_one(db_pool.inner())
-        .await
-        .unwrap();
-
+async fn api_confirm(db_pool: &State<DbPool>, code: &'_ str) -> Response<Redirect> {
     // let local = ret.0.unwrap_or("en".to_string());
 
     // Redirect::temporary(format!(
     //     "{}/{}/{}",
     //     "https://ictunion.cz", local, "registered"
     // ))
+    let redirect =  Ok(Redirect::found("https://union.planning-game.com"));
 
-    Redirect::found("https://union.planning-game.com")
+    use sqlx::error::Error::*;
+    match query::confirm_email(code).fetch_one(db_pool.inner()).await {
+        Ok(_) => redirect,
+        // Even if not found we want to still redirect!
+        // This is especially in cases user goes back to confirmation
+        // email and clicks the link again
+        Err(RowNotFound) => redirect,
+        Err(err) => Err(err.into()),
+    }
 }
 
 pub fn routes() -> Vec<Route> {

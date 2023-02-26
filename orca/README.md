@@ -27,7 +27,8 @@ Main dependecies are:
 
 __Toolchain:__
 
-We use stable toolchain for rust. If you're [rustup](https://rustup.rs/) user make sure to update the stable toolchain
+We use stable toolchain for rust.
+If you're using [rustup](https://rustup.rs/) you can ensure the right tooling using:
 
 ```
 rustup default stable
