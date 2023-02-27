@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 
 use super::RegistrationRequest;
 use crate::db::{Query, QueryAs};
+use crate::media::ImageData;
 use crate::server::UserAgent;
 
 pub fn create_join_request<'r>(
@@ -9,8 +10,8 @@ pub fn create_join_request<'r>(
     user_agent: UserAgent<'r>,
     confirmation_token: String,
     user: &RegistrationRequest<'r>,
-) -> Query<'r> {
-    sqlx::query(
+) -> QueryAs<'r, (i32,)> {
+    sqlx::query_as(
         "
 insert into members
 ( email
@@ -28,9 +29,8 @@ insert into members
 , registration_user_agent
 , registration_source
 , confirmation_token
-)
-values
-( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )
+) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )
+returning id
 ",
     )
     .bind(user.email)
@@ -50,7 +50,7 @@ values
     .bind(confirmation_token)
 }
 
-pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (Option<String>, )> {
+pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (String,)> {
     sqlx::query_as(
         "
 update members as m
@@ -63,4 +63,20 @@ returning
 ",
     )
     .bind(code)
+}
+
+pub fn create_singature_file<'r>(user_id: i32, image: &'r ImageData) -> Query<'r> {
+    sqlx::query(
+        r#"
+insert into files
+( name
+, file_type
+, data
+, user_id
+) values ('signature', $1, decode($2, 'base64'), $3)
+"#,
+    )
+    .bind(image.image_type)
+    .bind(image.base64_data)
+    .bind(user_id)
 }

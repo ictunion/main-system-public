@@ -1,5 +1,5 @@
-use rocket::{Build, Rocket, Request};
 use rocket::response;
+use rocket::{Build, Request, Rocket};
 
 mod registration;
 
@@ -14,8 +14,8 @@ impl From<sqlx::Error> for SqlError {
 
 impl<'r> response::Responder<'r, 'static> for SqlError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        use sqlx::error::Error::*;
         use rocket::http::Status;
+        use sqlx::error::Error::*;
 
         match self.0 {
             RowNotFound => Err(Status::NotFound),
@@ -28,11 +28,18 @@ impl<'r> response::Responder<'r, 'static> for SqlError {
 #[derive(Debug, Responder)]
 pub enum ApiError {
     DbErr(SqlError),
+    Status(rocket::http::Status),
 }
 
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         Self::DbErr(err.into())
+    }
+}
+
+impl From<rocket::http::Status> for ApiError {
+    fn from(status: rocket::http::Status) -> Self {
+        Self::Status(status)
     }
 }
 

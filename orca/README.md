@@ -51,3 +51,9 @@ __Run project:__
 ```
 cargo run
 ```
+
+__Run tests:__
+
+```
+cargo test
+```

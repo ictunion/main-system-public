@@ -1,5 +1,8 @@
 use rocket::futures::TryFutureExt;
-use sqlx::{PgPool, postgres::{PgPoolOptions, PgArguments}, Postgres};
+use sqlx::{
+    postgres::{PgArguments, PgPoolOptions},
+    PgPool, Postgres,
+};
 use std::ops::Deref;
 
 #[derive(Debug)]

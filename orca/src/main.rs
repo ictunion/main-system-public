@@ -1,10 +1,13 @@
 #[macro_use]
 extern crate rocket;
 
+use std::fs;
+
 mod api;
 mod db;
-mod server;
 mod generate;
+mod media;
+mod server;
 
 #[derive(Debug)]
 enum StartupError {
@@ -26,15 +29,16 @@ impl From<rocket::Error> for StartupError {
 
 #[rocket::main]
 async fn main() -> Result<(), StartupError> {
+    // create temp directory for orca
+    let _dir = fs::create_dir_all("/tmp/orca");
+
     let db_pool = db::connect(db::Config {
         connection_url: "postgres://orca@localhost/ictunion",
-        max_connections: 5
-    }).await?;
+        max_connections: 5,
+    })
+    .await?;
 
-    let _rocket = api::build()
-        .manage(db_pool)
-        .launch()
-        .await?;
+    let _rocket = api::build().manage(db_pool).launch().await?;
 
     Ok(())
 }
