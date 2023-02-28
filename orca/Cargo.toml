@@ -14,3 +14,4 @@ sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "ma
 time = { version = "0.3.19", features = [ "serde-human-readable" ] }
 rustc-serialize = "0.3.24"
 tokio = { version = "1.25.0", features = [ "io-std", "fs" ] }
+image = "0.24.5"

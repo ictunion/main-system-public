@@ -1,5 +1,6 @@
 use rocket::response;
 use rocket::{Build, Request, Rocket};
+use tokio::task::JoinError;
 
 mod registration;
 
@@ -25,10 +26,26 @@ impl<'r> response::Responder<'r, 'static> for SqlError {
     }
 }
 
+#[derive(Debug)]
+pub struct ThreadingError(JoinError);
+
+impl From<JoinError> for ThreadingError {
+    fn from(value: JoinError) -> Self {
+        ThreadingError(value)
+    }
+}
+
+impl<'r> response::Responder<'r, 'static> for ThreadingError {
+    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        Err(rocket::http::Status::InternalServerError)
+    }
+}
+
 #[derive(Debug, Responder)]
 pub enum ApiError {
     DbErr(SqlError),
     Status(rocket::http::Status),
+    ThreadFail(ThreadingError),
 }
 
 impl From<sqlx::Error> for ApiError {
@@ -40,6 +57,12 @@ impl From<sqlx::Error> for ApiError {
 impl From<rocket::http::Status> for ApiError {
     fn from(status: rocket::http::Status) -> Self {
         Self::Status(status)
+    }
+}
+
+impl From<JoinError> for ApiError {
+    fn from(err: JoinError) -> Self {
+        Self::ThreadFail(err.into())
     }
 }
 

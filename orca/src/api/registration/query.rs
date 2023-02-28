@@ -77,6 +77,6 @@ insert into files
 "#,
     )
     .bind(image.image_type)
-    .bind(image.base64_data)
+    .bind(image.to_base64())
     .bind(user_id)
 }

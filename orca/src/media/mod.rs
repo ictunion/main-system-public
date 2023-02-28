@@ -1,14 +1,19 @@
 use rocket::serde::Deserialize;
-use rustc_serialize::base64::{FromBase64, FromBase64Error};
+use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64};
 use tokio::fs;
 use tokio::io;
 use tokio::io::AsyncWriteExt;
+
+// usage of this std lib functions means blocking
+use std::io::Cursor as BlockingCursor;
+
+use image::io::Reader as ImageReader;
 
 use crate::generate;
 
 /// Manipulating Base64 images
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct RawBase64<'r>(pub &'r str);
 
@@ -47,6 +52,7 @@ impl<'a> RawBase64<'a> {
         Ok(ImageData {
             image_type,
             base64_data,
+            image: None,
         })
     }
 }
@@ -57,6 +63,7 @@ pub enum Error {
     Malformed,
     IoError(io::Error),
     DecodingError(FromBase64Error),
+    Image(image::ImageError),
 }
 
 impl From<io::Error> for Error {
@@ -71,6 +78,12 @@ impl From<FromBase64Error> for Error {
     }
 }
 
+impl From<image::ImageError> for Error {
+    fn from(value: image::ImageError) -> Self {
+        Self::Image(value)
+    }
+}
+
 impl PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
         matches!(
@@ -80,10 +93,11 @@ impl PartialEq for Error {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct ImageData<'r> {
     pub image_type: &'r str,
-    pub base64_data: &'r str,
+    base64_data: &'r str,
+    image: Option<Vec<u8>>,
 }
 
 impl ImageData<'_> {
@@ -102,11 +116,48 @@ impl ImageData<'_> {
 
         Ok(path)
     }
+
+    pub fn standardize_size(&mut self) -> Result<(), Error> {
+        // decode bytes from bas64
+        let mut bytes = self.base64_data.from_base64()?;
+
+        // decode image from bytes
+        let img = ImageReader::new(BlockingCursor::new(&mut bytes))
+            .with_guessed_format()?
+            .decode()?
+            .resize_to_fill(1024, 1024, image::imageops::FilterType::Triangle);
+
+        let mut buffer: Vec<u8> = Vec::new();
+        img.write_to(
+            &mut BlockingCursor::new(&mut buffer),
+            image::ImageOutputFormat::Png,
+        )?;
+
+        self.image = Some(buffer);
+        self.image_type = "png";
+
+        Ok(())
+    }
+
+    pub fn to_base64(&self) -> String {
+        match &self.image {
+            None => self.base64_data.to_string(),
+            Some(image) => image.to_base64(rustc_serialize::base64::MIME),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // This is needed just for convinience in tests
+    // otherwise it's useless and kind of missleading
+    impl<'r> PartialEq for ImageData<'r> {
+        fn eq(&self, other: &ImageData<'r>) -> bool {
+            self.image_type == other.image_type && self.base64_data == other.base64_data
+        }
+    }
 
     #[test]
     fn empty_string() {

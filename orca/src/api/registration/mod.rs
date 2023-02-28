@@ -15,7 +15,7 @@ use crate::server::UserAgent;
 
 mod query;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate)]
 #[serde(crate = "rocket::serde")]
 /// Input for join api (website form)
 pub struct RegistrationRequest<'r> {
@@ -42,12 +42,12 @@ pub struct RegistrationRequest<'r> {
 
 #[post("/join", format = "json", data = "<validated_user>")]
 /// Registration form request
-async fn api_join(
+async fn api_join<'r>(
     remote_addr: SocketAddr,
     user_agent: UserAgent<'_>,
     db_pool: &State<DbPool>,
-    validated_user: Validated<Json<RegistrationRequest<'_>>>,
-) -> Response<status::Accepted<&'static str>> {
+    validated_user: Validated<Json<RegistrationRequest<'r>>>,
+) -> Response<status::Accepted<&'r str>> {
     let user = validated_user.0;
 
     // First lets create a member record so we don't loose
@@ -79,24 +79,36 @@ async fn api_join(
         }
     }
 
-    // Next lets process the signature data
-    // and store that
-    // note that we deliberetely don't attempt do do both insers in transcation
-    // this is safe to do one by one and we don't want to loose data for member
-    // if we crash because of signature
-    let signature_data = user
+    // Next we need to
+    //   - decode image
+    //   - resize it
+    //   - store it to db
+    //   - store it to disk
+    //   - produce .tex files
+    //   - spawn latex to produce pdf
+    //   - store pdf to the database
+    //   - send an email
+    //
+    // TODO:
+    // Obviously these is both compute (image resize) and io heavy
+    // operations so we move rest of the processing into it's own
+    // thread where we can do both compute as well as heavy blocking io
+    // without blocking request workers.
+
+    let mut signature_data = user
         .signature
         .to_image_data()
         .map_err(|_| Status::UnprocessableEntity)?;
 
-    // TODO: should we be first resizing file?;
+    // TODO: for now we do this blocking operation in here
+    // otherwise we would need to use unstable features
+    signature_data
+        .standardize_size()
+        .map_err(|_| Status::UnprocessableEntity)?;
+
     query::create_singature_file(user_id, &signature_data)
         .execute(db_pool.inner())
         .await?;
-
-    // TODO: generate PDF
-
-    // TODO: send an email
 
     Ok(status::Accepted(Some("ok")))
 }
