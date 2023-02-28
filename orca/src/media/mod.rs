@@ -1,15 +1,11 @@
 use rocket::serde::Deserialize;
 use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64};
-use tokio::fs;
 use tokio::io;
-use tokio::io::AsyncWriteExt;
 
 // usage of this std lib functions means blocking
 use std::io::Cursor as BlockingCursor;
 
 use image::io::Reader as ImageReader;
-
-use crate::generate;
 
 /// Manipulating Base64 images
 
@@ -47,13 +43,8 @@ impl<'a> RawBase64<'a> {
             return Err(Error::Malformed);
         }
 
-        let base64_data = &value[start + 7..];
-
-        Ok(ImageData {
-            image_type,
-            base64_data,
-            image: None,
-        })
+        let image = value[start + 7..].from_base64()?;
+        Ok(ImageData { image_type, image })
     }
 }
 
@@ -96,36 +87,16 @@ impl PartialEq for Error {
 #[derive(Debug)]
 pub struct ImageData<'r> {
     pub image_type: &'r str,
-    base64_data: &'r str,
-    image: Option<Vec<u8>>,
+    image: Vec<u8>,
 }
 
 impl ImageData<'_> {
-    #[allow(dead_code)]
-    pub async fn store_as_tempfile(&self) -> Result<String, Error> {
-        let bytes = self.base64_data.from_base64()?;
-        let path = format!("/tmp/orca/{}.{}", generate::string(64), self.image_type);
-
-        // TODO should be temp file
-        let file = fs::File::create(&path).await?;
-        {
-            let mut writter = io::BufWriter::new(file);
-            writter.write_all(&bytes).await?;
-            writter.flush().await?;
-        }
-
-        Ok(path)
-    }
-
-    pub fn standardize_size(&mut self) -> Result<(), Error> {
+    pub fn resize(&mut self, width: u32, height: u32) -> Result<(), Error> {
         // decode bytes from bas64
-        let mut bytes = self.base64_data.from_base64()?;
-
-        // decode image from bytes
-        let img = ImageReader::new(BlockingCursor::new(&mut bytes))
+        let img = ImageReader::new(BlockingCursor::new(&mut self.image))
             .with_guessed_format()?
             .decode()?
-            .resize_to_fill(1024, 1024, image::imageops::FilterType::Triangle);
+            .resize(width, height, image::imageops::FilterType::Triangle);
 
         let mut buffer: Vec<u8> = Vec::new();
         img.write_to(
@@ -133,17 +104,14 @@ impl ImageData<'_> {
             image::ImageOutputFormat::Png,
         )?;
 
-        self.image = Some(buffer);
+        self.image = buffer;
         self.image_type = "png";
 
         Ok(())
     }
 
     pub fn to_base64(&self) -> String {
-        match &self.image {
-            None => self.base64_data.to_string(),
-            Some(image) => image.to_base64(rustc_serialize::base64::MIME),
-        }
+        self.image.to_base64(rustc_serialize::base64::MIME)
     }
 }
 
@@ -155,7 +123,7 @@ mod tests {
     // otherwise it's useless and kind of missleading
     impl<'r> PartialEq for ImageData<'r> {
         fn eq(&self, other: &ImageData<'r>) -> bool {
-            self.image_type == other.image_type && self.base64_data == other.base64_data
+            false
         }
     }
 

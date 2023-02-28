@@ -103,7 +103,7 @@ async fn api_join<'r>(
     // TODO: for now we do this blocking operation in here
     // otherwise we would need to use unstable features
     signature_data
-        .standardize_size()
+        .resize(492, 192)
         .map_err(|_| Status::UnprocessableEntity)?;
 
     query::create_singature_file(user_id, &signature_data)
