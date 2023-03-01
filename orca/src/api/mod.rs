@@ -3,6 +3,7 @@ use rocket::{Build, Request, Rocket};
 use tokio::task::JoinError;
 
 mod registration;
+use crate::processing::SenderError;
 
 #[derive(Debug)]
 pub struct SqlError(sqlx::Error);
@@ -41,11 +42,18 @@ impl<'r> response::Responder<'r, 'static> for ThreadingError {
     }
 }
 
+impl<'r> response::Responder<'r, 'static> for SenderError {
+    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        Err(rocket::http::Status::InternalServerError)
+    }
+}
+
 #[derive(Debug, Responder)]
 pub enum ApiError {
     DbErr(SqlError),
     Status(rocket::http::Status),
     ThreadFail(ThreadingError),
+    QueueSender(SenderError),
 }
 
 impl From<sqlx::Error> for ApiError {
@@ -63,6 +71,12 @@ impl From<rocket::http::Status> for ApiError {
 impl From<JoinError> for ApiError {
     fn from(err: JoinError) -> Self {
         Self::ThreadFail(err.into())
+    }
+}
+
+impl From<SenderError> for ApiError {
+    fn from(err: SenderError) -> Self {
+        Self::QueueSender(err)
     }
 }
 

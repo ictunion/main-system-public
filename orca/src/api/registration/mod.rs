@@ -8,9 +8,12 @@ use rocket::{Route, State};
 use rocket_validation::{Validate, Validated};
 
 use super::Response;
+use crate::data::{Id, Member};
 use crate::db::{self, DbPool};
 use crate::generate;
 use crate::media::RawBase64;
+use crate::processing::Command;
+use crate::processing::QueueSender;
 use crate::server::UserAgent;
 
 mod query;
@@ -46,13 +49,14 @@ async fn api_join<'r>(
     remote_addr: SocketAddr,
     user_agent: UserAgent<'_>,
     db_pool: &State<DbPool>,
+    queue: &State<QueueSender>,
     validated_user: Validated<Json<RegistrationRequest<'r>>>,
 ) -> Response<status::Accepted<&'r str>> {
     let user = validated_user.0;
 
     // First lets create a member record so we don't loose
     // any people even if rest of the stuff goes wrong for one reason or another
-    let user_id: i32;
+    let member_id: Id<Member>;
     loop {
         let confirmation_token = generate::string(64);
         let res = query::create_join_request(remote_addr, user_agent, confirmation_token, &user)
@@ -72,7 +76,7 @@ async fn api_join<'r>(
                 Ok((id,)) => {
                     // All went well...
                     // break the loop so we can respond with Ok
-                    user_id = id;
+                    member_id = id;
                     break;
                 }
             }
@@ -106,8 +110,13 @@ async fn api_join<'r>(
         .resize(492, 192)
         .map_err(|_| Status::UnprocessableEntity)?;
 
-    query::create_singature_file(user_id, &signature_data)
+    query::create_singature_file(member_id, &signature_data)
         .execute(db_pool.inner())
+        .await?;
+
+    queue
+        .inner()
+        .send(Command::NewMemberRegistered(member_id, signature_data))
         .await?;
 
     Ok(status::Accepted(Some("ok")))

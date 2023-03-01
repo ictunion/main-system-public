@@ -4,13 +4,14 @@ use super::RegistrationRequest;
 use crate::db::{Query, QueryAs};
 use crate::media::ImageData;
 use crate::server::UserAgent;
+use crate::data::{Id, Member};
 
 pub fn create_join_request<'r>(
     remote_addr: SocketAddr,
     user_agent: UserAgent<'r>,
     confirmation_token: String,
     user: &RegistrationRequest<'r>,
-) -> QueryAs<'r, (i32,)> {
+) -> QueryAs<'r, (Id<Member>,)> {
     sqlx::query_as(
         "
 insert into members
@@ -65,7 +66,7 @@ returning
     .bind(code)
 }
 
-pub fn create_singature_file<'r>(user_id: i32, image: &'r ImageData) -> Query<'r> {
+pub fn create_singature_file<'r>(user_id: Id<Member>, image: &'r ImageData) -> Query<'r> {
     sqlx::query(
         r#"
 insert into files
@@ -73,10 +74,10 @@ insert into files
 , file_type
 , data
 , user_id
-) values ('signature', $1, decode($2, 'base64'), $3)
+) values ('signature', $1, $2, $3)
 "#,
     )
-    .bind(image.image_type)
-    .bind(image.to_base64())
+    .bind(&image.image_type)
+    .bind(image.to_vec())
     .bind(user_id)
 }

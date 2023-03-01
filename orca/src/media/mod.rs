@@ -1,7 +1,9 @@
 use rocket::serde::Deserialize;
 use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64};
+use tokio::fs;
 use tokio::io;
 
+use tokio::io::AsyncWriteExt;
 // usage of this std lib functions means blocking
 use std::io::Cursor as BlockingCursor;
 
@@ -20,7 +22,7 @@ impl<'a> From<&'a str> for RawBase64<'a> {
 }
 
 impl<'a> RawBase64<'a> {
-    pub fn to_image_data(&self) -> Result<ImageData<'a>, Error> {
+    pub fn to_image_data(&self) -> Result<ImageData, Error> {
         // this is how prefix looks like
         // `data:image/png;base64,.....`
         let value = self.0;
@@ -44,7 +46,10 @@ impl<'a> RawBase64<'a> {
         }
 
         let image = value[start + 7..].from_base64()?;
-        Ok(ImageData { image_type, image })
+        Ok(ImageData {
+            image_type: image_type.to_string(),
+            image,
+        })
     }
 }
 
@@ -85,12 +90,12 @@ impl PartialEq for Error {
 }
 
 #[derive(Debug)]
-pub struct ImageData<'r> {
-    pub image_type: &'r str,
+pub struct ImageData {
+    pub image_type: String,
     image: Vec<u8>,
 }
 
-impl ImageData<'_> {
+impl ImageData {
     pub fn resize(&mut self, width: u32, height: u32) -> Result<(), Error> {
         // decode bytes from bas64
         let img = ImageReader::new(BlockingCursor::new(&mut self.image))
@@ -105,13 +110,30 @@ impl ImageData<'_> {
         )?;
 
         self.image = buffer;
-        self.image_type = "png";
+        self.image_type = "png".to_string();
 
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn to_base64(&self) -> String {
         self.image.to_base64(rustc_serialize::base64::MIME)
+    }
+
+    pub fn to_vec(&self) -> &Vec<u8> {
+        &self.image
+    }
+
+    pub async fn write_to_disk(&self, path: &str, file_name: &str) -> Result<(), io::Error> {
+        let full_path = format!("{}/{}.{}", path, file_name, self.image_type);
+        let file = fs::File::create(full_path).await?;
+        {
+            let mut writter = io::BufWriter::new(file);
+            writter.write_all(&self.image).await?;
+            writter.flush().await?;
+        }
+
+        Ok(())
     }
 }
 
@@ -121,8 +143,8 @@ mod tests {
 
     // This is needed just for convinience in tests
     // otherwise it's useless and kind of missleading
-    impl<'r> PartialEq for ImageData<'r> {
-        fn eq(&self, other: &ImageData<'r>) -> bool {
+    impl PartialEq for ImageData {
+        fn eq(&self, _other: &ImageData) -> bool {
             false
         }
     }
@@ -173,11 +195,11 @@ mod tests {
 
     #[test]
     fn parses_parts_correctly() {
-        let subj = RawBase64::from("data:image/png;base64,123");
+        let subj = RawBase64::from("data:image/png;base64,iVBORw0=");
 
         let res = subj.to_image_data().unwrap();
         assert_eq!(res.image_type, "png");
-        assert_eq!(res.base64_data, "123");
+        assert_eq!(res.to_base64(), "iVBORw0=");
     }
 
     #[test]
