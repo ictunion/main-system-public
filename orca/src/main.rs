@@ -4,12 +4,12 @@ extern crate rocket;
 use std::fs;
 
 mod api;
+mod data;
 mod db;
 mod generate;
 mod media;
 mod processing;
 mod server;
-mod data;
 
 #[derive(Debug)]
 enum StartupError {
@@ -40,13 +40,15 @@ async fn main() -> Result<(), StartupError> {
     })
     .await?;
 
-    let queue = processing::start(64);
+    let queue_db_pool = db::connect(db::Config {
+        connection_url: "postgres://orca@localhost/ictunion",
+        max_connections: 2,
+    })
+    .await?;
 
-    let _rocket = api::build()
-        .manage(db_pool)
-        .manage(queue)
-        .launch()
-        .await?;
+    let queue = processing::start(64, queue_db_pool);
+
+    let _rocket = api::build().manage(db_pool).manage(queue).launch().await?;
 
     Ok(())
 }

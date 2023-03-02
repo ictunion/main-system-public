@@ -1,10 +1,10 @@
 use std::net::SocketAddr;
 
 use super::RegistrationRequest;
+use crate::data::{Id, Member};
 use crate::db::{Query, QueryAs};
 use crate::media::ImageData;
 use crate::server::UserAgent;
-use crate::data::{Id, Member};
 
 pub fn create_join_request<'r>(
     remote_addr: SocketAddr,
@@ -66,7 +66,7 @@ returning
     .bind(code)
 }
 
-pub fn create_singature_file<'r>(user_id: Id<Member>, image: &'r ImageData) -> Query<'r> {
+pub fn create_singature_file(user_id: Id<Member>, image: &'_ ImageData) -> Query<'_> {
     sqlx::query(
         r#"
 insert into files

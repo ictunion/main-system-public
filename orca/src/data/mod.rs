@@ -1,8 +1,8 @@
-use std::marker::PhantomData;
 use std::error::Error;
 use std::fmt::Display;
+use std::marker::PhantomData;
 
-use sqlx::{Decode, database::HasValueRef, Postgres, Type, Encode};
+use sqlx::{database::HasValueRef, Decode, Encode, Postgres, Type};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Id<T>(i32, PhantomData<T>);
@@ -32,7 +32,7 @@ impl<'r, T> Decode<'r, Postgres> for Id<T>
 where
     // we want to delegate some of the work to string decoding so let's make sure strings
     // are supported by the database
-    &'r str: Decode<'r, Postgres>
+    &'r str: Decode<'r, Postgres>,
 {
     fn decode(
         value: <Postgres as HasValueRef<'r>>::ValueRef,
@@ -44,13 +44,20 @@ where
 }
 
 impl<'q, T> Encode<'q, Postgres> for Id<T> {
-    fn encode(self, buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer) -> sqlx::encode::IsNull
+    fn encode(
+        self,
+        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull
     where
-        Self: Sized, {
+        Self: Sized,
+    {
         <i32 as Encode<Postgres>>::encode(self.0, buf)
     }
 
-    fn encode_by_ref(&self, buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer) -> sqlx::encode::IsNull {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
         <i32 as Encode<Postgres>>::encode(self.0, buf)
     }
 }
