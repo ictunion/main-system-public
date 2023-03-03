@@ -137,6 +137,51 @@ impl ImageData {
     }
 }
 
+/// Escape (La)TeX input string
+/// to prevent injection of arbitrary TeX during PDF generation
+pub trait TexEscape {
+    fn escape_tex(self) -> String;
+}
+
+/// The primary way of securing PDF printing via LaTeX
+/// is by passing `-no-shell-escape` to prevent arbitrary code execution!
+/// As a secondary measure we also escape TeX string themselves
+impl TexEscape for &str {
+
+    /// Escape TeX control sequences to harmless strings
+    fn escape_tex(self) -> String {
+        let mut res = String::new();
+        for chr in self.chars() {
+
+            // This Escaping is based on Christopher Gutteridge's PHP code available at
+            // https://stackoverflow.com/questions/2541616/how-to-escape-strip-special-characters-in-the-latex-document#answer-5422751
+            // including @david's fix (see comments).
+            // Used as Public Domain as per author's license
+            let escaped = match chr {
+                '#' => Some("\\#"),
+                '$' => Some("\\$"),
+                '%' => Some("\\%"),
+                '&' => Some("\\&"),
+                '~' => Some("~{}"),
+                '_' => Some("\\_"),
+                '^' => Some("\\^{}"),
+                '\\' => Some("\\textbackslash{}"),
+                '{' => Some("\\{"),
+                '}' => Some("\\}"),
+                _ => None,
+            };
+
+            // push escaped sequence to result
+            match escaped {
+                Some(replace_with) => res.push_str(replace_with),
+                None => res.push(chr),
+            }
+        }
+
+        res
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,6 +193,8 @@ mod tests {
             false
         }
     }
+
+    // Test image decoding
 
     #[test]
     fn empty_string() {
@@ -208,5 +255,33 @@ mod tests {
 
         let res = subj.to_image_data().unwrap();
         assert_eq!(res.image_type, "png");
+    }
+
+    // Test TeX escaping
+
+    #[test]
+    fn it_doesnt_break_safe_string() {
+        let subj = "FooBar💩";
+
+        let res = subj.escape_tex();
+        assert_eq!(res, subj);
+    }
+
+    #[test]
+    fn it_escapes_backslashes() {
+        // uses raw string so we don't need to escape backslashes
+        let subj = r#"\LARGE"#;
+        let res = subj.escape_tex();
+        assert_ne!(res, subj);
+        assert_eq!(res, r#"\textbackslash{}LARGE"#);
+    }
+
+    #[test]
+    fn it_escapes_double_backslashes_correctly() {
+        // uses raw string so we don't need to escape backslashes
+        let subj = r#"\\LARGE"#;
+        let res = subj.escape_tex();
+        assert_ne!(res, subj);
+        assert_eq!(res, r#"\textbackslash{}\textbackslash{}LARGE"#);
     }
 }
