@@ -1,9 +1,8 @@
 #[macro_use]
 extern crate rocket;
 
-use std::fs;
-
 mod api;
+mod config;
 mod data;
 mod db;
 mod generate;
@@ -31,8 +30,10 @@ impl From<rocket::Error> for StartupError {
 
 #[rocket::main]
 async fn main() -> Result<(), StartupError> {
-    // create temp directory for orca
-    let _dir = fs::create_dir_all("/tmp/orca");
+    // Read cofiguration
+    let config = config::Config::get();
+
+    println!("Configuration applied:\n{:?}", config);
 
     let db_pool = db::connect(db::Config {
         connection_url: "postgres://orca@localhost/ictunion",
@@ -46,7 +47,7 @@ async fn main() -> Result<(), StartupError> {
     })
     .await?;
 
-    let queue = processing::start(64, queue_db_pool);
+    let queue = processing::start(&config, 64, queue_db_pool);
 
     let _rocket = api::build().manage(db_pool).manage(queue).launch().await?;
 

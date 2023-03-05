@@ -15,3 +15,7 @@ time = { version = "0.3.19", features = [ "serde-human-readable" ] }
 rustc-serialize = "0.3.24"
 tokio = { version = "1.25.0", features = [ "io-std", "fs", "process" ] }
 image = "0.24.5"
+hyper = { version = "0.14.24", features = [ "http1", "client", "runtime" ] }
+serde_json = "1.0.93"
+hyper-openssl = "0.9.2"
+openssl = "0.10.45"

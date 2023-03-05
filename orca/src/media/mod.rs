@@ -147,12 +147,10 @@ pub trait TexEscape {
 /// is by passing `-no-shell-escape` to prevent arbitrary code execution!
 /// As a secondary measure we also escape TeX string themselves
 impl TexEscape for &str {
-
     /// Escape TeX control sequences to harmless strings
     fn escape_tex(self) -> String {
         let mut res = String::new();
         for chr in self.chars() {
-
             // This Escaping is based on Christopher Gutteridge's PHP code available at
             // https://stackoverflow.com/questions/2541616/how-to-escape-strip-special-characters-in-the-latex-document#answer-5422751
             // including @david's fix (see comments).
