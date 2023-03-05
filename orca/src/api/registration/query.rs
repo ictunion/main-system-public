@@ -51,14 +51,14 @@ returning id
     .bind(confirmation_token)
 }
 
-pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (String,)> {
+pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (Id<Member>, String)> {
     sqlx::query_as(
         "
 update members as m
 set   confirmed_at = now()
     , confirmation_token = NULL
 where confirmation_token = $1
-returning m.registration_local
+returning m.id, m.registration_local
 ",
     )
     .bind(code)

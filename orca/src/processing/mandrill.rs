@@ -35,6 +35,14 @@ impl<'a> Attachement<'a> {
             content: bytes.to_base64(rustc_serialize::base64::MIME),
         }
     }
+
+    pub fn new_base64(name: &'a str, mime_type: &'a str, content: String) -> Self {
+        Self {
+            name,
+            mime_type,
+            content,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -57,21 +65,22 @@ pub struct TemplateMessage<'a> {
 }
 
 impl<'a> TemplateMessage<'a> {
-    pub fn new(subject: &'a str, member: &'a super::MemberDetails, config: &'a Config) -> Self {
-        let full_name = format!("{} {}", member.first_name, member.last_name);
-        let recipient = Recipient {
-            email: member.email.clone(),
-            name: full_name,
-        };
+    pub fn new(subject: &'a str, config: &'a Config) -> Self {
         Self {
             subject,
             from_email: &config.email_from_email,
             from_name: config.email_from_name.as_deref(),
-            to: vec![recipient],
+            to: Vec::new(),
             tags: Vec::new(),
             attachments: Vec::new(),
             global_merge_vars: Vec::new(),
         }
+    }
+
+    pub fn add_recipient(&mut self, email: String, name: String) -> &mut Self {
+        let recipient = Recipient { email, name };
+        self.to.push(recipient);
+        self
     }
 
     pub fn attach(&mut self, attachement: Attachement<'a>) -> &mut Self {

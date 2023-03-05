@@ -23,6 +23,8 @@ pub struct Config {
     pub tex_exe: String,
     pub processing_queue_size: usize,
     pub verify_redirects_to: String,
+    pub notification_email: Option<String>,
+    pub new_member_notification_template: String,
 }
 
 impl Config {
@@ -71,6 +73,12 @@ impl Config {
             .extract_inner("verify_redirects_to")
             .unwrap_or(host.clone());
 
+        let notification_email = figment.extract_inner("notification_email").ok();
+
+        let new_member_notification_template = figment
+            .extract_inner("new_member_notification_template")
+            .unwrap_or("member_registered".to_string());
+
         Self {
             email_sender,
             mandrill_api_host,
@@ -84,6 +92,8 @@ impl Config {
             tex_exe,
             processing_queue_size,
             verify_redirects_to,
+            notification_email,
+            new_member_notification_template,
         }
     }
 }

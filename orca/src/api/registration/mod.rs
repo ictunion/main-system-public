@@ -58,11 +58,13 @@ async fn api_join<'r>(
     // First lets create a member record so we don't loose
     // any people even if rest of the stuff goes wrong for one reason or another
     let member_id: Id<Member>;
+    let mut confirmation_token;
     loop {
-        let confirmation_token = generate::string(64);
-        let res = query::create_join_request(remote_addr, user_agent, confirmation_token, &user)
-            .fetch_one(db_pool.inner())
-            .await;
+        confirmation_token = generate::string(64);
+        let res =
+            query::create_join_request(remote_addr, user_agent, confirmation_token.clone(), &user)
+                .fetch_one(db_pool.inner())
+                .await;
 
         if db::fail_duplicated(&res) {
             // We won the loterry and generated confirmation token which already exists...
@@ -103,7 +105,11 @@ async fn api_join<'r>(
     // Rest of the processing then happens on async thread outside of web worker
     queue
         .inner()
-        .send(Command::NewMemberRegistered(member_id, signature_data))
+        .send(Command::NewMemberRegistered(
+            member_id,
+            signature_data,
+            confirmation_token,
+        ))
         .await?;
 
     Ok(status::Accepted(Some("ok")))
@@ -114,13 +120,23 @@ async fn api_join<'r>(
 async fn api_confirm(
     db_pool: &State<DbPool>,
     config: &State<Config>,
+    queue: &State<QueueSender>,
     code: &'_ str,
 ) -> Response<Redirect> {
     let redirect = Ok(Redirect::found(config.inner().verify_redirects_to.clone()));
 
     use sqlx::error::Error::*;
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {
-        Ok(_) => redirect,
+        Ok((member_id, _local)) => {
+            // notify about new registration
+            queue
+                .inner()
+                .send(Command::NewMemberVerified(member_id))
+                .await?;
+
+            // redirect user to the right place
+            redirect
+        }
         // Even if not found we want to still redirect!
         // This is especially in cases user goes back to confirmation
         // email and clicks the link again

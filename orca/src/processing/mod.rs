@@ -24,7 +24,8 @@ use self::mandrill::TemplateContentItem;
 
 #[derive(Debug)]
 pub enum Command {
-    NewMemberRegistered(Id<Member>, ImageData),
+    NewMemberRegistered(Id<Member>, ImageData, String),
+    NewMemberVerified(Id<Member>),
 }
 
 pub struct QueueSender(Sender<Command>);
@@ -88,8 +89,53 @@ async fn process(
 ) -> Result<(), ProcessingError> {
     use Command::*;
     match command {
-        NewMemberRegistered(member_id, signature) => {
-            process_new_member_registered(member_id, signature, config, db_pool, email_sender).await
+        NewMemberRegistered(member_id, signature, verification_token) => {
+            process_new_member_registered(
+                member_id,
+                signature,
+                verification_token,
+                config,
+                db_pool,
+                email_sender,
+            )
+            .await
+        }
+        NewMemberVerified(member_id) => {
+            // We do this only if notification email is configured
+            if let Some(notification_email) = &config.notification_email {
+                let (pdf_data,) = fetch_registration_pdf_base64(member_id)
+                    .fetch_one(db_pool)
+                    .await?;
+
+                let member_details = query_member(member_id).fetch_one(db_pool).await?;
+
+                let pdf_attachement =
+                    Attachement::new_base64("registration.pdf", "application/pdf", pdf_data);
+                let mut message = TemplateMessage::new("New Member Registered", config);
+
+                message
+                    .add_recipient(notification_email.to_string(), "Notifications".to_string())
+                    .attach(pdf_attachement)
+                    .bind(TemplateContentItem::new(
+                        "first_name",
+                        &member_details.first_name,
+                    ))
+                    .bind(TemplateContentItem::new(
+                        "last_name",
+                        &member_details.last_name,
+                    ))
+                    .bind(TemplateContentItem::new("email", &member_details.email))
+                    .bind(TemplateContentItem::new(
+                        "phone_number",
+                        &member_details.phone_number,
+                    ));
+
+                email_sender
+                    .send_template(&config.new_member_notification_template, message)
+                    .await?;
+            }
+
+            Ok(())
         }
     }
 }
@@ -97,6 +143,7 @@ async fn process(
 async fn process_new_member_registered(
     member_id: Id<Member>,
     signature: ImageData,
+    verification_token: String,
     config: &Config,
     db_pool: &DbPool,
     email_sender: &mandrill::Sender,
@@ -123,12 +170,14 @@ async fn process_new_member_registered(
     // Send email
     let verify_url = format!(
         "{}/registration/{}/confirm",
-        config.host, member_details.confirmation_token
+        config.host, verification_token
     );
     let pdf_attachement = Attachement::new("registration.pdf", "application/pdf", &pdf_data);
-    let mut message = TemplateMessage::new("Verify Email Address", &member_details, config);
+    let full_name = format!("{} {}", member_details.first_name, member_details.last_name);
+    let mut message = TemplateMessage::new("Verify Email Address", config);
 
     message
+        .add_recipient(member_details.email, full_name)
         .attach(pdf_attachement)
         .bind(TemplateContentItem::new(
             "first_name",
@@ -164,7 +213,7 @@ pub struct MemberDetails {
     pub postal_code: String,
     pub company_name: String,
     pub occupation: String,
-    pub confirmation_token: String,
+    pub confirmation_token: Option<String>,
 }
 
 async fn print_tex_header(details: &MemberDetails) -> Result<String, ProcessingError> {
@@ -267,6 +316,20 @@ fn track_verification_sent_at(id: Id<Member>) -> Query<'static> {
 update members as m
 set verification_sent_at = now()
 where id = $1
+",
+    )
+    .bind(id)
+}
+
+fn fetch_registration_pdf_base64(id: Id<Member>) -> QueryAs<'static, (String,)> {
+    sqlx::query_as(
+        "
+select encode(data, 'base64') from files
+where user_id = $1
+    and file_type = 'pdf'
+    and name = 'registration'
+order by created_at desc
+limit 1
 ",
     )
     .bind(id)

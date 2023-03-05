@@ -14,6 +14,8 @@ processing_db_pool = 2
 tex_exe = "xelatex"
 processing_queue_size = 16
 verify_redirects_to = "http://localhost:1313/registration-confirmed"
+notification_email = ""
+new_member_notification_template = "member_registered"
 
 [development]
 address = "localhost"
