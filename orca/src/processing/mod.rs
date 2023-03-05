@@ -144,6 +144,11 @@ async fn process_new_member_registered(
         .send_template(&config.email_confirmation_template_name, message)
         .await?;
 
+    // Update info in DB about email being sent
+    track_verification_sent_at(member_id)
+        .execute(db_pool)
+        .await?;
+
     Ok(())
 }
 
@@ -253,5 +258,16 @@ insert into files
 ",
     )
     .bind(data)
+    .bind(id)
+}
+
+fn track_verification_sent_at(id: Id<Member>) -> Query<'static> {
+    sqlx::query(
+        "
+update members as m
+set verification_sent_at = now()
+where id = $1
+",
+    )
     .bind(id)
 }
