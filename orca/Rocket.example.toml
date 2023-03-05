@@ -1,0 +1,11 @@
+[global.limits]
+json = 131072
+
+[global]
+address = "127.0.0.1"
+
+[development]
+address = "localhost"
+
+[production]
+address = "0.0.0.0"

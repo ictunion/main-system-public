@@ -19,13 +19,23 @@ Make sure you have configured gray whale before starting to work with Orca.
 
 ### Dependecies
 
-Orca uses [Cargo](https://doc.rust-lang.org/cargo/) as a build tool.
-Main dependecies are:
+Make sure you have these dependecies installed on your machine:
 
-- [Rocket](https://rocket.rs/) web server framework
-- [sqlx](https://crates.io/crates/sqlx) sql driver
+- [rustup](https://rustup.rs/) to manage rustc and cargo
+- [open-ssl](https://www.openssl.org/) C library for TLS implementation
+- [xelatex](https://xetex.sourceforge.net/) executable for printing PDF from TeX
 
-__Toolchain:__
+### Configuration
+
+Copy example configuration file
+
+```
+cp Rocket.example.toml Rocket.toml
+```
+
+## Developing
+
+### Toolchain
 
 We use stable toolchain for rust.
 If you're using [rustup](https://rustup.rs/) you can ensure the right tooling using:
@@ -40,13 +50,23 @@ or that your toolchain is up to date:
 rustup update
 ```
 
+### Libraries
+
+Orca uses [Cargo](https://doc.rust-lang.org/cargo/) as a build tool.
+Main dependecies are:
+
+- [Rocket](https://rocket.rs/) web server framework
+- [sqlx](https://crates.io/crates/sqlx) sql driver
+
 __Generate Documentation__ for all dependecies and code:
 
 ```
 cargo doc --open
 ```
 
-__Run project:__
+### Running project
+
+__Run server on your machine:__
 
 ```
 cargo run
