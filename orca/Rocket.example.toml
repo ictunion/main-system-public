@@ -8,6 +8,12 @@ email_from_email = "noreply@planning-game.com"
 email_from_name = "Planning Game"
 host = "http://localhost:8000"
 email_confirmation_template_name = "email_confirmation"
+postgres = "postgres://orca@localhost/ictunion"
+web_db_pool = 5
+processing_db_pool = 2
+tex_exe = "xelatex"
+processing_queue_size = 16
+verify_redirects_to = "http://localhost:1313/registration-confirmed"
 
 [development]
 address = "localhost"

@@ -33,23 +33,26 @@ async fn main() -> Result<(), StartupError> {
     // Read cofiguration
     let config = config::Config::get();
 
-    println!("Configuration applied:\n{:?}", config);
-
-    let db_pool = db::connect(db::Config {
-        connection_url: "postgres://orca@localhost/ictunion",
-        max_connections: 5,
+    let web_db_pool = db::connect(db::Config {
+        connection_url: &config.postgres,
+        max_connections: config.web_db_pool,
     })
     .await?;
 
-    let queue_db_pool = db::connect(db::Config {
-        connection_url: "postgres://orca@localhost/ictunion",
-        max_connections: 2,
+    let processing_db_pool = db::connect(db::Config {
+        connection_url: &config.postgres,
+        max_connections: config.processing_db_pool,
     })
     .await?;
 
-    let queue = processing::start(&config, 64, queue_db_pool);
+    let queue = processing::start(&config, processing_db_pool);
 
-    let _rocket = api::build().manage(db_pool).manage(queue).launch().await?;
+    let _rocket = api::build()
+        .manage(web_db_pool)
+        .manage(queue)
+        .manage(config)
+        .launch()
+        .await?;
 
     Ok(())
 }

@@ -8,6 +8,7 @@ use rocket::{Route, State};
 use rocket_validation::{Validate, Validated};
 
 use super::Response;
+use crate::config::Config;
 use crate::data::{Id, Member};
 use crate::db::{self, DbPool};
 use crate::generate;
@@ -83,29 +84,14 @@ async fn api_join<'r>(
         }
     }
 
-    // Next we need to
-    //   - decode image
-    //   - resize it
-    //   - store it to db
-    //   - store it to disk
-    //   - produce .tex files
-    //   - spawn latex to produce pdf
-    //   - store pdf to the database
-    //   - send an email
-    //
-    // TODO:
-    // Obviously these is both compute (image resize) and io heavy
-    // operations so we move rest of the processing into it's own
-    // thread where we can do both compute as well as heavy blocking io
-    // without blocking request workers.
-
+    // Decode signature image data
     let mut signature_data = user
         .signature
         .to_image_data()
         .map_err(|_| Status::UnprocessableEntity)?;
 
-    // TODO: for now we do this blocking operation in here
-    // otherwise we would need to use unstable features
+    // This is done in response thread because we want to be sure
+    // it succeeds before we return OK status
     signature_data
         .resize(492, 192)
         .map_err(|_| Status::UnprocessableEntity)?;
@@ -114,6 +100,7 @@ async fn api_join<'r>(
         .execute(db_pool.inner())
         .await?;
 
+    // Rest of the processing then happens on async thread outside of web worker
     queue
         .inner()
         .send(Command::NewMemberRegistered(member_id, signature_data))
@@ -124,14 +111,12 @@ async fn api_join<'r>(
 
 #[get("/<code>/confirm")]
 /// Confirma registration request using email
-async fn api_confirm(db_pool: &State<DbPool>, code: &'_ str) -> Response<Redirect> {
-    // let local = ret.0.unwrap_or("en".to_string());
-
-    // Redirect::temporary(format!(
-    //     "{}/{}/{}",
-    //     "https://ictunion.cz", local, "registered"
-    // ))
-    let redirect = Ok(Redirect::found("https://union.planning-game.com"));
+async fn api_confirm(
+    db_pool: &State<DbPool>,
+    config: &State<Config>,
+    code: &'_ str,
+) -> Response<Redirect> {
+    let redirect = Ok(Redirect::found(config.inner().verify_redirects_to.clone()));
 
     use sqlx::error::Error::*;
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {

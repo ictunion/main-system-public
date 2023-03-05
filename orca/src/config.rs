@@ -17,6 +17,12 @@ pub struct Config {
     pub email_from_name: Option<String>,
     pub host: String,
     pub email_confirmation_template_name: String,
+    pub postgres: String,
+    pub web_db_pool: u32,
+    pub processing_db_pool: u32,
+    pub tex_exe: String,
+    pub processing_queue_size: usize,
+    pub verify_redirects_to: String,
 }
 
 impl Config {
@@ -49,6 +55,22 @@ impl Config {
         let email_confirmation_template_name = figment
             .extract_inner("email_confirmation_template_name")
             .unwrap_or("email_confirmation".to_string());
+
+        let postgres = figment
+            .extract_inner("postgres")
+            .unwrap_or("posthres://orca@localhost/ictunion".to_string());
+
+        let web_db_pool = figment.extract_inner("web_db_pool").unwrap_or(5);
+        let processing_db_pool = figment.extract_inner("processing_db_pool").unwrap_or(2);
+        let tex_exe = figment
+            .extract_inner("tex_exe")
+            .unwrap_or("xelatex".to_string());
+        let processing_queue_size = figment.extract_inner("processing_queue_size").unwrap_or(16);
+
+        let verify_redirects_to = figment
+            .extract_inner("verify_redirects_to")
+            .unwrap_or(host.clone());
+
         Self {
             email_sender,
             mandrill_api_host,
@@ -56,6 +78,12 @@ impl Config {
             email_from_name,
             host,
             email_confirmation_template_name,
+            postgres,
+            web_db_pool,
+            processing_db_pool,
+            tex_exe,
+            processing_queue_size,
+            verify_redirects_to,
         }
     }
 }

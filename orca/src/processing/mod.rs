@@ -40,9 +40,9 @@ impl QueueSender {
     }
 }
 
-pub fn start(config: &Config, capacity: usize, db_pool: DbPool) -> QueueSender {
+pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
     let email_sender: mandrill::Sender = mandrill::Sender::new(config);
-    let (sender, mut receiver) = mpsc::channel(capacity);
+    let (sender, mut receiver) = mpsc::channel(config.processing_queue_size);
     let our_conf = config.clone();
 
     tokio::spawn(async move {
@@ -114,7 +114,7 @@ async fn process_new_member_registered(
     let member_details = query_member(member_id).fetch_one(db_pool).await?;
 
     // Generate PDF
-    let pdf_path = print_pdf(&member_details, &processing_dir).await?;
+    let pdf_path = print_pdf(config, &member_details, &processing_dir).await?;
     let pdf_data = fs::read(pdf_path).await?;
     insert_registration_pdf(member_id, &pdf_data)
         .execute(db_pool)
@@ -198,7 +198,11 @@ async fn print_tex_header(details: &MemberDetails) -> Result<String, ProcessingE
 /// Given a member id, directory and db_pool
 /// This will generate registration PDF for
 /// application using xelatex and return path to the PDF file
-async fn print_pdf(member_details: &MemberDetails, dir: &str) -> Result<String, ProcessingError> {
+async fn print_pdf(
+    config: &Config,
+    member_details: &MemberDetails,
+    dir: &str,
+) -> Result<String, ProcessingError> {
     // inline static files
     let form_tex = include_str!("../../latex/registration.tex");
     let logo_png = include_bytes!("../../latex/logo.png");
@@ -214,7 +218,7 @@ async fn print_pdf(member_details: &MemberDetails, dir: &str) -> Result<String, 
     fs::write(format!("{dir}/logo.png"), logo_png).await?;
 
     // Spawn xelatex process to print the pdf
-    let mut child = process::Command::new("xelatex")
+    let mut child = process::Command::new(config.tex_exe.as_str())
         .current_dir(dir)
         .arg("registration.tex")
         .arg("-halt-on-error")

@@ -8,12 +8,12 @@ use std::ops::Deref;
 #[derive(Debug)]
 pub struct SqlError(sqlx::Error);
 
-pub struct Config {
-    pub connection_url: &'static str,
+pub struct Config<'a> {
+    pub connection_url: &'a str,
     pub max_connections: u32,
 }
 
-pub async fn connect(config: Config) -> Result<PgPool, SqlError> {
+pub async fn connect(config: Config<'_>) -> Result<PgPool, SqlError> {
     PgPoolOptions::new()
         .max_connections(config.max_connections)
         .connect(config.connection_url)
