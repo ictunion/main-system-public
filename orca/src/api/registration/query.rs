@@ -55,12 +55,10 @@ pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (String,)> {
     sqlx::query_as(
         "
 update members as m
-set confirmed_at = now()
-  , confirmation_token = NULL
-where
-  confirmation_token = $1
-returning
-  m.registration_local
+set   confirmed_at = now()
+    , confirmation_token = NULL
+where confirmation_token = $1
+returning m.registration_local
 ",
     )
     .bind(code)

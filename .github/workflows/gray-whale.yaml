@@ -1,0 +1,43 @@
+name: "Gray Whale"
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  all:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15.2-alpine
+        env:
+          # Enable password authentication even for local connections
+          POSTGRES_USER: postgres
+          POSTGRES_DB: ictunion
+          POSTGRES_PASSWORD: superuser
+        ports:
+          # maps tcp port 5432 on service container to the host
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        # needed because the postgres container does not provide a healthcheck
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v18
+
+      - name: Build using nix
+        working-directory: gray-whale
+        run: nix build
+
+      - name: run migrations
+        working-directory: gray-whale
+        run: |
+          cp refinery.example.toml refinery.toml
+          ./result/bin/gray-whale-migrate migrate

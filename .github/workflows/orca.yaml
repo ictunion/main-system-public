@@ -1,0 +1,52 @@
+name: "Orca"
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  nix-build:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'main'
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v18
+
+      - name: Build via nix
+        working-directory: orca
+        run: nix build
+
+  rustup-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v18
+
+      - name: Validate formatting
+        working-directory: orca
+        run: nix develop -c bash -c "cargo fmt --check"
+
+      - name: Lint using Clippy
+        working-directory: orca
+        run: nix develop -c bash -c "cargo clippy"
+
+      - name: Run tests in dev env
+        working-directory: orca
+        run: nix develop -c bash -c "cargo test"

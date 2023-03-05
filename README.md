@@ -17,10 +17,10 @@ requires just permissions for reading and writing the data (no alterations of sc
 
 Every sub-system has its own documentation within README.md file!
 
-| name                     | role                                | description                                              |
-|--------------------------|-------------------------------------|----------------------------------------------------------|
-| [Gray Whale](gray-whale) | Database migrations and management  | Gray Whales have longest migrations of any marine mammal |
-| [Orca](orca)             | Registration and members management | ORganization Contact Acquirement                         |
+| name                     | status                                                                                                      | role                                | description                                              |
+|--------------------------|-------------------------------------------------------------------------------------------------------------|-------------------------------------|----------------------------------------------------------|
+| [Gray Whale](gray-whale) | ![status](https://github.com/ictunion/main-systemn/actions/workflows/gray-whale.yaml/badge.svg?branch=main) | Database migrations and management  | Gray Whales have longest migrations of any marine mammal |
+| [Orca](orca)             | ![status](https://github.com/ictunion/main-systemn/actions/workflows/orca.yaml/badge.svg?branch=main)       | Registration and members management | ORganization Contact Acquirement                         |
 
 ## Running
 
