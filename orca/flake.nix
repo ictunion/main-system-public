@@ -11,12 +11,7 @@
         inherit system;
         overlays = [];
       };
-      tex = pkgs.texlive.combine {
-        inherit (pkgs.texlive)
-          scheme-small
-          datetime
-          fmtcount;
-      };
+      tex = with pkgs; import ./tex.nix { inherit texlive; };
       buildInputs = with pkgs; [
         tex
         rustup
