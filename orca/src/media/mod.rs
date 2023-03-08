@@ -1,4 +1,4 @@
-use rocket::serde::Deserialize;
+use rocket::serde::{Deserialize, Serialize};
 use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64};
 use tokio::fs;
 use tokio::io;
@@ -11,7 +11,7 @@ use image::io::Reader as ImageReader;
 
 /// Manipulating Base64 images
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
 pub struct RawBase64<'r>(pub &'r str);
 

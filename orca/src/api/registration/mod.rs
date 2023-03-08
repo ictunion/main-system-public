@@ -39,7 +39,8 @@ pub struct RegistrationRequest<'r> {
     phone_number: Option<&'r str>,
     company_name: Option<&'r str>,
     occupation: Option<&'r str>,
-    signature: RawBase64<'r>,
+    #[validate(required)]
+    signature: Option<RawBase64<'r>>,
     #[validate(length(min = 2, max = 2))]
     local: &'r str,
 }
@@ -89,8 +90,12 @@ async fn api_join<'r>(
     // Decode signature image data
     let mut signature_data = user
         .signature
-        .to_image_data()
-        .map_err(|_| Status::UnprocessableEntity)?;
+        .as_ref()
+        .ok_or(Status::UnprocessableEntity)
+        .and_then(|data| {
+            data.to_image_data()
+                .map_err(|_| Status::UnprocessableEntity)
+        })?;
 
     // This is done in response thread because we want to be sure
     // it succeeds before we return OK status
