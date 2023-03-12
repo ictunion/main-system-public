@@ -23,8 +23,9 @@ mod query;
 #[serde(crate = "rocket::serde")]
 /// Input for join api (website form)
 pub struct RegistrationRequest<'r> {
+    #[validate(required)]
     #[validate(email)]
-    email: &'r str,
+    email: Option<&'r str>,
     #[validate(required)]
     first_name: Option<&'r str>,
     #[validate(required)]
