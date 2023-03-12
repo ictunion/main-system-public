@@ -17,6 +17,10 @@ verify_redirects_to = "http://localhost:1313/registration-confirmed"
 notification_email = ""
 new_member_notification_template = "member_registered"
 
+    [global.verify_redirects_to]
+    default = "http://localhost:1313/en/confirmed"
+    cs = "http://localhost:1313/cs/schvaleno"
+
 [development]
 address = "localhost"
 

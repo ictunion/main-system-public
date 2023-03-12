@@ -3,6 +3,8 @@ use rocket::figment::{
     Figment, Profile,
 };
 
+use std::collections::HashMap;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum EmailSender {
     TestSender,
@@ -22,7 +24,7 @@ pub struct Config {
     pub processing_db_pool: u32,
     pub tex_exe: String,
     pub processing_queue_size: usize,
-    pub verify_redirects_to: String,
+    pub verify_redirects_to: HashMap<String, String>,
     pub notification_email: Option<String>,
     pub new_member_notification_template: String,
 }
@@ -71,7 +73,7 @@ impl Config {
 
         let verify_redirects_to = figment
             .extract_inner("verify_redirects_to")
-            .unwrap_or(host.clone());
+            .unwrap_or(HashMap::new());
 
         let notification_email = figment.extract_inner("notification_email").ok();
 
@@ -94,6 +96,15 @@ impl Config {
             verify_redirects_to,
             notification_email,
             new_member_notification_template,
+        }
+    }
+
+    pub fn verify_redirect_for_local(&self, lang: &str) -> String {
+        match self.verify_redirects_to.get(lang) {
+            Some(url) => url.to_string(),
+            None => self.verify_redirects_to.get("default")
+                .unwrap_or(&self.host)
+                .to_string()
         }
     }
 }

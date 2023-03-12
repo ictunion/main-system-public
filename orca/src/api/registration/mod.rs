@@ -128,11 +128,9 @@ async fn api_confirm(
     queue: &State<QueueSender>,
     code: &'_ str,
 ) -> Response<Redirect> {
-    let redirect = Ok(Redirect::found(config.inner().verify_redirects_to.clone()));
-
     use sqlx::error::Error::*;
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {
-        Ok((member_id, _local)) => {
+        Ok((member_id, local)) => {
             // notify about new registration
             queue
                 .inner()
@@ -140,12 +138,12 @@ async fn api_confirm(
                 .await?;
 
             // redirect user to the right place
-            redirect
+            Ok(Redirect::found(config.inner().verify_redirect_for_local(&local)))
         }
         // Even if not found we want to still redirect!
         // This is especially in cases user goes back to confirmation
         // email and clicks the link again
-        Err(RowNotFound) => redirect,
+        Err(RowNotFound) => Ok(Redirect::found(config.inner().verify_redirect_for_local("default"))),
         Err(err) => Err(err.into()),
     }
 }
