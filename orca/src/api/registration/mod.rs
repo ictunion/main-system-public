@@ -25,10 +25,10 @@ mod query;
 pub struct RegistrationRequest<'r> {
     #[validate(email)]
     email: &'r str,
-    #[validate(length(min = 1))]
-    first_name: &'r str,
-    #[validate(length(min = 1))]
-    last_name: &'r str,
+    #[validate(required)]
+    first_name: Option<&'r str>,
+    #[validate(required)]
+    last_name: Option<&'r str>,
     /// We use option here so that `null` value goes
     /// through the parser into validator
     #[validate(required)]
