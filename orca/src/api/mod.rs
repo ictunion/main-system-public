@@ -1,4 +1,4 @@
-use rocket::response;
+use rocket::response::{self, Responder};
 use rocket::{Build, Request, Rocket};
 use tokio::task::JoinError;
 
@@ -14,7 +14,7 @@ impl From<sqlx::Error> for SqlError {
     }
 }
 
-impl<'r> response::Responder<'r, 'static> for SqlError {
+impl<'r> Responder<'r, 'static> for SqlError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
         use rocket::http::Status;
         use sqlx::error::Error::*;
@@ -96,3 +96,26 @@ pub fn build() -> Rocket<Build> {
 }
 
 pub type Response<T> = Result<T, ApiError>;
+
+/// This is pretty much a wrapper for `Status`
+/// which doesn't allow for response body content
+/// since it standardizes it for common cases.
+#[derive(Debug)]
+pub enum SuccessResponse {
+    Accepted,
+}
+
+impl<'r> Responder<'r, 'static> for SuccessResponse {
+    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
+        use rocket::response::status;
+        use rocket::serde::json::Json;
+
+        match &self {
+            Self::Accepted => {
+                let response =
+                    status::Accepted(Some(Json("{ 'status': 202, 'message': 'Accepted' }")));
+                response.respond_to(request)
+            }
+        }
+    }
+}

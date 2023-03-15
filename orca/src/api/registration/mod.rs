@@ -1,12 +1,12 @@
 use time::Date;
 
 use rocket::http::Status;
-use rocket::response::{status, Redirect};
+use rocket::response::Redirect;
 use rocket::serde::{json::Json, Deserialize};
 use rocket::{Route, State};
 use rocket_validation::{Validate, Validated};
 
-use super::Response;
+use super::{Response, SuccessResponse};
 use crate::config::Config;
 use crate::data::{Id, Member};
 use crate::db::{self, DbPool};
@@ -53,7 +53,7 @@ async fn api_join<'r>(
     db_pool: &State<DbPool>,
     queue: &State<QueueSender>,
     validated_user: Validated<Json<RegistrationRequest<'r>>>,
-) -> Response<status::Accepted<&'r str>> {
+) -> Response<SuccessResponse> {
     let user = validated_user.0;
 
     // First lets create a member record so we don't loose
@@ -117,7 +117,7 @@ async fn api_join<'r>(
         ))
         .await?;
 
-    Ok(status::Accepted(Some("ok")))
+    Ok(SuccessResponse::Accepted)
 }
 
 #[get("/<code>/confirm")]
