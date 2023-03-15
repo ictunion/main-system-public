@@ -1,6 +1,12 @@
 use std::convert::Infallible;
 use std::net::IpAddr;
 
+cfg_if::cfg_if! {
+    if #[cfg(feature="proxy-support")] {
+        use std::str::FromStr;
+    }
+}
+
 use rocket::request::{FromRequest, Outcome, Request};
 
 #[derive(Debug, Clone, Copy, sqlx::Type)]

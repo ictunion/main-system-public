@@ -45,8 +45,8 @@ jobs:
 
       - name: Lint using Clippy
         working-directory: orca
-        run: nix develop -c bash -c "cargo clippy"
+        run: nix develop -c bash -c "cargo clippy --features proxy-support"
 
       - name: Run tests in dev env
         working-directory: orca
-        run: nix develop -c bash -c "cargo test"
+        run: nix develop -c bash -c "cargo test --features proxy-support"
