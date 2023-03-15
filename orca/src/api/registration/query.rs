@@ -1,13 +1,11 @@
-use std::net::SocketAddr;
-
 use super::RegistrationRequest;
 use crate::data::{Id, Member};
 use crate::db::{Query, QueryAs};
 use crate::media::ImageData;
-use crate::server::UserAgent;
+use crate::server::{IpAddress, UserAgent};
 
 pub fn create_join_request<'r>(
-    remote_addr: SocketAddr,
+    ip_addr: IpAddress,
     user_agent: UserAgent<'r>,
     confirmation_token: String,
     user: &RegistrationRequest<'r>,
@@ -45,7 +43,7 @@ returning id
     .bind(user.company_name)
     .bind(user.occupation)
     .bind(user.local)
-    .bind(remote_addr.ip())
+    .bind(ip_addr)
     .bind(user_agent)
     .bind("website_join_form")
     .bind(confirmation_token)

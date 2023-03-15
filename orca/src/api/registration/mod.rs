@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use time::Date;
 
 use rocket::http::Status;
@@ -15,7 +14,7 @@ use crate::generate;
 use crate::media::RawBase64;
 use crate::processing::Command;
 use crate::processing::QueueSender;
-use crate::server::UserAgent;
+use crate::server::{IpAddress, UserAgent};
 
 mod query;
 
@@ -49,7 +48,7 @@ pub struct RegistrationRequest<'r> {
 #[post("/join", format = "json", data = "<validated_user>")]
 /// Registration form request
 async fn api_join<'r>(
-    remote_addr: SocketAddr,
+    ip_addr: IpAddress,
     user_agent: UserAgent<'_>,
     db_pool: &State<DbPool>,
     queue: &State<QueueSender>,
@@ -64,7 +63,7 @@ async fn api_join<'r>(
     loop {
         confirmation_token = generate::string(64);
         let res =
-            query::create_join_request(remote_addr, user_agent, confirmation_token.clone(), &user)
+            query::create_join_request(ip_addr, user_agent, confirmation_token.clone(), &user)
                 .fetch_one(db_pool.inner())
                 .await;
 
@@ -139,12 +138,16 @@ async fn api_confirm(
                 .await?;
 
             // redirect user to the right place
-            Ok(Redirect::found(config.inner().verify_redirect_for_local(&local)))
+            Ok(Redirect::found(
+                config.inner().verify_redirect_for_local(&local),
+            ))
         }
         // Even if not found we want to still redirect!
         // This is especially in cases user goes back to confirmation
         // email and clicks the link again
-        Err(RowNotFound) => Ok(Redirect::found(config.inner().verify_redirect_for_local("default"))),
+        Err(RowNotFound) => Ok(Redirect::found(
+            config.inner().verify_redirect_for_local("default"),
+        )),
         Err(err) => Err(err.into()),
     }
 }

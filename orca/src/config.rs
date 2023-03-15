@@ -102,9 +102,11 @@ impl Config {
     pub fn verify_redirect_for_local(&self, lang: &str) -> String {
         match self.verify_redirects_to.get(lang) {
             Some(url) => url.to_string(),
-            None => self.verify_redirects_to.get("default")
+            None => self
+                .verify_redirects_to
+                .get("default")
                 .unwrap_or(&self.host)
-                .to_string()
+                .to_string(),
         }
     }
 }

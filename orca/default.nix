@@ -6,16 +6,20 @@
 , lib
 , texlive
 , makeWrapper
+, nix-gitignore
+, buildFeatures ? []
 }:
 let
   tex = import ./tex.nix { inherit texlive; };
 in
 # TODO: add wrapProgram to configure path to tex
 rustPlatform.buildRustPackage {
+  inherit buildFeatures;
+
   pname = "ict-union-orca";
   version = "0.1.0";
-  src = ./.;
-  cargoSha256 = "sha256-oVycgqvOVwVlEBO+QygTczuVCOwMn51HtjXfX66FFTs=";
+  src = nix-gitignore.gitignoreSource [] ./.;
+  cargoSha256 = "sha256-+r8L9zZ66GHn7KVSyLfcbmCsatZVkEKFRDoRMDRPaH4=";
 
   nativeBuildInputs = [ pkg-config makeWrapper ];
 

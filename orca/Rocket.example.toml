@@ -2,20 +2,32 @@
 json = 131072
 
 [global]
+# Bind to
 address = "127.0.0.1"
+host = "http://localhost:8000"
+
+# API key for mandrill (mailchip transactional emails)
+# Remember that this is secret!
 mandrill_api_key = ""
+
+# Email configuration
 email_from_email = "noreply@planning-game.com"
 email_from_name = "Planning Game"
-host = "http://localhost:8000"
 email_confirmation_template_name = "email_confirmation"
+notification_email = ""
+new_member_notification_template = "member_registered"
+
+# Database
 postgres = "postgres://orca@localhost/ictunion"
 web_db_pool = 5
 processing_db_pool = 2
+
+# PDF printing
 tex_exe = "xelatex"
+
+# Business logic configuration
 processing_queue_size = 16
 verify_redirects_to = "http://localhost:1313/registration-confirmed"
-notification_email = ""
-new_member_notification_template = "member_registered"
 
     [global.verify_redirects_to]
     default = "http://localhost:1313/en/confirmed"

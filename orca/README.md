@@ -33,6 +33,14 @@ Copy example configuration file
 cp Rocket.example.toml Rocket.toml
 ```
 
+Please refer to example configuration file and rocket documentation for documentation on configuration.
+
+We also use cargo features for compile time configuration like:
+
+```
+cargo build --features proxy-support
+```
+
 ## Developing
 
 ### Toolchain
@@ -76,4 +84,13 @@ __Run tests:__
 
 ```
 cargo test
+```
+
+## Documentation
+
+We use Rusts build in documetation capabilities for documenting implementation
+and settings. Use `cargo` to build the up to date documentation:
+
+```
+cargo doc --open
 ```

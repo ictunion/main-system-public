@@ -20,6 +20,7 @@ POST :host/registration/join
 User-Agent: Emacs
 Content-Type: application/json
 Accept: application/json
+X-Real-IP: 0.0.0.0
 
 {
     "email": :email,
