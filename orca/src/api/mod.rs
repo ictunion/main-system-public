@@ -112,9 +112,8 @@ impl<'r> Responder<'r, 'static> for SuccessResponse {
 
         match &self {
             Self::Accepted => {
-                let response =
-                    status::Accepted(Some(Json("{ 'status': 202, 'message': 'Accepted' }")));
-                response.respond_to(request)
+                status::Accepted(Some(Json("{ 'status': 202, 'message': 'Accepted' }")))
+                    .respond_to(request)
             }
         }
     }

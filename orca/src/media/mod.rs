@@ -1,3 +1,5 @@
+use time::Date;
+
 use rocket::serde::{Deserialize, Serialize};
 use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64};
 use tokio::fs;
@@ -140,7 +142,7 @@ impl ImageData {
 /// Escape (La)TeX input string
 /// to prevent injection of arbitrary TeX during PDF generation
 pub trait TexEscape {
-    fn escape_tex(self) -> String;
+    fn escape_tex(&self) -> String;
 }
 
 /// The primary way of securing PDF printing via LaTeX
@@ -148,7 +150,7 @@ pub trait TexEscape {
 /// As a secondary measure we also escape TeX string themselves
 impl TexEscape for &str {
     /// Escape TeX control sequences to harmless strings
-    fn escape_tex(self) -> String {
+    fn escape_tex(&self) -> String {
         let mut res = String::new();
         for chr in self.chars() {
             // This Escaping is based on Christopher Gutteridge's PHP code available at
@@ -177,6 +179,31 @@ impl TexEscape for &str {
         }
 
         res
+    }
+}
+
+impl TexEscape for String {
+    fn escape_tex(&self) -> String {
+        self.as_str().escape_tex()
+    }
+}
+
+impl TexEscape for Date {
+    /// We can trust date not to contain any dangerous chars
+    fn escape_tex(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl<T> TexEscape for Option<T>
+where
+    T: TexEscape,
+{
+    fn escape_tex(&self) -> String {
+        match self {
+            Some(a) => a.escape_tex(),
+            None => String::new(),
+        }
     }
 }
 

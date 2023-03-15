@@ -118,16 +118,16 @@ async fn process(
                     .attach(pdf_attachement)
                     .bind(TemplateContentItem::new(
                         "first_name",
-                        &member_details.first_name,
+                        from_optional_sring(&member_details.first_name),
                     ))
                     .bind(TemplateContentItem::new(
                         "last_name",
-                        &member_details.last_name,
+                        from_optional_sring(&member_details.last_name),
                     ))
                     .bind(TemplateContentItem::new("email", &member_details.email))
                     .bind(TemplateContentItem::new(
                         "phone_number",
-                        &member_details.phone_number,
+                        from_optional_sring(&member_details.phone_number),
                     ));
 
                 email_sender
@@ -137,6 +137,13 @@ async fn process(
 
             Ok(())
         }
+    }
+}
+
+fn from_optional_sring(string: &Option<String>) -> &str {
+    match &string {
+        Some(s) => s,
+        None => "[none]",
     }
 }
 
@@ -173,7 +180,11 @@ async fn process_new_member_registered(
         config.host, verification_token
     );
     let pdf_attachement = Attachement::new("registration.pdf", "application/pdf", &pdf_data);
-    let full_name = format!("{} {}", member_details.first_name, member_details.last_name);
+    let full_name = format!(
+        "{} {}",
+        member_details.first_name.as_deref().unwrap_or(""),
+        member_details.last_name.as_deref().unwrap_or("")
+    );
     let mut message = TemplateMessage::new("Verify Email Address", config);
 
     message
@@ -181,11 +192,11 @@ async fn process_new_member_registered(
         .attach(pdf_attachement)
         .bind(TemplateContentItem::new(
             "first_name",
-            &member_details.first_name,
+            from_optional_sring(&member_details.first_name),
         ))
         .bind(TemplateContentItem::new(
             "last_name",
-            &member_details.last_name,
+            from_optional_sring(&member_details.last_name),
         ))
         .bind(TemplateContentItem::new("verify_link", &verify_url));
 
@@ -203,21 +214,25 @@ async fn process_new_member_registered(
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct MemberDetails {
-    pub first_name: String,
-    pub last_name: String,
-    pub date_of_birth: Date,
-    pub phone_number: String,
     pub email: String,
-    pub address: String,
-    pub city: String,
-    pub postal_code: String,
-    pub company_name: String,
-    pub occupation: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub date_of_birth: Option<Date>,
+    pub phone_number: Option<String>,
+    pub address: Option<String>,
+    pub city: Option<String>,
+    pub postal_code: Option<String>,
+    pub company_name: Option<String>,
+    pub occupation: Option<String>,
     pub confirmation_token: Option<String>,
 }
 
 async fn print_tex_header(details: &MemberDetails) -> Result<String, ProcessingError> {
-    let signature = format!("{} {}", details.first_name, details.last_name);
+    let signature = format!(
+        "{} {}",
+        details.first_name.as_deref().unwrap_or(""),
+        details.last_name.as_deref().unwrap_or("")
+    );
     // TODO: implement tex escaping!
     Ok(format!(
         "\
@@ -233,18 +248,18 @@ async fn print_tex_header(details: &MemberDetails) -> Result<String, ProcessingE
 \\newcommand{{\\Position}}{{{}}}
 \\newcommand{{\\Signature}}{{{}}}
 ",
-        &details.first_name.escape_tex(),
-        &details.last_name.escape_tex(),
+        details.first_name.as_deref().escape_tex(),
+        details.last_name.as_deref().escape_tex(),
         // This doesn't need to be escaped because
         // Date isn't arbitrary string of characters.
-        details.date_of_birth,
-        &details.phone_number.escape_tex(),
-        &details.email.escape_tex(),
-        &details.address.escape_tex(),
-        &details.city.escape_tex(),
-        &details.postal_code.escape_tex(),
-        &details.company_name.escape_tex(),
-        &details.occupation.escape_tex(),
+        details.date_of_birth.escape_tex(),
+        details.phone_number.as_deref().escape_tex(),
+        details.email.as_str().escape_tex(),
+        details.address.as_deref().escape_tex(),
+        details.city.as_deref().escape_tex(),
+        details.postal_code.as_deref().escape_tex(),
+        details.company_name.as_deref().escape_tex(),
+        details.occupation.as_deref().escape_tex(),
         &signature.escape_tex()
     ))
 }
