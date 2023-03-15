@@ -17,10 +17,12 @@ use mandrill::{Attachement, TemplateMessage};
 
 use crate::config::Config;
 use crate::data::{Id, Member};
-use crate::db::{DbPool, Query, QueryAs};
+use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};
 
 use self::mandrill::TemplateContentItem;
+
+mod query;
 
 #[derive(Debug)]
 pub enum Command {
@@ -103,11 +105,11 @@ async fn process(
         NewMemberVerified(member_id) => {
             // We do this only if notification email is configured
             if let Some(notification_email) = &config.notification_email {
-                let (pdf_data,) = fetch_registration_pdf_base64(member_id)
+                let (pdf_data,) = query::fetch_registration_pdf_base64(member_id)
                     .fetch_one(db_pool)
                     .await?;
 
-                let member_details = query_member(member_id).fetch_one(db_pool).await?;
+                let member_details = query::query_member(member_id).fetch_one(db_pool).await?;
 
                 let pdf_attachement =
                     Attachement::new_base64("registration.pdf", "application/pdf", pdf_data);
@@ -165,12 +167,12 @@ async fn process_new_member_registered(
     // Query for detail information about member
     // in theory we could also pass this in thje command
     // but doing it this way means that all triggers, defaults etc are 100% applied to the data
-    let member_details = query_member(member_id).fetch_one(db_pool).await?;
+    let member_details = query::query_member(member_id).fetch_one(db_pool).await?;
 
     // Generate PDF
     let pdf_path = print_pdf(config, &member_details, &processing_dir).await?;
     let pdf_data = fs::read(pdf_path).await?;
-    insert_registration_pdf(member_id, &pdf_data)
+    query::insert_registration_pdf(member_id, &pdf_data)
         .execute(db_pool)
         .await?;
 
@@ -205,7 +207,7 @@ async fn process_new_member_registered(
         .await?;
 
     // Update info in DB about email being sent
-    track_verification_sent_at(member_id)
+    query::track_verification_sent_at(member_id)
         .execute(db_pool)
         .await?;
 
@@ -300,52 +302,4 @@ async fn print_pdf(
     println!("the command exited with: {status}");
 
     Ok(format!("{dir}/registration.pdf"))
-}
-
-fn query_member<'a>(id: Id<Member>) -> QueryAs<'a, MemberDetails> {
-    sqlx::query_as("
-select first_name, last_name, date_of_birth, phone_number, email, address, city, postal_code, company_name, occupation, confirmation_token
-from members where id = $1
-")
-    .bind(id)
-}
-
-fn insert_registration_pdf(id: Id<Member>, data: &Vec<u8>) -> Query<'_> {
-    sqlx::query(
-        "
-insert into files
-( name
-, file_type
-, data
-, user_id
-) values ('registration', 'pdf', $1, $2)
-",
-    )
-    .bind(data)
-    .bind(id)
-}
-
-fn track_verification_sent_at(id: Id<Member>) -> Query<'static> {
-    sqlx::query(
-        "
-update members as m
-set verification_sent_at = now()
-where id = $1
-",
-    )
-    .bind(id)
-}
-
-fn fetch_registration_pdf_base64(id: Id<Member>) -> QueryAs<'static, (String,)> {
-    sqlx::query_as(
-        "
-select encode(data, 'base64') from files
-where user_id = $1
-    and file_type = 'pdf'
-    and name = 'registration'
-order by created_at desc
-limit 1
-",
-    )
-    .bind(id)
 }
