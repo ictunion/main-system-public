@@ -1,6 +1,7 @@
 use rocket::response::{self, Responder};
 use rocket::{Build, Request, Rocket};
 use tokio::task::JoinError;
+use validator::ValidationError;
 
 mod registration;
 use crate::processing::SenderError;
@@ -117,4 +118,12 @@ impl<'r> Responder<'r, 'static> for SuccessResponse {
             }
         }
     }
+}
+
+pub fn validate_non_empty(val: &str) -> Result<(), ValidationError> {
+    if val.trim().is_empty() {
+        return Err(ValidationError::new("empty"));
+    }
+
+    Ok(())
 }

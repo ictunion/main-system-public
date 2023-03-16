@@ -6,7 +6,7 @@ use rocket::serde::{json::Json, Deserialize};
 use rocket::{Route, State};
 use rocket_validation::{Validate, Validated};
 
-use super::{Response, SuccessResponse};
+use super::{validate_non_empty, Response, SuccessResponse};
 use crate::config::Config;
 use crate::data::{Id, Member};
 use crate::db::{self, DbPool};
@@ -26,18 +26,32 @@ pub struct RegistrationRequest<'r> {
     #[validate(email)]
     email: Option<&'r str>,
     #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     first_name: Option<&'r str>,
     #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     last_name: Option<&'r str>,
     /// We use option here so that `null` value goes
     /// through the parser into validator
     #[validate(required)]
     date_of_birth: Option<Date>,
+    #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     address: Option<&'r str>,
+    #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     city: Option<&'r str>,
+    #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     postal_code: Option<&'r str>,
+    #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     phone_number: Option<&'r str>,
+    #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     company_name: Option<&'r str>,
+    #[validate(required)]
+    #[validate(custom = "validate_non_empty")]
     occupation: Option<&'r str>,
     #[validate(required)]
     signature: Option<RawBase64<'r>>,
