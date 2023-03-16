@@ -1,51 +1,51 @@
 use crate::db::{Query, QueryAs};
 
-use super::MemberDetails;
-use crate::data::{Id, Member};
+use super::RegistrationDetails;
+use crate::data::{Id, RegistrationRequest};
 
-pub fn query_member<'a>(id: Id<Member>) -> QueryAs<'a, MemberDetails> {
+pub fn query_registration<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, RegistrationDetails> {
     sqlx::query_as("
-select first_name, last_name, date_of_birth, phone_number, email, address, city, postal_code, company_name, occupation, confirmation_token
-from members where id = $1
+SELECT first_name, last_name, date_of_birth, phone_number, email, address, city, postal_code, company_name, occupation, confirmation_token
+FROM registration_requests WHERE id = $1
 ")
     .bind(id)
 }
 
-pub fn insert_registration_pdf(id: Id<Member>, data: &Vec<u8>) -> Query<'_> {
+pub fn insert_registration_pdf(id: Id<RegistrationRequest>, data: &Vec<u8>) -> Query<'_> {
     sqlx::query(
         "
-insert into files
+INSERT INTO files
 ( name
 , file_type
 , data
-, user_id
-) values ('registration', 'pdf', $1, $2)
+, registration_request_id
+) VALUES ('registration', 'pdf', $1, $2)
 ",
     )
     .bind(data)
     .bind(id)
 }
 
-pub fn track_verification_sent_at(id: Id<Member>) -> Query<'static> {
+pub fn track_verification_sent_at(id: Id<RegistrationRequest>) -> Query<'static> {
     sqlx::query(
         "
-update members as m
-set verification_sent_at = now()
-where id = $1
+UPDATE registration_requests AS m
+SET verification_sent_at = now()
+WHERE id = $1
 ",
     )
     .bind(id)
 }
 
-pub fn fetch_registration_pdf_base64(id: Id<Member>) -> QueryAs<'static, (String,)> {
+pub fn fetch_registration_pdf_base64(id: Id<RegistrationRequest>) -> QueryAs<'static, (String,)> {
     sqlx::query_as(
         "
-select encode(data, 'base64') from files
-where user_id = $1
-    and file_type = 'pdf'
-    and name = 'registration'
-order by created_at desc
-limit 1
+SELECT encode(data, 'base64') FROM files
+WHERE registration_request_id = $1
+    AND file_type = 'pdf'
+    AND name = 'registration'
+ORDER BY created_at DESC
+LIMIT 1
 ",
     )
     .bind(id)

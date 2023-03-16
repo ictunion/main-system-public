@@ -15,10 +15,10 @@ pub enum EmailSender {
 pub struct Config {
     pub email_sender: EmailSender,
     pub mandrill_api_host: String,
-    pub email_from_email: String,
-    pub email_from_name: Option<String>,
+    pub email_sender_email: String,
+    pub email_sender_name: Option<String>,
     pub host: String,
-    pub email_confirmation_template_name: String,
+    pub email_confirmation_template: String,
     pub postgres: String,
     pub web_db_pool: u32,
     pub processing_db_pool: u32,
@@ -26,7 +26,7 @@ pub struct Config {
     pub processing_queue_size: usize,
     pub verify_redirects_to: HashMap<String, String>,
     pub notification_email: Option<String>,
-    pub new_member_notification_template: String,
+    pub email_new_registration_notification_template: String,
     /// This is rocket level value, not logger one
     pub log_level: rocket::config::LogLevel,
 }
@@ -50,16 +50,16 @@ impl Config {
             .extract_inner("mandrill_api_host")
             .unwrap_or("https://mandrillapp.com/api/1.0".to_string());
 
-        let email_from_email = figment
-            .extract_inner("email_from_email")
+        let email_sender_email = figment
+            .extract_inner("email_sender_email")
             .unwrap_or("noreply@localhost".to_string());
-        let email_from_name = figment.extract_inner("email_from_name").ok();
+        let email_sender_name = figment.extract_inner("email_sender_name").ok();
 
         let host = figment
             .extract_inner("host")
             .unwrap_or("http://localhost".to_string());
-        let email_confirmation_template_name = figment
-            .extract_inner("email_confirmation_template_name")
+        let email_confirmation_template = figment
+            .extract_inner("email_confirmation_template")
             .unwrap_or("email_confirmation".to_string());
 
         let postgres = figment
@@ -79,9 +79,9 @@ impl Config {
 
         let notification_email = figment.extract_inner("notification_email").ok();
 
-        let new_member_notification_template = figment
-            .extract_inner("new_member_notification_template")
-            .unwrap_or("member_registered".to_string());
+        let email_new_registration_notification_template = figment
+            .extract_inner("email_new_registration_notification_template")
+            .unwrap_or("new_registration_notification_template".to_string());
 
         let log_level = figment
             .extract_inner("log_level")
@@ -90,10 +90,10 @@ impl Config {
         Self {
             email_sender,
             mandrill_api_host,
-            email_from_email,
-            email_from_name,
+            email_sender_email,
+            email_sender_name,
             host,
-            email_confirmation_template_name,
+            email_confirmation_template,
             postgres,
             web_db_pool,
             processing_db_pool,
@@ -101,7 +101,7 @@ impl Config {
             processing_queue_size,
             verify_redirects_to,
             notification_email,
-            new_member_notification_template,
+            email_new_registration_notification_template,
             log_level,
         }
     }

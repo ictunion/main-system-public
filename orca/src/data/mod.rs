@@ -1,14 +1,15 @@
 use std::error::Error;
 use std::fmt::Display;
 use std::marker::PhantomData;
+use uuid::Uuid;
 
 use sqlx::{database::HasValueRef, Decode, Encode, Postgres, Type};
 
 #[derive(Debug, Clone, Copy)]
-pub struct Id<T>(i32, PhantomData<T>);
+pub struct Id<T>(Uuid, PhantomData<T>);
 
-impl<T> From<i32> for Id<T> {
-    fn from(value: i32) -> Self {
+impl<T> From<Uuid> for Id<T> {
+    fn from(value: Uuid) -> Self {
         Id(value, PhantomData)
     }
 }
@@ -21,7 +22,7 @@ impl<T> Display for Id<T> {
 
 impl<T> Type<Postgres> for Id<T> {
     fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
-        <i32 as Type<Postgres>>::type_info()
+        <Uuid as Type<Postgres>>::type_info()
     }
 }
 
@@ -37,7 +38,7 @@ where
     fn decode(
         value: <Postgres as HasValueRef<'r>>::ValueRef,
     ) -> Result<Id<T>, Box<dyn Error + 'static + Send + Sync>> {
-        let value = <i32 as Decode<Postgres>>::decode(value)?;
+        let value = <Uuid as Decode<Postgres>>::decode(value)?;
 
         Ok(Id(value, PhantomData))
     }
@@ -51,16 +52,16 @@ impl<'q, T> Encode<'q, Postgres> for Id<T> {
     where
         Self: Sized,
     {
-        <i32 as Encode<Postgres>>::encode(self.0, buf)
+        <Uuid as Encode<Postgres>>::encode(self.0, buf)
     }
 
     fn encode_by_ref(
         &self,
         buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
     ) -> sqlx::encode::IsNull {
-        <i32 as Encode<Postgres>>::encode(self.0, buf)
+        <Uuid as Encode<Postgres>>::encode(self.0, buf)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Member;
+pub struct RegistrationRequest;

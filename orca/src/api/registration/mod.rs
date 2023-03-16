@@ -8,7 +8,7 @@ use rocket_validation::{Validate, Validated};
 
 use super::{validate_non_empty, Response, SuccessResponse};
 use crate::config::Config;
-use crate::data::{Id, Member};
+use crate::data::{self, Id};
 use crate::db::{self, DbPool};
 use crate::generate;
 use crate::media::RawBase64;
@@ -70,9 +70,9 @@ async fn api_join<'r>(
 ) -> Response<SuccessResponse> {
     let user = validated_user.0;
 
-    // First lets create a member record so we don't loose
+    // First lets create a request record so we don't loose
     // any people even if rest of the stuff goes wrong for one reason or another
-    let member_id: Id<Member>;
+    let reg_id: Id<data::RegistrationRequest>;
     let mut confirmation_token;
     loop {
         confirmation_token = generate::string(64);
@@ -94,7 +94,7 @@ async fn api_join<'r>(
                 Ok((id,)) => {
                     // All went well...
                     // break the loop so we can respond with Ok
-                    member_id = id;
+                    reg_id = id;
                     break;
                 }
             }
@@ -117,15 +117,15 @@ async fn api_join<'r>(
         .resize(492, 192)
         .map_err(|_| Status::UnprocessableEntity)?;
 
-    query::create_singature_file(member_id, &signature_data)
+    query::create_singature_file(reg_id, &signature_data)
         .execute(db_pool.inner())
         .await?;
 
     // Rest of the processing then happens on async thread outside of web worker
     queue
         .inner()
-        .send(Command::NewMemberRegistered(
-            member_id,
+        .send(Command::NewRegistrationRequest(
+            reg_id,
             signature_data,
             confirmation_token,
         ))
@@ -148,11 +148,11 @@ async fn api_confirm(
 ) -> Response<Redirect> {
     use sqlx::error::Error::*;
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {
-        Ok((member_id, local)) => {
+        Ok((reg_id, local)) => {
             // notify about new registration
             queue
                 .inner()
-                .send(Command::NewMemberVerified(member_id))
+                .send(Command::RegistrationRequestVerified(reg_id))
                 .await?;
 
             info!("Registration request verified.");

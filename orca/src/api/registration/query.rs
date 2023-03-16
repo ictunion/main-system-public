@@ -1,5 +1,5 @@
 use super::RegistrationRequest;
-use crate::data::{Id, Member};
+use crate::data::{self, Id};
 use crate::db::{Query, QueryAs};
 use crate::media::ImageData;
 use crate::server::{IpAddress, UserAgent};
@@ -9,10 +9,10 @@ pub fn create_join_request<'r>(
     user_agent: UserAgent<'r>,
     confirmation_token: String,
     user: &RegistrationRequest<'r>,
-) -> QueryAs<'r, (Id<Member>,)> {
+) -> QueryAs<'r, (Id<data::RegistrationRequest>,)> {
     sqlx::query_as(
         "
-insert into members
+INSERT INTO registration_requests
 ( email
 , first_name
 , last_name
@@ -28,8 +28,8 @@ insert into members
 , registration_user_agent
 , registration_source
 , confirmation_token
-) values ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )
-returning id
+) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )
+RETURNING id
 ",
     )
     .bind(user.email)
@@ -49,31 +49,34 @@ returning id
     .bind(confirmation_token)
 }
 
-pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (Id<Member>, String)> {
+pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (Id<data::RegistrationRequest>, String)> {
     sqlx::query_as(
         "
-update members as m
-set   confirmed_at = now()
+UPDATE registration_requests AS m
+SET   confirmed_at = now()
     , confirmation_token = NULL
-where confirmation_token = $1
-returning m.id, m.registration_local
+WHERE confirmation_token = $1
+RETURNING m.id, m.registration_local
 ",
     )
     .bind(code)
 }
 
-pub fn create_singature_file(user_id: Id<Member>, image: &'_ ImageData) -> Query<'_> {
+pub fn create_singature_file(
+    reg_id: Id<data::RegistrationRequest>,
+    image: &'_ ImageData,
+) -> Query<'_> {
     sqlx::query(
         r#"
-insert into files
+INSERT INTO files
 ( name
 , file_type
 , data
-, user_id
-) values ('signature', $1, $2, $3)
+, registration_request_id
+) VALUES ('signature', $1, $2, $3)
 "#,
     )
     .bind(&image.image_type)
     .bind(image.to_vec())
-    .bind(user_id)
+    .bind(reg_id)
 }

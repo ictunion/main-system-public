@@ -15,7 +15,7 @@ Gray Whale is database migration system used to manage schema add access of our 
 You'll need to run PostgreSQL database server on your system. This can be achieved in one of many ways
 from running PostgreSQL as a systemd service on Linux system, launchd service on MacOS or using Windows installers.
 
-[Makefile](../Makefile) in the root of the project provides convinient multiplatform way of running postgres
+[Makefile](../Makefile) in the root of the project provides convenient multiplatform way of running postgres
 inside a [Docker](https://www.docker.com/) container.
 
 ## Using Refinery Cli
@@ -35,6 +35,21 @@ If you're using provided docker based solution for starting Postgres (make postg
 you're all set. If you use other way to run postgres __you will most likely need to edit the refinery.toml__
 to much your configuration. Alternatively you can also avoid starting from example file and
 simply use `refinery configure` to produce config for your setup.
+
+## Create a database
+
+using psql create database called `ictunion`.
+
+> Using makefile from root of the repository psql could be started using make:
+>
+> ```
+> make psql DB_NAME=postgres
+> ````
+
+
+```
+CREATE DATABASE itctunion;
+```
 
 ## Migrate Database
 

@@ -82,8 +82,8 @@ impl From<SenderError> for ApiError {
 }
 
 #[get("/status")]
-fn status_api() -> &'static str {
-    "OK"
+fn status_api() -> SuccessResponse {
+    SuccessResponse::Ok
 }
 
 pub fn build() -> Rocket<Build> {
@@ -104,6 +104,7 @@ pub type Response<T> = Result<T, ApiError>;
 #[derive(Debug)]
 pub enum SuccessResponse {
     Accepted,
+    Ok,
 }
 
 impl<'r> Responder<'r, 'static> for SuccessResponse {
@@ -116,6 +117,7 @@ impl<'r> Responder<'r, 'static> for SuccessResponse {
                 status::Accepted(Some(Json("{ 'status': 202, 'message': 'Accepted' }")))
                     .respond_to(request)
             }
+            Self::Ok => Json(" { 'status: 200, 'message': 'OK' }").respond_to(request),
         }
     }
 }

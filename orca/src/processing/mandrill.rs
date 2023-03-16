@@ -68,8 +68,8 @@ impl<'a> TemplateMessage<'a> {
     pub fn new(subject: &'a str, config: &'a Config) -> Self {
         Self {
             subject,
-            from_email: &config.email_from_email,
-            from_name: config.email_from_name.as_deref(),
+            from_email: &config.email_sender_email,
+            from_name: config.email_sender_name.as_deref(),
             to: Vec::new(),
             tags: Vec::new(),
             attachments: Vec::new(),
