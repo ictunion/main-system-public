@@ -18,7 +18,7 @@ log_level = "debug"
 
 # Email (mandrill) configuration
 notification_email = ""
-email_sender_email = "noreply@planning-game.com"
+email_sender_email = ""
 email_sender_name = "Planning Game"
 email_confirmation_template = "email_confirmation"
 email_new_registration_notification_template = "new_registration_notification_template"
@@ -33,7 +33,6 @@ tex_exe = "xelatex"
 
 # Business logic configuration
 processing_queue_size = 16
-verify_redirects_to = "http://localhost:1313/registration-confirmed"
 
     # Confirmation api redirect urls
     [global.verify_redirects_to]
