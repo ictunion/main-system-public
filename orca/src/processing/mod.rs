@@ -30,6 +30,17 @@ pub enum Command {
     NewMemberVerified(Id<Member>),
 }
 
+impl std::fmt::Display for Command {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            Self::NewMemberRegistered(id, _, token) => {
+                write!(f, "NewMemberRegistered id: {id}, token: {token}")
+            }
+            Self::NewMemberVerified(id) => write!(f, "NewMemberVerified id: {id}"),
+        }
+    }
+}
+
 pub struct QueueSender(Sender<Command>);
 
 #[derive(Debug)]
@@ -45,13 +56,18 @@ impl QueueSender {
 
 pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
     let email_sender: mandrill::Sender = mandrill::Sender::new(config);
-    let (sender, mut receiver) = mpsc::channel(config.processing_queue_size);
+    let (sender, mut receiver) = mpsc::channel::<Command>(config.processing_queue_size);
     let our_conf = config.clone();
 
+    info!("Starting processing queue");
     tokio::spawn(async move {
         while let Some(cmd) = receiver.recv().await {
-            let res = process(cmd, &our_conf, &db_pool, &email_sender).await;
-            println!("Processing result: {res:?}");
+            let cmd_info = cmd.to_string();
+            info!("Processiong command: {cmd_info}");
+            match process(cmd, &our_conf, &db_pool, &email_sender).await {
+                Ok(()) => info!("Command processed successfully"),
+                Err(err) => error!("Processing of cmd: {cmd_info} failed with: {:?}", err),
+            }
         }
     });
 
@@ -299,7 +315,7 @@ async fn print_pdf(
 
     // Await until the command completes
     let status = child.wait().await?;
-    println!("the command exited with: {status}");
+    info!("tex command exited successfully: {status}");
 
     Ok(format!("{dir}/registration.pdf"))
 }

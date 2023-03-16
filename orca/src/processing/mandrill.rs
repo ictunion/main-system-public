@@ -174,8 +174,8 @@ impl Sender {
             }
             EmailSender::TestSender => {
                 // just print the message
-                println!("Email would be sent:");
-                println!("\ttemplate: {}", template_name);
+                info!("Email would be sent:");
+                info!("\ttemplate: {}", template_name);
 
                 Ok(())
             }
@@ -193,7 +193,7 @@ impl Sender {
         let connector = HttpsConnector::new()?;
         let client: Client<_, Body> = Client::builder().build(connector);
         let res = client.request(req).await?;
-        println!("result: {:?}", res);
+        info!("email sent: {:?}", res);
 
         Ok(())
     }

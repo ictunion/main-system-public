@@ -131,6 +131,10 @@ async fn api_join<'r>(
         ))
         .await?;
 
+    info!(
+        "IP: {} New registration request added to processing",
+        ip_addr
+    );
     Ok(SuccessResponse::Accepted)
 }
 
@@ -151,6 +155,7 @@ async fn api_confirm(
                 .send(Command::NewMemberVerified(member_id))
                 .await?;
 
+            info!("Registration request verified.");
             // redirect user to the right place
             Ok(Redirect::found(
                 config.inner().verify_redirect_for_local(&local),
@@ -159,9 +164,12 @@ async fn api_confirm(
         // Even if not found we want to still redirect!
         // This is especially in cases user goes back to confirmation
         // email and clicks the link again
-        Err(RowNotFound) => Ok(Redirect::found(
-            config.inner().verify_redirect_for_local("default"),
-        )),
+        Err(RowNotFound) => {
+            info!("Verification token not found, redirecting still...");
+            Ok(Redirect::found(
+                config.inner().verify_redirect_for_local("default"),
+            ))
+        }
         Err(err) => Err(err.into()),
     }
 }

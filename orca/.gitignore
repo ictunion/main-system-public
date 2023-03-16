@@ -1,4 +1,11 @@
+# Rust
 /target
+
+# Direnv
+/.direnv
+.envrc
+
+# Project specific
 /data/*
 !/data/.gitkeep
 /Rocket.toml

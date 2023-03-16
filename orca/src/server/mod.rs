@@ -1,3 +1,4 @@
+use core::fmt::Display;
 use std::convert::Infallible;
 use std::net::IpAddr;
 
@@ -26,6 +27,12 @@ impl<'r> FromRequest<'r> for UserAgent<'r> {
 #[derive(Debug, Clone, Copy, sqlx::Type)]
 #[sqlx(transparent)]
 pub struct IpAddress(IpAddr);
+
+impl Display for IpAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.0.fmt(f)
+    }
+}
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for IpAddress {

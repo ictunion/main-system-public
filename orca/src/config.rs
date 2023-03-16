@@ -27,6 +27,8 @@ pub struct Config {
     pub verify_redirects_to: HashMap<String, String>,
     pub notification_email: Option<String>,
     pub new_member_notification_template: String,
+    /// This is rocket level value, not logger one
+    pub log_level: rocket::config::LogLevel,
 }
 
 impl Config {
@@ -81,6 +83,10 @@ impl Config {
             .extract_inner("new_member_notification_template")
             .unwrap_or("member_registered".to_string());
 
+        let log_level = figment
+            .extract_inner("log_level")
+            .unwrap_or(rocket::config::LogLevel::Normal);
+
         Self {
             email_sender,
             mandrill_api_host,
@@ -96,6 +102,7 @@ impl Config {
             verify_redirects_to,
             notification_email,
             new_member_notification_template,
+            log_level,
         }
     }
 

@@ -10,33 +10,58 @@
 //! ```
 //! cargo build --features proxy-support
 //! ```
+extern crate rand;
 #[macro_use]
 extern crate rocket;
+extern crate cfg_if;
+extern crate hyper;
+extern crate hyper_openssl;
+extern crate image;
+extern crate openssl;
+extern crate rocket_validation;
+extern crate rustc_serialize;
+extern crate serde_json;
+extern crate sqlx;
+extern crate time;
+extern crate tokio;
+extern crate validator;
+#[macro_use]
+extern crate log;
+extern crate chrono;
+extern crate fern;
 
 mod api;
 mod config;
 mod data;
 mod db;
 mod generate;
+mod logging;
 mod media;
 mod processing;
 mod server;
 
 #[derive(Debug)]
 enum StartupError {
-    DatabaseError(db::SqlError),
-    ServerError(rocket::Error),
+    Database(db::SqlError),
+    Server(rocket::Error),
+    Logger(fern::InitError),
 }
 
 impl From<db::SqlError> for StartupError {
     fn from(err: db::SqlError) -> Self {
-        Self::DatabaseError(err)
+        Self::Database(err)
     }
 }
 
 impl From<rocket::Error> for StartupError {
     fn from(err: rocket::Error) -> Self {
-        Self::ServerError(err)
+        Self::Server(err)
+    }
+}
+
+impl From<fern::InitError> for StartupError {
+    fn from(err: fern::InitError) -> Self {
+        Self::Logger(err)
     }
 }
 
@@ -44,6 +69,9 @@ impl From<rocket::Error> for StartupError {
 async fn main() -> Result<(), StartupError> {
     // Read cofiguration
     let config = config::Config::get();
+
+    // Configure logger
+    logging::setup_logger(config.log_level)?;
 
     let web_db_pool = db::connect(db::Config {
         connection_url: &config.postgres,
