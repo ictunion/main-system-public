@@ -174,7 +174,7 @@ async fn process_new_member_registered(
     email_sender: &mandrill::Sender,
 ) -> Result<(), ProcessingError> {
     // Prepare directory & image data for processing
-    let processing_dir = format!("data/members/{member_id}");
+    let processing_dir = format!("data/refistration_requests/{member_id}");
     fs::create_dir_all(&processing_dir).await?;
     signature
         .write_to_disk(&processing_dir, "signature")
@@ -226,6 +226,9 @@ async fn process_new_member_registered(
     query::track_verification_sent_at(member_id)
         .execute(db_pool)
         .await?;
+
+    // Remove directory containing data for processing
+    fs::remove_dir_all(processing_dir).await?;
 
     Ok(())
 }
