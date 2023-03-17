@@ -18,7 +18,6 @@ pub struct Config {
     pub email_sender_email: String,
     pub email_sender_name: Option<String>,
     pub host: String,
-    pub email_confirmation_template: String,
     pub postgres: String,
     pub web_db_pool: u32,
     pub processing_db_pool: u32,
@@ -27,6 +26,8 @@ pub struct Config {
     pub verify_redirects_to: HashMap<String, String>,
     pub notification_email: Option<String>,
     pub email_new_registration_notification_template: String,
+    pub email_confirmation_templates: HashMap<String, String>,
+    pub email_confirmation_subjects: HashMap<String, String>,
     /// This is rocket level value, not logger one
     pub log_level: rocket::config::LogLevel,
 }
@@ -58,9 +59,6 @@ impl Config {
         let host = figment
             .extract_inner("host")
             .unwrap_or("http://localhost".to_string());
-        let email_confirmation_template = figment
-            .extract_inner("email_confirmation_template")
-            .unwrap_or("email_confirmation".to_string());
 
         let postgres = figment
             .extract_inner("postgres")
@@ -83,6 +81,14 @@ impl Config {
             .extract_inner("email_new_registration_notification_template")
             .unwrap_or("new_registration_notification_template".to_string());
 
+        let email_confirmation_templates = figment
+            .extract_inner("email_confirmation_templates")
+            .unwrap_or(HashMap::new());
+
+        let email_confirmation_subjects = figment
+            .extract_inner("email_confirmation_subjects")
+            .unwrap_or(HashMap::new());
+
         let log_level = figment
             .extract_inner("log_level")
             .unwrap_or(rocket::config::LogLevel::Normal);
@@ -93,7 +99,6 @@ impl Config {
             email_sender_email,
             email_sender_name,
             host,
-            email_confirmation_template,
             postgres,
             web_db_pool,
             processing_db_pool,
@@ -102,6 +107,8 @@ impl Config {
             verify_redirects_to,
             notification_email,
             email_new_registration_notification_template,
+            email_confirmation_templates,
+            email_confirmation_subjects,
             log_level,
         }
     }
@@ -113,6 +120,28 @@ impl Config {
                 .verify_redirects_to
                 .get("default")
                 .unwrap_or(&self.host)
+                .to_string(),
+        }
+    }
+
+    pub fn email_confirmation_template_for_local(&self, lang: &str) -> String {
+        match self.email_confirmation_templates.get(lang) {
+            Some(template) => template.to_string(),
+            None => self
+                .email_confirmation_templates
+                .get("default")
+                .unwrap_or(&"email_confirmation".to_string())
+                .to_string(),
+        }
+    }
+
+    pub fn email_confirmation_subject_for_local(&self, lang: &str) -> String {
+        match self.email_confirmation_subjects.get(lang) {
+            Some(sub) => sub.to_string(),
+            None => self
+                .email_confirmation_subjects
+                .get("default")
+                .unwrap_or(&"Verify Email Address".to_string())
                 .to_string(),
         }
     }

@@ -151,7 +151,10 @@ async fn process(
                     ));
 
                 email_sender
-                    .send_template(&config.email_new_registration_notification_template, message)
+                    .send_template(
+                        &config.email_new_registration_notification_template,
+                        message,
+                    )
                     .await?;
             }
 
@@ -186,6 +189,7 @@ async fn process_new_registration(
     // in theory we could also pass this in thje command
     // but doing it this way means that all triggers, defaults etc are 100% applied to the data
     let member_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
+    let lang = &member_details.registration_local;
 
     // Generate PDF
     let pdf_path = print_pdf(config, &member_details, &processing_dir).await?;
@@ -205,7 +209,8 @@ async fn process_new_registration(
         member_details.first_name.as_deref().unwrap_or(""),
         member_details.last_name.as_deref().unwrap_or("")
     );
-    let mut message = TemplateMessage::new("Verify Email Address", config);
+    let subject = config.email_confirmation_subject_for_local(lang);
+    let mut message = TemplateMessage::new(&subject, config);
 
     message
         .add_recipient(member_details.email, full_name)
@@ -221,7 +226,7 @@ async fn process_new_registration(
         .bind(TemplateContentItem::new("verify_link", &verify_url));
 
     email_sender
-        .send_template(&config.email_confirmation_template, message)
+        .send_template(&config.email_confirmation_template_for_local(lang), message)
         .await?;
 
     // Update info in DB about email being sent
@@ -248,6 +253,7 @@ pub struct RegistrationDetails {
     pub company_name: Option<String>,
     pub occupation: Option<String>,
     pub confirmation_token: Option<String>,
+    pub registration_local: String,
 }
 
 async fn print_tex_header(details: &RegistrationDetails) -> Result<String, ProcessingError> {

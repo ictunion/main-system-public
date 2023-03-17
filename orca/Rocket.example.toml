@@ -20,8 +20,9 @@ log_level = "debug"
 notification_email = ""
 email_sender_email = ""
 email_sender_name = "Planning Game"
-email_confirmation_template = "email_confirmation"
 email_new_registration_notification_template = "new_registration_notification_template"
+email_confirmation_templates = { default = "email_confirmation-en", cs = "email_confirmation-cs" }
+email_confirmation_subjects = { default = "Verify Email Address", cs = "Potvrď e-mail" }
 
 # Database
 postgres = "postgres://orca@localhost/ictunion"
