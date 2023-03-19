@@ -1,0 +1,36 @@
+name: "Publish Source"
+
+on:
+  push:
+
+jobs:
+  publish-code:
+    # TODO: change this to main-system once we have actions
+    if: ${{ github.event.repository.name }} == 'union-system' && ${{ github.ref_name }} == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # See documentation for the action
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.GIT_SSH_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          if_key_exists: fail
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v18
+
+      - name: Create anonymized repo
+        run: nix run github:ictunion/git-anonymize -- . -o /tmp/anonymized -n 'ICT Guerrilla' -e 'ictguerrilla@proton.me' -c none
+
+      - name: Publish anonymized repository
+        working-directory: /tmp/anonymized
+        run: |
+          git checkout ${{ github.ref_name }}
+          git remote add origin git@github.com:ictunion/main-system-public.git
+          git push --force origin ${{ github.ref_name }}
