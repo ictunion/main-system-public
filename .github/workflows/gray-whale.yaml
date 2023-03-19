@@ -1,7 +1,6 @@
 name: "Gray Whale"
 
 on:
-  pull_request:
   push:
 
 jobs:

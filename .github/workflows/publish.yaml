@@ -26,7 +26,7 @@ jobs:
         uses: cachix/install-nix-action@v18
 
       - name: Create anonymized repo
-        run: nix run github:ictunion/git-anonymize -- . -o /tmp/anonymized -n 'ICT Guerrilla' -e 'ictguerrilla@proton.me' -c none
+        run: nix run github:ictunion/git-anonymize -- . -o /tmp/anonymized -n 'ICT Guerrilla' -e 'ictguerrilla@proton.me'
 
       - name: Publish anonymized repository
         working-directory: /tmp/anonymized
