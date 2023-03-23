@@ -1,10 +1,24 @@
-\documentclass[a4]{article}
+\documentclass[]{article}
+
+\usepackage{amsfonts}
+\usepackage{fontspec}
+
+%% Basic font
+\setmainfont[
+  BoldFont={IBMPlexSerif-Bold.otf},
+  ItalicFont={IBMPlexSerif-Italic.otf},
+  BoldItalicFont={IBMPlexSerif-BoldItalic.otf}
+]{IBMPlexSerif-Regular.otf}
+
+\renewcommand{\baselinestretch}{1.5}
 
 \usepackage[czech]{babel}
 \usepackage{graphicx} % Required for inserting images
 
+\usepackage{xcolor}
+
 %Paper size
-\usepackage[includehead, nomarginpar, top = 0mm, right = 15mm, left = 15mm]{geometry}
+\usepackage[includehead, nomarginpar, top = 0mm, right = 30mm, left = 30mm]{geometry}
 
 \usepackage{fancyhdr}
 
@@ -20,50 +34,81 @@
 \setlength\parindent{0pt}
 
 \fancyhead{}
-\fancyfoot[L]{Souhlasím s uchováním těchto mnou poskytnutých osobních údajů v souvislosti s evidencí mého členství.}
+\fancyfoot[L]{\it{\langFootnote}}
 \renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.3pt}
 \pagestyle{fancy}
 
 \input{data.tex}
+\input{lang.tex}
+
+\newcommand{\entry}[2]{
+  \parbox[t]{0.25\textwidth}{\color{black}#1:}
+  \parbox[t]{0.75\textwidth}{\color{gray}\longunderline{\color{black}#2}}
+}
+
+\newcommand{\field}[1]{
+  \textbf{\hspace{2mm}\underline{\hspace{1mm}#1\hspace{1mm}}\hspace{2mm}}
+}
 
 \begin{document}
 
-	\LARGE
+    \parbox[t]{0.75\textwidth}{
+      \textbf{\LARGE{\langTitle}}\\
+      \bf{\langSubTitle}
+    } $ \begin{array}{l}\hfill\includegraphics[scale=0.35]{logo}\end{array} $\\
 
+    \vspace{10mm}
 
-	\textbf{PŘIHLÁŠKA PRO NOVÉ ČLENY A ČLENKY} $ \begin{array}{l}\includegraphics[scale=0.35]{logo}\end{array} $	 \\
+    \langDescription\\
+    Odborové organizace pracujících v ICT.
 
-	\large
+    \vspace{10mm}
 
-	Vyplněním této přihlášky vyjadřuji svou svobodnou vůli stát se členem\_členkou
-	Odborové organizace pracujících v ICT.\\
+    \entry{\langFirstName}{\Name}
+    \entry{\langLastName}{\Surname}
+    \entry{\langDateOfBirth}{\DateOfBirth}
+	\entry{\langPhone}{\Phone}
+    \entry{\langEmial}{\Email}
 
-	Jméno: \longunderline{\Name}\\
+	\section{\langAddress}
 
-	Příjmení: \longunderline{\Surname}\\
+    \entry{\langStreetNo}{\Address}
+    \parbox[t]{0.25\textwidth}{
+      \color{black}{\langCity}:
+    }
+    \parbox[t]{0.35\textwidth}{
+      \color{gray}\longunderline{\color{black}\City}
+    }
+    \hfill
+    \parbox[t]{0.08\textwidth}{
+      \color{black}{\langZipCode}:
+    }
+    \parbox[t]{0.27\textwidth}{
+      \color{gray}\longunderline{\color{black}\Zipcode}
+    }
 
-	Datum narození: \longunderline{\DateOfBirth}\\
+	\section{\langEmployment}
 
-	Soukromý telefon: \longunderline{\Phone}\\
+    \entry{\langCompany}{\Company}
+	\entry{\langOccupation}{\Position}
 
-	Soukromý email: \longunderline{\Email}\\
+    \vspace{1.5mm}
 
-	\section{Adresa}
+    \langConfirmation
 
-	Ulice a číslo: \longunderline{\Address}\\
+    \vspace{7mm}
 
-	Město: \longunderline{\City} PSČ: \longunderline{\Zipcode} \\
-
-	\section{Zaměstnání}
-
-	Název firmy: \longunderline{\Company}\\
-
-	Pracovní pozice: \longunderline{\Position}\\
-
-	Podpisem se zavazuji, že budu plnit povinnosti vyplývající ze stanov.\\\\
-
-	%Include signature with data from data.tex
-	V...\textbf{Prague}... dne ...\textbf{\today}... \hspace{50mm} Podpis: $ \begin{array}{l}\includegraphics{signature}\end{array} $  \\
+    \parbox[t]{0.5\textwidth}{
+      \vspace{3mm}
+      \hspace{10mm}\langPlaceDate \field{\today}
+    }
+    \hfill
+    \parbox[t]{0.5\textwidth}{
+      \hspace{1mm}\langSignature:
+      \vspace{1mm}\\
+      \color{gray}
+      \fbox{$ \begin{array}{l}\includegraphics[width=63mm,scale=0.4]{signature}\end{array} $}
+    }
 
 \end{document}

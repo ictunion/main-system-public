@@ -11,7 +11,7 @@
         inherit system;
         overlays = [];
       };
-      tex = with pkgs; import ./tex.nix { inherit texlive; };
+      tex = with pkgs; import ./latex { inherit texlive; };
       buildInputs = with pkgs; [
         tex
         rustup
@@ -28,6 +28,7 @@
             rustup install stable
             rustup override set stable
           '';
+          OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
         };
       defaultPackage = pkgs.callPackage ./default.nix {};
   });

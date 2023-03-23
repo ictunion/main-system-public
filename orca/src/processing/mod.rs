@@ -2,6 +2,7 @@
 //! This is done using `tokio::sync::mpsc` channels
 //! We spam to run outside of request processing threads (workers).
 //! This also might be called `queue` or `worker`
+use phf::phf_map;
 
 use time::Date;
 use tokio::fs;
@@ -235,7 +236,7 @@ async fn process_new_registration(
         .await?;
 
     // Remove directory containing data for processing
-    fs::remove_dir_all(processing_dir).await?;
+    // fs::remove_dir_all(processing_dir).await?;
 
     Ok(())
 }
@@ -265,17 +266,17 @@ async fn print_tex_header(details: &RegistrationDetails) -> Result<String, Proce
     // TODO: implement tex escaping!
     Ok(format!(
         "\
-\\newcommand{{\\Name}}{{{}}}
-\\newcommand{{\\Surname}}{{{}}}
-\\newcommand{{\\DateOfBirth}}{{{}}}
-\\newcommand{{\\Phone}}{{{}}}
-\\newcommand{{\\Email}}{{{}}}
-\\newcommand{{\\Address}}{{{}}}
-\\newcommand{{\\City}}{{{}}}
-\\newcommand{{\\Zipcode}}{{{}}}
-\\newcommand{{\\Company}}{{{}}}
-\\newcommand{{\\Position}}{{{}}}
-\\newcommand{{\\Signature}}{{{}}}
+\\def\\Name{{{}}}
+\\def\\Surname{{{}}}
+\\def\\DateOfBirth{{{}}}
+\\def\\Phone{{{}}}
+\\def\\Email{{{}}}
+\\def\\Address{{{}}}
+\\def\\City{{{}}}
+\\def\\Zipcode{{{}}}
+\\def\\Company{{{}}}
+\\def\\Position{{{}}}
+\\def\\Signature{{{}}}
 ",
         details.first_name.as_deref().escape_tex(),
         details.last_name.as_deref().escape_tex(),
@@ -291,6 +292,18 @@ async fn print_tex_header(details: &RegistrationDetails) -> Result<String, Proce
         details.occupation.as_deref().escape_tex(),
         &signature.escape_tex()
     ))
+}
+
+const DEFAULT_PDF_TRANSLATION: &'static str = include_str!("../../latex/lang.en.tex");
+static PDF_LOCALIZATIONS: phf::Map<&'static str, &'static str> = phf_map!(
+    "en" => DEFAULT_PDF_TRANSLATION,
+    "cs" => include_str!("../../latex/lang.cs.tex"),
+);
+
+fn get_pdf_localization(lang: &str) -> &'static str {
+    PDF_LOCALIZATIONS
+        .get(lang)
+        .unwrap_or(&DEFAULT_PDF_TRANSLATION)
 }
 
 /// Given a member id, directory and db_pool
@@ -313,6 +326,12 @@ async fn print_pdf(
 
     // Write static content to directory
     fs::write(format!("{dir}/registration.tex"), form_tex).await?;
+    fs::write(format!("{dir}/registration.tex"), form_tex).await?;
+    fs::write(
+        format!("{dir}/lang.tex"),
+        get_pdf_localization(&member_details.registration_local),
+    )
+    .await?;
     fs::write(format!("{dir}/logo.png"), logo_png).await?;
 
     // Spawn xelatex process to print the pdf

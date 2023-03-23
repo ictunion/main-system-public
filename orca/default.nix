@@ -7,10 +7,11 @@
 , texlive
 , makeWrapper
 , nix-gitignore
+, ibm-plex
 , buildFeatures ? []
 }:
 let
-  tex = import ./tex.nix { inherit texlive; };
+  tex = import ./latex { inherit texlive; };
 in
 # TODO: add wrapProgram to configure path to tex
 rustPlatform.buildRustPackage {
@@ -27,6 +28,8 @@ rustPlatform.buildRustPackage {
     darwin.apple_sdk.frameworks.Security
   ];
   postInstall = ''
-    wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
+    wrapProgram "$out/bin/orca" \\
+      --suffix PATH : "${tex}/bin" \\
+      --suffix OSFONTDIR : "${ibm-plex}/share/fonts/opentype"
   '';
 }
