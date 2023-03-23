@@ -11,7 +11,7 @@
         inherit system;
         overlays = [];
       };
-      tex = with pkgs; import ./tex.nix { inherit texlive; };
+      tex = with pkgs; import ./latex { inherit texlive; };
       buildInputs = with pkgs; [
         tex
         rustup

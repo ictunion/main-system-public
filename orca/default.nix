@@ -10,7 +10,7 @@
 , buildFeatures ? []
 }:
 let
-  tex = import ./tex.nix { inherit texlive; };
+  tex = import ./latex { inherit texlive; };
 in
 # TODO: add wrapProgram to configure path to tex
 rustPlatform.buildRustPackage {
