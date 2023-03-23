@@ -34,12 +34,13 @@
 \setlength\parindent{0pt}
 
 \fancyhead{}
-\fancyfoot[L]{\it{Souhlasím s uchováním těchto mnou poskytnutých osobních údajů v souvislosti s evidencí mého členství.}}
+\fancyfoot[L]{\it{\langFootnote}}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0.3pt}
 \pagestyle{fancy}
 
 \input{data.tex}
+\input{lang.\Lang.tex}
 
 \newcommand{\entry}[2]{
   \parbox[t]{0.25\textwidth}{\color{black}#1:}
@@ -53,56 +54,57 @@
 \begin{document}
 
     \parbox[t]{0.75\textwidth}{
-      \textbf{\LARGE{PŘIHLÁŠKA}}\\
+      \textbf{\LARGE{\langTitle}}\\
       \bf{O členství}
     } $ \begin{array}{l}\hfill\includegraphics[scale=0.35]{logo}\end{array} $\\
 
     \vspace{10mm}
 
-	Vyplněním této přihlášky vyjadřuji svou svobodnou vůli stát se členem*kou\\
-	Odborové organizace pracujících v ICT.\\
+    \langDescription
 
-    \entry{Jméno}{\Name}
-    \entry{Příjmení}{\Surname}
-    \entry{Datum narození}{\DateOfBirth}
-	\entry{Telefon}{\Phone}
-    \entry{E-mail}{\Email}
+    \vspace{10mm}
 
-	\section{Adresa}
+    \entry{\langFirstName}{\Name}
+    \entry{\langLastName}{\Surname}
+    \entry{\langDateOfBirth}{\DateOfBirth}
+	\entry{\langPhone}{\Phone}
+    \entry{\langEmial}{\Email}
 
-    \entry{Ulice a číslo}{\Address}
+	\section{\langAddress}
+
+    \entry{\langStreetNo}{\Address}
     \parbox[t]{0.25\textwidth}{
-      \color{black}{Město}:
+      \color{black}{\langCity}:
     }
     \parbox[t]{0.35\textwidth}{
       \color{gray}\longunderline{\color{black}\City}
     }
     \hfill
     \parbox[t]{0.08\textwidth}{
-      \color{black}{PSČ}:
+      \color{black}{\langZipCode}:
     }
     \parbox[t]{0.27\textwidth}{
       \color{gray}\longunderline{\color{black}\Zipcode}
     }
 
-	\section{Zaměstnání}
+	\section{\langEmployment}
 
-    \entry{Název firmy}{\Company}
-	\entry{Pracovní pozice}{\Position}
+    \entry{\langCompany}{\Company}
+	\entry{\langOccupation}{\Position}
 
     \vspace{1.5mm}
 
-	Podpisem se zavazuji, že budu plnit povinnosti vyplývající ze stanov.
+    \langConfirmation
 
     \vspace{7mm}
 
     \parbox[t]{0.5\textwidth}{
       \vspace{3mm}
-      \hspace{10mm}V \field{Praze} dne \field{\today}
+      \hspace{10mm}\langPlaceDate \field{\today}
     }
     \hfill
     \parbox[t]{0.5\textwidth}{
-      \hspace{1mm}Podpis:
+      \hspace{1mm}\langSignature:
       \vspace{1mm}\\
       \color{gray}
       \fbox{$ \begin{array}{l}\includegraphics[width=63mm,scale=0.4]{signature}\end{array} $}
