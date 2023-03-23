@@ -28,6 +28,7 @@
             rustup install stable
             rustup override set stable
           '';
+          OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
         };
       defaultPackage = pkgs.callPackage ./default.nix {};
   });

@@ -235,7 +235,7 @@ async fn process_new_registration(
         .await?;
 
     // Remove directory containing data for processing
-    fs::remove_dir_all(processing_dir).await?;
+    // fs::remove_dir_all(processing_dir).await?;
 
     Ok(())
 }
