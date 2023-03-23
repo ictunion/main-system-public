@@ -29,6 +29,7 @@ extern crate validator;
 extern crate log;
 extern crate chrono;
 extern crate fern;
+extern crate phf;
 
 mod api;
 mod config;
