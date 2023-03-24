@@ -17,10 +17,10 @@ requires just permissions for reading and writing the data (no alterations of sc
 
 Every sub-system has its own documentation within README.md file!
 
-| name                     | status                                                                                                     | role                                |
-|--------------------------|------------------------------------------------------------------------------------------------------------|-------------------------------------|
-| [Gray Whale](gray-whale) | ![status](https://github.com/ictunion/main-system/actions/workflows/gray-whale.yaml/badge.svg?branch=main) | Database migrations and management  |
-| [Orca](orca)             | ![status](https://github.com/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)       | Registration and members management |
+| name                     | status                                                             | role                                |
+|--------------------------|--------------------------------------------------------------------|-------------------------------------|
+| [Gray Whale](gray-whale) | ![status](actions/workflows/gray-whale.yaml/badge.svg?branch=main) | Database migrations and management  |
+| [Orca](orca)             | ![status](actions/workflows/orca.yaml/badge.svg?branch=main)       | Registration and members management |
 
 ## Goals
 
