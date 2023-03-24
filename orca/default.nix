@@ -20,7 +20,7 @@ rustPlatform.buildRustPackage {
   pname = "ict-union-orca";
   version = "0.1.0";
   src = nix-gitignore.gitignoreSource [] ./.;
-  cargoSha256 = "sha256-YZUV3la7cpk2eW/yWJueEaM721gdTALQ6OJ421tPBpw=";
+  cargoSha256 = "sha256-So9tg/nZnLj5lJBftKdCFvUQf2ac8urI9kYlJrtjU8E=";
 
   nativeBuildInputs = [ pkg-config makeWrapper ];
 
@@ -28,8 +28,6 @@ rustPlatform.buildRustPackage {
     darwin.apple_sdk.frameworks.Security
   ];
   postInstall = ''
-    wrapProgram "$out/bin/orca" \\
-      --suffix PATH : "${tex}/bin" \\
-      --suffix OSFONTDIR : "${ibm-plex}/share/fonts/opentype"
+    wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
   '';
 }
