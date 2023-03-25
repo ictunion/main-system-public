@@ -10,3 +10,4 @@
 !/data/.gitkeep
 /Rocket.toml
 /result*
+/latex/lang.tex
