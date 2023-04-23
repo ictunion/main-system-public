@@ -136,20 +136,7 @@ async fn process(
 
                 message
                     .add_recipient(notification_email.to_string(), "Notifications".to_string())
-                    .attach(pdf_attachement)
-                    .bind(TemplateContentItem::new(
-                        "first_name",
-                        from_optional_sring(&reg_details.first_name),
-                    ))
-                    .bind(TemplateContentItem::new(
-                        "last_name",
-                        from_optional_sring(&reg_details.last_name),
-                    ))
-                    .bind(TemplateContentItem::new("email", &reg_details.email))
-                    .bind(TemplateContentItem::new(
-                        "phone_number",
-                        from_optional_sring(&reg_details.phone_number),
-                    ));
+                    .attach(pdf_attachement);
 
                 email_sender
                     .send_template(
