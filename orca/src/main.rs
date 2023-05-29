@@ -14,13 +14,9 @@ extern crate rand;
 #[macro_use]
 extern crate rocket;
 extern crate cfg_if;
-extern crate hyper;
-extern crate hyper_openssl;
 extern crate image;
-extern crate openssl;
 extern crate rocket_validation;
 extern crate rustc_serialize;
-extern crate serde_json;
 extern crate sqlx;
 extern crate time;
 extern crate tokio;
@@ -30,6 +26,7 @@ extern crate log;
 extern crate chrono;
 extern crate fern;
 extern crate phf;
+// extern crate handlebars;
 
 mod api;
 mod config;

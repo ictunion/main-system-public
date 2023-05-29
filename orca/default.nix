@@ -13,14 +13,13 @@
 let
   tex = import ./latex { inherit texlive; };
 in
-# TODO: add wrapProgram to configure path to tex
 rustPlatform.buildRustPackage {
   inherit buildFeatures;
 
   pname = "ict-union-orca";
   version = "0.1.0";
   src = nix-gitignore.gitignoreSource [] ./.;
-  cargoSha256 = "sha256-So9tg/nZnLj5lJBftKdCFvUQf2ac8urI9kYlJrtjU8E=";
+  cargoSha256 = "sha256-Hmmvh0sPjr35JTliBzACtlAIcpECCR0dBNvwE3hehFA=";
 
   nativeBuildInputs = [ pkg-config makeWrapper ];
 

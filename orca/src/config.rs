@@ -5,16 +5,11 @@ use rocket::figment::{
 
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum EmailSender {
-    TestSender,
-    Mandrill(String),
-}
+use self::templates::Templates;
+pub mod templates;
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub email_sender: EmailSender,
-    pub mandrill_api_host: String,
     pub email_sender_email: String,
     pub email_sender_name: Option<String>,
     pub host: String,
@@ -25,11 +20,13 @@ pub struct Config {
     pub processing_queue_size: usize,
     pub verify_redirects_to: HashMap<String, String>,
     pub notification_email: Option<String>,
-    pub email_new_registration_notification_template: String,
-    pub email_confirmation_templates: HashMap<String, String>,
     pub email_confirmation_subjects: HashMap<String, String>,
     /// This is rocket level value, not logger one
     pub log_level: rocket::config::LogLevel,
+    pub smtp_host: String,
+    pub smtp_user: String,
+    pub smtp_password: String,
+    pub templates: templates::Templates<'static>,
 }
 
 impl Config {
@@ -39,17 +36,6 @@ impl Config {
             .merge(Toml::file("Rocket.toml").nested())
             .merge(Env::prefixed("ROCKET_").global())
             .select(Profile::from_env_or("ROCKET_PROFILE", "default"));
-
-        let mandrill_api_key: Result<String, _> = figment.extract_inner("mandrill_api_key");
-
-        let email_sender = match mandrill_api_key {
-            Ok(api_key) => EmailSender::Mandrill(api_key),
-            Err(_) => EmailSender::TestSender,
-        };
-
-        let mandrill_api_host = figment
-            .extract_inner("mandrill_api_host")
-            .unwrap_or("https://mandrillapp.com/api/1.0".to_string());
 
         let email_sender_email = figment
             .extract_inner("email_sender_email")
@@ -77,14 +63,6 @@ impl Config {
 
         let notification_email = figment.extract_inner("notification_email").ok();
 
-        let email_new_registration_notification_template = figment
-            .extract_inner("email_new_registration_notification_template")
-            .unwrap_or("new_registration_notification_template".to_string());
-
-        let email_confirmation_templates = figment
-            .extract_inner("email_confirmation_templates")
-            .unwrap_or(HashMap::new());
-
         let email_confirmation_subjects = figment
             .extract_inner("email_confirmation_subjects")
             .unwrap_or(HashMap::new());
@@ -93,9 +71,27 @@ impl Config {
             .extract_inner("log_level")
             .unwrap_or(rocket::config::LogLevel::Normal);
 
+        let smtp_host = figment
+            .extract_inner("smtp_host")
+            .unwrap_or("localhost".to_string());
+
+        let smtp_user = figment
+            .extract_inner("smtp_user")
+            .unwrap_or("orca".to_string());
+
+        let smtp_password = figment
+            .extract_inner("smtp_password")
+            .unwrap_or(String::new());
+
+        let templates_path = figment
+            .extract_inner("templates_path")
+            .unwrap_or("./templates");
+
+        let mut templates = Templates::new();
+        // This makes app fail at startup in case there is some error which we want
+        templates.preload_templates(templates_path).unwrap();
+
         Self {
-            email_sender,
-            mandrill_api_host,
             email_sender_email,
             email_sender_name,
             host,
@@ -106,10 +102,12 @@ impl Config {
             processing_queue_size,
             verify_redirects_to,
             notification_email,
-            email_new_registration_notification_template,
-            email_confirmation_templates,
             email_confirmation_subjects,
             log_level,
+            smtp_host,
+            smtp_user,
+            smtp_password,
+            templates,
         }
     }
 
@@ -120,17 +118,6 @@ impl Config {
                 .verify_redirects_to
                 .get("default")
                 .unwrap_or(&self.host)
-                .to_string(),
-        }
-    }
-
-    pub fn email_confirmation_template_for_local(&self, lang: &str) -> String {
-        match self.email_confirmation_templates.get(lang) {
-            Some(template) => template.to_string(),
-            None => self
-                .email_confirmation_templates
-                .get("default")
-                .unwrap_or(&"email_confirmation".to_string())
                 .to_string(),
         }
     }

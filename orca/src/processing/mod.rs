@@ -1,4 +1,3 @@
-//! Implement async processing of data
 //! This is done using `tokio::sync::mpsc` channels
 //! We spam to run outside of request processing threads (workers).
 //! This also might be called `queue` or `worker`
@@ -11,17 +10,18 @@ use tokio::process;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
+use lettre::{
+    address, message::Attachment, message::Mailbox, message::MultiPart, message::SinglePart,
+    transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
+    Tokio1Executor,
+};
 use std::process::Stdio;
 
-mod mandrill;
-use mandrill::{Attachement, TemplateMessage};
-
+use crate::config::templates;
 use crate::config::Config;
 use crate::data::{Id, RegistrationRequest};
 use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};
-
-use self::mandrill::TemplateContentItem;
 
 mod query;
 
@@ -58,7 +58,6 @@ impl QueueSender {
 }
 
 pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
-    let email_sender: mandrill::Sender = mandrill::Sender::new(config);
     let (sender, mut receiver) = mpsc::channel::<Command>(config.processing_queue_size);
     let our_conf = config.clone();
 
@@ -67,7 +66,7 @@ pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
         while let Some(cmd) = receiver.recv().await {
             let cmd_info = cmd.to_string();
             info!("Processiong command: {cmd_info}");
-            match process(cmd, &our_conf, &db_pool, &email_sender).await {
+            match process(cmd, &our_conf, &db_pool).await {
                 Ok(()) => info!("Command processed successfully"),
                 Err(err) => error!("Processing of cmd: {cmd_info} failed with: {:?}", err),
             }
@@ -81,7 +80,10 @@ pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
 enum ProcessingError {
     Io(io::Error),
     Sql(sqlx::Error),
-    EmailSender(mandrill::SenderError),
+    EmailAddress(address::AddressError),
+    EmailRendering(handlebars::RenderError),
+    Lettre(lettre::error::Error),
+    Smtp(lettre::transport::smtp::Error),
 }
 
 impl From<io::Error> for ProcessingError {
@@ -96,9 +98,27 @@ impl From<sqlx::Error> for ProcessingError {
     }
 }
 
-impl From<mandrill::SenderError> for ProcessingError {
-    fn from(value: mandrill::SenderError) -> Self {
-        Self::EmailSender(value)
+impl From<address::AddressError> for ProcessingError {
+    fn from(value: address::AddressError) -> Self {
+        Self::EmailAddress(value)
+    }
+}
+
+impl From<lettre::error::Error> for ProcessingError {
+    fn from(value: lettre::error::Error) -> Self {
+        Self::Lettre(value)
+    }
+}
+
+impl From<handlebars::RenderError> for ProcessingError {
+    fn from(value: handlebars::RenderError) -> Self {
+        Self::EmailRendering(value)
+    }
+}
+
+impl From<lettre::transport::smtp::Error> for ProcessingError {
+    fn from(value: lettre::transport::smtp::Error) -> Self {
+        Self::Smtp(value)
     }
 }
 
@@ -106,44 +126,48 @@ async fn process(
     command: Command,
     config: &Config,
     db_pool: &DbPool,
-    email_sender: &mandrill::Sender,
 ) -> Result<(), ProcessingError> {
     use Command::*;
     match command {
         NewRegistrationRequest(reg_id, signature, verification_token) => {
-            process_new_registration(
-                reg_id,
-                signature,
-                verification_token,
-                config,
-                db_pool,
-                email_sender,
-            )
-            .await
+            process_new_registration(reg_id, signature, verification_token, config, db_pool).await
         }
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured
             if let Some(notification_email) = &config.notification_email {
-                let (pdf_data,) = query::fetch_registration_pdf_base64(reg_id)
+                let (pdf_data,) = query::fetch_registration_pdf(reg_id)
                     .fetch_one(db_pool)
                     .await?;
 
-                let reg_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
+                let sender_info: Mailbox = format!(
+                    "{} <{}>",
+                    config.email_sender_name.clone().unwrap_or("".to_string()),
+                    config.email_sender_email
+                )
+                .parse()?;
 
-                let pdf_attachement =
-                    Attachement::new_base64("registration.pdf", "application/pdf", pdf_data);
-                let mut message = TemplateMessage::new("New Registerarion Request", config);
+                let renderer = config
+                    .templates
+                    .renderer(&templates::NEW_APPLICATION_NOTICE, "default");
+                let message_html = config.templates.render(&renderer)?;
 
-                message
-                    .add_recipient(notification_email.to_string(), "Notifications".to_string())
-                    .attach(pdf_attachement);
+                let message = Message::builder()
+                    .from(sender_info.clone())
+                    .reply_to(sender_info)
+                    .to(format!("Notifications <{}>", notification_email).parse()?)
+                    .subject("New Application")
+                    .multipart(
+                        MultiPart::related()
+                            .singlepart(SinglePart::html(message_html))
+                            .singlepart(
+                                Attachment::new(String::from("application.pdf"))
+                                    // This should never fail
+                                    // we generate the pdf ourselves so we know it will be valid
+                                    .body(pdf_data, "application/pdf".parse().unwrap()),
+                            ),
+                    )?;
 
-                email_sender
-                    .send_template(
-                        &config.email_new_registration_notification_template,
-                        message,
-                    )
-                    .await?;
+                send_email(config, message).await?;
             }
 
             Ok(())
@@ -151,11 +175,15 @@ async fn process(
     }
 }
 
-fn from_optional_sring(string: &Option<String>) -> &str {
-    match &string {
-        Some(s) => s,
-        None => "[none]",
-    }
+async fn send_email(config: &Config, message: Message) -> Result<(), ProcessingError> {
+    let creds = Credentials::new(config.smtp_user.to_owned(), config.smtp_password.to_owned());
+    let mailer: AsyncSmtpTransport<Tokio1Executor> =
+        AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)?
+            .credentials(creds)
+            .build();
+
+    mailer.send(message).await?;
+    Ok(())
 }
 
 async fn process_new_registration(
@@ -164,7 +192,6 @@ async fn process_new_registration(
     verification_token: String,
     config: &Config,
     db_pool: &DbPool,
-    email_sender: &mandrill::Sender,
 ) -> Result<(), ProcessingError> {
     // Prepare directory & image data for processing
     let processing_dir = format!("data/refistration_requests/{reg_id}");
@@ -191,31 +218,55 @@ async fn process_new_registration(
         "{}/registration/{}/confirm",
         config.host, verification_token
     );
-    let pdf_attachement = Attachement::new("registration.pdf", "application/pdf", &pdf_data);
+
+    let sender_info: Mailbox = format!(
+        "{} <{}>",
+        config.email_sender_name.clone().unwrap_or("".to_string()),
+        config.email_sender_email
+    )
+    .parse()?;
+
     let full_name = format!(
         "{} {}",
         member_details.first_name.as_deref().unwrap_or(""),
         member_details.last_name.as_deref().unwrap_or("")
     );
     let subject = config.email_confirmation_subject_for_local(lang);
-    let mut message = TemplateMessage::new(&subject, config);
 
-    message
-        .add_recipient(member_details.email, full_name)
-        .attach(pdf_attachement)
-        .bind(TemplateContentItem::new(
+    let mut renderer = config
+        .templates
+        .renderer(&templates::EMAIL_VERIFICATION, lang);
+
+    renderer
+        .bind(
             "first_name",
-            from_optional_sring(&member_details.first_name),
-        ))
-        .bind(TemplateContentItem::new(
+            member_details.first_name.as_deref().unwrap_or(""),
+        )
+        .bind(
             "last_name",
-            from_optional_sring(&member_details.last_name),
-        ))
-        .bind(TemplateContentItem::new("verify_link", &verify_url));
+            member_details.last_name.as_deref().unwrap_or(""),
+        )
+        .bind("Verify_link", &verify_url);
 
-    email_sender
-        .send_template(&config.email_confirmation_template_for_local(lang), message)
-        .await?;
+    let message_html = config.templates.render(&renderer)?;
+
+    let message = Message::builder()
+        .from(sender_info.clone())
+        .reply_to(sender_info)
+        .to(format!("{} <{}>", full_name, member_details.email).parse()?)
+        .subject(subject)
+        .multipart(
+            MultiPart::related()
+                .singlepart(SinglePart::html(message_html))
+                .singlepart(
+                    Attachment::new(String::from("application.pdf"))
+                        // This should never fail
+                        // we generate the pdf ourselves so we know it will be valid
+                        .body(pdf_data, "application/pdf".parse().unwrap()),
+                ),
+        )?;
+
+    send_email(config, message).await?;
 
     // Update info in DB about email being sent
     query::track_verification_sent_at(reg_id)
@@ -223,7 +274,7 @@ async fn process_new_registration(
         .await?;
 
     // Remove directory containing data for processing
-    // fs::remove_dir_all(processing_dir).await?;
+    fs::remove_dir_all(processing_dir).await?;
 
     Ok(())
 }
@@ -281,7 +332,7 @@ async fn print_tex_header(details: &RegistrationDetails) -> Result<String, Proce
     ))
 }
 
-const DEFAULT_PDF_TRANSLATION: &'static str = include_str!("../../latex/lang.en.tex");
+const DEFAULT_PDF_TRANSLATION: &str = include_str!("../../latex/lang.en.tex");
 static PDF_LOCALIZATIONS: phf::Map<&'static str, &'static str> = phf_map!(
     "en" => DEFAULT_PDF_TRANSLATION,
     "cs" => include_str!("../../latex/lang.cs.tex"),

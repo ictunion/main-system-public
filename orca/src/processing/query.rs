@@ -37,10 +37,10 @@ WHERE id = $1
     .bind(id)
 }
 
-pub fn fetch_registration_pdf_base64(id: Id<RegistrationRequest>) -> QueryAs<'static, (String,)> {
+pub fn fetch_registration_pdf(id: Id<RegistrationRequest>) -> QueryAs<'static, (Vec<u8>,)> {
     sqlx::query_as(
         "
-SELECT encode(data, 'base64') FROM files
+SELECT data FROM files
 WHERE registration_request_id = $1
     AND file_type = 'pdf'
     AND name = 'registration'

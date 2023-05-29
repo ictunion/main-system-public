@@ -9,20 +9,16 @@ host = "http://localhost:8000"
 # Logging
 log_level = "debug"
 
-# API key for mandrill (mailchip transactional emails)
-# Remember that this is secret!
-# If this is not defined instead of sending emails we
-# Just log information that email would be send (for development purposes)
-# This requires info level log to be enabled (which is by default)
-# mandrill_api_key = ""
+# Email (smtp) configuration
+smtp_host = "mail.ictunion.cz"
+smtp_user = "noreply@ictunion.cz"
+smtp_password = "68aCcVVawagc4v"
 
-# Email (mandrill) configuration
+# Email configuration
 notification_email = ""
 email_sender_email = ""
-email_sender_name = "Planning Game"
-email_new_registration_notification_template = "new_registration_notification_template"
-email_confirmation_templates = { default = "email_confirmation-en", cs = "email_confirmation-cs" }
-email_confirmation_subjects = { default = "Verify Email Address", cs = "Potvrď e-mail" }
+email_sender_name = "ICT Union"
+templates_path = "./templates"
 
 # Database
 postgres = "postgres://orca@localhost/ictunion"
