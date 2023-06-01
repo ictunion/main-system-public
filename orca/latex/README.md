@@ -10,4 +10,4 @@ then you should be able to run:
 xelatex registration.tex
 ```
 
-You also need to have opetype IBM/Plex fonts in your system. You can download them on [Github](https://github.com/IBM/plex/releases/latest)
+You also need to have opentype IBM/Plex fonts in your system. You can download them on [Github](https://github.com/IBM/plex/releases/latest)
