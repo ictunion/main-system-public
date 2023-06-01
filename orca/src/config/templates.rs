@@ -24,7 +24,7 @@ pub struct Templates<'a> {
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
-    TemplateLoading(handlebars::TemplateError),
+    TemplateLoading(Box<handlebars::TemplateError>),
 }
 
 impl From<std::io::Error> for Error {
@@ -35,7 +35,7 @@ impl From<std::io::Error> for Error {
 
 impl From<handlebars::TemplateError> for Error {
     fn from(value: handlebars::TemplateError) -> Self {
-        Self::TemplateLoading(value)
+        Self::TemplateLoading(Box::new(value))
     }
 }
 
@@ -62,6 +62,7 @@ impl<'a> Templates<'a> {
     }
 
     fn load_template(&mut self, path: &str, template: &Template) -> Result<(), Error> {
+        println!("{}", path);
         // Tempalte can be directory containing different translations
         // default.html is translation which gets used when no other translation is found.
         match fs::read_dir(format!("{}/{}", path, template.name)) {

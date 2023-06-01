@@ -214,7 +214,7 @@ async fn process_new_registration(
         .await?;
 
     // Send email
-    let verify_url = format!(
+    let verify_link = format!(
         "{}/registration/{}/confirm",
         config.host, verification_token
     );
@@ -246,7 +246,7 @@ async fn process_new_registration(
             "last_name",
             member_details.last_name.as_deref().unwrap_or(""),
         )
-        .bind("Verify_link", &verify_url);
+        .bind("verify_link", &verify_link);
 
     let message_html = config.templates.render(&renderer)?;
 

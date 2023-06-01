@@ -18,7 +18,7 @@ smtp_password = "68aCcVVawagc4v"
 notification_email = ""
 email_sender_email = ""
 email_sender_name = "ICT Union"
-templates_path = "./templates"
+templates_dir = "./templates"
 
 # Database
 postgres = "postgres://orca@localhost/ictunion"

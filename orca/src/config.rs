@@ -83,13 +83,11 @@ impl Config {
             .extract_inner("smtp_password")
             .unwrap_or(String::new());
 
-        let templates_path = figment
-            .extract_inner("templates_path")
-            .unwrap_or("./templates");
+        let templates_path: String = figment.extract_inner("templates_dir").unwrap();
 
         let mut templates = Templates::new();
         // This makes app fail at startup in case there is some error which we want
-        templates.preload_templates(templates_path).unwrap();
+        templates.preload_templates(&templates_path).unwrap();
 
         Self {
             email_sender_email,
