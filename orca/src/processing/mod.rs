@@ -151,16 +151,31 @@ async fn process(
                     .renderer(&templates::NEW_APPLICATION_NOTICE, "default");
                 let message_html = config.templates.render(&renderer)?;
 
+                // We need member details because we want to customize email subject/pdf name
+                let member_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
+
+                let email_subject = format!(
+                    "New Application - {} {}",
+                    member_details.first_name.as_deref().unwrap_or(""),
+                    member_details.last_name.as_deref().unwrap_or("")
+                );
+
+                let pdf_name = format!(
+                    "{}_{}.pdf",
+                    member_details.first_name.as_deref().unwrap_or(""),
+                    member_details.last_name.as_deref().unwrap_or("")
+                );
+
                 let message = Message::builder()
                     .from(sender_info.clone())
                     .reply_to(sender_info)
                     .to(format!("Notifications <{}>", notification_email).parse()?)
-                    .subject("New Application")
+                    .subject(email_subject)
                     .multipart(
                         MultiPart::related()
                             .singlepart(SinglePart::html(message_html))
                             .singlepart(
-                                Attachment::new(String::from("application.pdf"))
+                                Attachment::new(String::from(pdf_name))
                                     // This should never fail
                                     // we generate the pdf ourselves so we know it will be valid
                                     .body(pdf_data, "application/pdf".parse().unwrap()),
