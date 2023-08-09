@@ -209,7 +209,7 @@ async fn process_new_registration(
     db_pool: &DbPool,
 ) -> Result<(), ProcessingError> {
     // Prepare directory & image data for processing
-    let processing_dir = format!("data/refistration_requests/{reg_id}");
+    let processing_dir = format!("data/registration_requests/{reg_id}");
     fs::create_dir_all(&processing_dir).await?;
     signature
         .write_to_disk(&processing_dir, "signature")
