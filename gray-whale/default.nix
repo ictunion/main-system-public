@@ -14,6 +14,5 @@ let
   };
 in
 writeScriptBin "gray-whale-migrate" ''
-    ${refinery-cli}/bin/refinery $1 -p ${migrations}/var/migrations
+    ${refinery-cli}/bin/refinery $@ -p ${migrations}/var/migrations
 ''
-
