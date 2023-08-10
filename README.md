@@ -2,7 +2,7 @@
 
 This is what we use to run ICT Union.
 
-Overall system is a collection of sub systems (components) used to manage
+System is a collection of sub systems (components) used to manage
 and run the system of the union organization.
 
 This helps us to have much finer grain control over permissions.
@@ -17,9 +17,9 @@ Every sub-system has its own documentation within README.md file!
 
 | name                             | status                                                                | role                                     |
 |----------------------------------|-----------------------------------------------------------------------|------------------------------------------|
-| [Gray Whale](gray-whale)         | ![status](actions/workflows/gray-whale.yaml/badge.svg?branch=main)    | Database migrations and management       |
-| [Orca](orca)                     | ![status](actions/workflows/orca.yaml/badge.svg?branch=main)          | Registration and members management      |
-| [Member's Panel](memebers-panel) | ![status](actions/workflows/members-panel.yaml/badge.svg?branch=main) | Entry dashboard for organization members |
+| [Gray Whale](gray-whale)         | ![status](/ictunion/main-system/actions/workflows/gray-whale.yaml/badge.svg?branch=main)    | Database migrations and management       |
+| [Orca](orca)                     | ![status](/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)          | Registration and members management      |
+| [Member's Panel](members-panel) | ![status](/ictunion/main-system/actions/workflows/members-panel.yaml/badge.svg?branch=main) | Entry dashboard for organization members |
 
 ## Goals
 

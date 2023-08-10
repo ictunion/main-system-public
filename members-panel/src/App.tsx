@@ -15,15 +15,19 @@ interface AppState {
     userInfo: UserInfo;
 }
 
-export default class App extends React.Component<Keycloak, AppState> {
-    constructor(props: Keycloak) {
+interface Props {
+    keycloak: Keycloak;
+}
+
+export default class App extends React.Component<Props, AppState> {
+    constructor(props: Props) {
         super(props);
 
         this.state = {
             userInfo: null
         };
 
-        props.loadUserInfo().then((userInfo: UserInfo) => {
+        props.keycloak.loadUserInfo().then((userInfo: UserInfo) => {
             this.setState((state) => {
                 return {
                     ...state, userInfo: userInfo
@@ -33,7 +37,7 @@ export default class App extends React.Component<Keycloak, AppState> {
     }
 
     logout() {
-        this.props.logout();
+        this.props.keycloak.logout();
     }
 
     render() {
