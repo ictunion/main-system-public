@@ -1,7 +1,5 @@
 import Keycloak from 'keycloak-js';
-import { Config, Url } from './config';
-
-const config = (require('../config.json') as Config);
+import config, { Url } from './config';
 
 // Initialize singleton
 const keycloak: Keycloak = new Keycloak({

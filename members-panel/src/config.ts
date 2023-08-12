@@ -6,3 +6,6 @@ export interface Config {
     keycloak_realm: string;
     keycloak_client_id: string;
 }
+
+const config = require("../config.json") as Config;
+export default config;
