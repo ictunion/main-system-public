@@ -69,6 +69,32 @@ make migrate
 make psql
 ```
 
+### Start HTTP API Service Using Postgrest
+
+```
+make postgrest
+```
+
+#### Miscellaneous Make Target
+
+Generate `keycloak-certs` file by fetching certs from keycloak instance:
+
+```
+make keycloak-certs
+```
+
+Clean all outputs from make
+
+```
+make clean
+```
+
+### Start all services
+
+```
+make up
+```
+
 ## License
 
 All source code is releleased under [AGPLv3](LICENSE) license unless specifically state otherwise.
