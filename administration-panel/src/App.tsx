@@ -1,11 +1,11 @@
-import * as React from "react";
+import * as React from 'react';
 import Keycloak from 'keycloak-js';
-import { accountSettingsUrl } from '@app/keycloak';
 import ApiAdapter from '@app/ApiAdapter';
-import {
-    Button, Box, AppBar, Toolbar, IconButton, Typography, Grid
-} from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import Layout from '@app/Layout';
+import WelcomePage from '@app/pages/Welcome';
+import NotFoundPage from '@app/pages/NotFound';
 
 interface UserInfo {
     name: string,
@@ -26,14 +26,12 @@ interface Props {
 }
 
 export default class App extends React.Component<Props, AppState> {
-    constructor(props: Props) {
-        super(props);
+    state: AppState = {
+        userInfo: null,
+    }
 
-        this.state = {
-            userInfo: null
-        };
-
-        props.keycloak.loadUserInfo().then((userInfo: UserInfo) => {
+    componentDidMount() {
+        this.props.keycloak.loadUserInfo().then((userInfo: UserInfo) => {
             this.setState((state) => {
                 return {
                     ...state, userInfo: userInfo
@@ -56,32 +54,14 @@ export default class App extends React.Component<Props, AppState> {
 
     render() {
         return (
-            <div style={{ minHeight: "100vh" }}>
-                <AppBar position="static">
-                    <Toolbar>
-                        <IconButton
-                            edge="start"
-                            color="inherit"
-                            aria-label="menu"
-                            sx={{ mr: 2 }}>
-                            <MenuIcon />
-                        </IconButton>
-                        <Typography variant="h6" color="inherit" component="div" sx={{ flexGrow: 1 }}>
-                            Administration Panel
-                        </Typography>
-                        <Button color="inherit" onClick={this.logout.bind(this)}>Logout</Button>
-                    </Toolbar>
-                </AppBar>
-                <Box sx={{ flexGrow: 1 }}>
-                    <Box sx={{ flexGrow: 1 }}>
-                        Hello <strong>{this.state.userInfo && this.state.userInfo.preferred_username}!</strong><br />
-                        <a href={accountSettingsUrl} target="_blank">Profile Settings</a>
-                    </Box>
-                    <pre>
-                        {JSON.stringify(this.state.userInfo)}
-                    </pre>
-                </Box>
-            </div>
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/" element={<Layout logout={this.logout.bind(this)} />}>
+                        <Route index element={<WelcomePage userInfo={this.state.userInfo} />} />
+                        <Route path="*" element={<NotFoundPage />} />
+                    </Route>
+                </Routes>
+            </BrowserRouter>
         );
     }
 }

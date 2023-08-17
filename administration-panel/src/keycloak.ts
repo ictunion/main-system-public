@@ -1,6 +1,15 @@
 import Keycloak from 'keycloak-js';
 import config, { Url } from './config';
 
+export interface UserInfo {
+    name: string,
+    email: string,
+    preferred_username: string,
+    given_name: string,
+    family_name: string,
+    locale: "cs" | "en",
+}
+
 // Initialize singleton
 const keycloak: Keycloak = new Keycloak({
     url: config.keycloak_url,
@@ -21,7 +30,5 @@ async function initKeycloak(): Promise<Keycloak> {
 
     return keycloak;
 }
-
-export const accountSettingsUrl: Url = `${config.keycloak_url}/realms/${config.keycloak_realm}/account`;
 
 export default initKeycloak;
