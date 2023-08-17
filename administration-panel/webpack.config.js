@@ -1,6 +1,8 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const config = require('./config.json');
 
 module.exports = (env, argv) => {
     const mode = argv.model === 'production' ? 'production' : 'development';
@@ -15,10 +17,17 @@ module.exports = (env, argv) => {
                     use: 'ts-loader',
                     exclude: /node_modules/,
                 },
+                {
+                    test: /\.css$/i,
+                    use: ["style-loader", "css-loader"],
+                },
             ],
         },
         resolve: {
             extensions: ['.tsx', '.ts', '.js'],
+            plugins: [
+                new TsconfigPathsPlugin(),
+            ],
         },
         output: {
             filename: 'bundle.js',

@@ -1,5 +1,6 @@
 {
-    "keycloak_url": "https://keycloak.ictunion.cz",
-    "keycloak_realm": "testing-members",
-    "keycloak_client_id": "administration-panel"
+  "keycloak_url": "https://keycloak.ictunion.cz",
+  "keycloak_realm": "testing-members",
+  "keycloak_client_id": "administration-panel",
+  "api_url": "http://localhost:5300"
 }

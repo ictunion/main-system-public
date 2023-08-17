@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": "src",
     "outDir": "./dist/",
     "noImplicitAny": true,
     "module": "es6",
@@ -7,6 +8,6 @@
     "allowJs": false,
     "sourceMap": true,
     "moduleResolution": "nodenext",
-    "jsx": "react"
+    "jsx": "react",
   }
 }
