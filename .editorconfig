@@ -27,3 +27,11 @@ indent_size = 4
 [*.nix]
 indent_style = space
 indent_size = 2
+
+[*.{ts,js}]
+indent_style = space
+indent_size = 4
+
+[*.json]
+indent_style = space
+indent_size = 2
