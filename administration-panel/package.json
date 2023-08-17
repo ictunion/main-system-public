@@ -30,6 +30,7 @@
     "@fontsource/roboto": "^5.0.8",
     "@mui/icons-material": "^5.14.3",
     "@mui/material": "^5.14.5",
+    "@supabase/postgrest-js": "^1.8.0",
     "keycloak-js": "^22.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

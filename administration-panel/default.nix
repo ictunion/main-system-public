@@ -12,7 +12,7 @@ buildNpmPackage {
     nodejs
   ];
   src = nix-gitignore.gitignoreSource [] ./.;
-  npmDepsHash = "sha256-W50VUWGBZtlutEp1y9KgvPijLsd8pZJYiwPbvDKKxfU=";
+  npmDepsHash = "sha256-0oOi5EVRR6Fl9Zlp9XEkIeSP2P45JdBwm0V8RfWfspo=";
 
   configurePhase = ''
     echo '${config-json}' > config.json

@@ -1,6 +1,13 @@
 import * as React from 'react';
 import Keycloak from 'keycloak-js';
 import ApiAdapter from '@app/ApiAdapter';
+
+import {
+    Button, Box, AppBar, Toolbar, IconButton, Typography, Grid
+} from '@mui/material';
+import { Menu as MenuIcon } from '@mui/icons-material';
+import { PostgrestClient } from '@supabase/postgrest-js'
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import Layout from '@app/Layout';
@@ -23,6 +30,7 @@ interface AppState {
 interface Props {
     keycloak: Keycloak;
     apiAdapter: ApiAdapter;
+    postgrest: PostgrestClient;
 }
 
 export default class App extends React.Component<Props, AppState> {
@@ -47,9 +55,9 @@ export default class App extends React.Component<Props, AppState> {
     }
 
     async get_all_members() {
-        const response = await this.props.apiAdapter.get("members");
-        const json = await response.json();
-        console.log(json);
+        const response = await this.props.postgrest.from('members').select()
+        const data = response.data;
+        console.log(data)
     }
 
     render() {
