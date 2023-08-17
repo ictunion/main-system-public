@@ -1,0 +1,5 @@
+{
+    "keycloak_url": "https://keycloak.ictunion.cz",
+    "keycloak_realm": "testing-members",
+    "keycloak_client_id": "administration-panel"
+}
