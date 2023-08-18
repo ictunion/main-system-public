@@ -12,7 +12,7 @@ log_level = "debug"
 # Email (smtp) configuration
 smtp_host = "mail.ictunion.cz"
 smtp_user = "noreply@ictunion.cz"
-smtp_password = "68aCcVVawagc4v"
+smtp_password = ""
 
 # Email configuration
 notification_email = ""

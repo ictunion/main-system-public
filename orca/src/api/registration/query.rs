@@ -68,12 +68,20 @@ pub fn create_singature_file(
 ) -> Query<'_> {
     sqlx::query(
         r#"
-INSERT INTO files
-( name
-, file_type
-, data
-, registration_request_id
-) VALUES ('signature', $1, $2, $3)
+WITH rows AS
+( INSERT INTO files
+    ( name
+    , file_type
+    , data
+    ) VALUES ('signature', $1, $2)
+    RETURNING id
+)
+INSERT INTO registration_requests_files
+    ( registration_request_id
+    , file_id
+    )
+    SELECT $3 as registration_request_id, id
+    FROM rows
 "#,
     )
     .bind(&image.image_type)

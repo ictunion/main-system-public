@@ -14,12 +14,20 @@ FROM registration_requests WHERE id = $1
 pub fn insert_registration_pdf(id: Id<RegistrationRequest>, data: &Vec<u8>) -> Query<'_> {
     sqlx::query(
         "
-INSERT INTO files
-( name
-, file_type
-, data
-, registration_request_id
-) VALUES ('registration', 'pdf', $1, $2)
+WITH rows AS
+( INSERT INTO files
+    ( name
+    , file_type
+    , data
+    ) VALUES ('registration', 'pdf', $1)
+    RETURNING id
+)
+INSERT INTO registration_requests_files
+    ( registration_request_id
+    , file_id
+    )
+    SELECT $2 as registration_request_id, id
+    FROM rows
 ",
     )
     .bind(data)
@@ -40,11 +48,13 @@ WHERE id = $1
 pub fn fetch_registration_pdf(id: Id<RegistrationRequest>) -> QueryAs<'static, (Vec<u8>,)> {
     sqlx::query_as(
         "
-SELECT data FROM files
+SELECT f.data FROM registration_requests_files rrf
+RIGHT JOIN files f
+ON rrf.file_id = f.id
 WHERE registration_request_id = $1
     AND file_type = 'pdf'
     AND name = 'registration'
-ORDER BY created_at DESC
+ORDER BY f.created_at DESC
 LIMIT 1
 ",
     )
