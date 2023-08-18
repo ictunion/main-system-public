@@ -15,12 +15,12 @@ requires just permissions for reading and writing the data (no alterations of sc
 
 Every sub-system has its own documentation within README.md file!
 
-| name                                         | status                                                                                                               | role                                     | language   |
-|----------------------------------------------|----------------------------------------------------------------------------------------------------------------------|------------------------------------------|------------|
-| [Gray Whale](gray-whale)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/gray-whale.yaml/badge.svg?branch=main)           | Database migrations and management       | SQL        |
-| [Orca](orca)                                 | ![status](https://github.com/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)                 | Registration and members management      | Rust       |
-| [Member's Panel](members-panel)              | ![status](https://github.com/ictunion/main-system/actions/workflows/members-panel.yaml/badge.svg?branch=main)        | Entry dashboard for organization members | TypeScript |
-| [Administration Panel](administration-panel) | ![status](https://github.com/ictunion/main-system/actions/workflows/administration-panel.yaml/badge.svg?branch=main) | Entry dashboard for organization members | TypeScript |
+| name                                         | status                                                                                                               | role                                      | language   |
+|----------------------------------------------|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------|------------|
+| [Gray Whale](gray-whale)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/gray-whale.yaml/badge.svg?branch=main)           | Database migrations and management        | SQL        |
+| [Orca](orca)                                 | ![status](https://github.com/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)                 | Registration and onboarding processing    | Rust       |
+| [Member's Panel](members-panel)              | ![status](https://github.com/ictunion/main-system/actions/workflows/members-panel.yaml/badge.svg?branch=main)        | Entry dashboard for organization members  | TypeScript |
+| [Administration Panel](administration-panel) | ![status](https://github.com/ictunion/main-system/actions/workflows/administration-panel.yaml/badge.svg?branch=main) | Administration tool for member management | TypeScript |
 
 ## Goals
 

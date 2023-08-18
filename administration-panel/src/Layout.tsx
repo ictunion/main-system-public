@@ -3,7 +3,10 @@ import AppHeader from '@app/layout/AppHeader';
 import { Outlet } from "react-router-dom";
 import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Home as HomeIcon } from '@mui/icons-material';
+import {
+    Home as HomeIcon
+    , PeopleAlt as PeopleAltIcon
+} from '@mui/icons-material';
 
 interface Props {
     logout: () => void;
@@ -31,13 +34,14 @@ const MenuItem = ({ text, route, children }: React.PropsWithChildren<ItemProps>)
 
 const Layout = (props: Props) => {
     return (
-        <div style={{ minHeight: "100%" }}>
+        <div className="app-wrapper">
             <AppHeader logout={props.logout}>
                 <List>
                     <MenuItem text="Home" route="/"><HomeIcon /></MenuItem>
+                    <MenuItem text="Members Table" route="/members-table"><PeopleAltIcon /></MenuItem>
                 </List>
             </AppHeader>
-            <Box sx={{ flexGrow: 1 }}>
+            <Box className="app-main">
                 <Outlet />
             </Box>
         </div>

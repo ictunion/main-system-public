@@ -63,7 +63,7 @@ const AppHeader: React.FC<React.PropsWithChildren<Props>> = (props) => {
     );
 
     return (
-        <Box sx={{ flexGrow: 1 }}>
+        <Box>
             <AppBar position="static">
                 <Toolbar>
                     <IconButton

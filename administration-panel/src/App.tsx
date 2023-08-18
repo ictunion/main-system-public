@@ -1,11 +1,5 @@
 import * as React from 'react';
 import Keycloak from 'keycloak-js';
-import ApiAdapter from '@app/ApiAdapter';
-
-import {
-    Button, Box, AppBar, Toolbar, IconButton, Typography, Grid
-} from '@mui/material';
-import { Menu as MenuIcon } from '@mui/icons-material';
 import { PostgrestClient } from '@supabase/postgrest-js'
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -13,6 +7,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@app/Layout';
 import WelcomePage from '@app/pages/Welcome';
 import NotFoundPage from '@app/pages/NotFound';
+import MembersTablePage from '@app/pages/MembersTable';
 
 interface UserInfo {
     name: string,
@@ -29,7 +24,6 @@ interface AppState {
 
 interface Props {
     keycloak: Keycloak;
-    apiAdapter: ApiAdapter;
     postgrest: PostgrestClient;
 }
 
@@ -46,18 +40,10 @@ export default class App extends React.Component<Props, AppState> {
                 };
             });
         });
-
-        this.get_all_members();
     }
 
     logout() {
         this.props.keycloak.logout();
-    }
-
-    async get_all_members() {
-        const response = await this.props.postgrest.from('members').select()
-        const data = response.data;
-        console.log(data)
     }
 
     render() {
@@ -66,6 +52,7 @@ export default class App extends React.Component<Props, AppState> {
                 <Routes>
                     <Route path="/" element={<Layout logout={this.logout.bind(this)} />}>
                         <Route index element={<WelcomePage userInfo={this.state.userInfo} />} />
+                        <Route path="members-table" element={<MembersTablePage postgrest={this.props.postgrest} />} />
                         <Route path="*" element={<NotFoundPage />} />
                     </Route>
                 </Routes>
