@@ -8,6 +8,7 @@ import Layout from '@app/Layout';
 import WelcomePage from '@app/pages/Welcome';
 import NotFoundPage from '@app/pages/NotFound';
 import MembersTablePage from '@app/pages/MembersTable';
+import NewMemberPage from '@app/pages/NewMember';
 
 interface UserInfo {
     name: string,
@@ -52,7 +53,10 @@ export default class App extends React.Component<Props, AppState> {
                 <Routes>
                     <Route path="/" element={<Layout logout={this.logout.bind(this)} />}>
                         <Route index element={<WelcomePage userInfo={this.state.userInfo} />} />
-                        <Route path="members-table" element={<MembersTablePage postgrest={this.props.postgrest} />} />
+                        <Route path="members" >
+                            <Route path="table" element={<MembersTablePage postgrest={this.props.postgrest} />} />
+                            <Route path="new" element={<NewMemberPage />} />
+                        </Route>
                         <Route path="*" element={<NotFoundPage />} />
                     </Route>
                 </Routes>

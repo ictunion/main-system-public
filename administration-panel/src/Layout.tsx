@@ -1,11 +1,12 @@
 import * as React from 'react';
 import AppHeader from '@app/layout/AppHeader';
 import { Outlet } from "react-router-dom";
-import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Divider, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import { Link } from 'react-router-dom';
 import {
-    Home as HomeIcon
-    , PeopleAlt as PeopleAltIcon
+    Home as HomeIcon,
+    PeopleAlt as PeopleAltIcon,
+    PersonAddAlt1 as PersonAddIcon
 } from '@mui/icons-material';
 
 interface Props {
@@ -37,8 +38,11 @@ const Layout = (props: Props) => {
         <div className="app-wrapper">
             <AppHeader logout={props.logout}>
                 <List>
-                    <MenuItem text="Home" route="/"><HomeIcon /></MenuItem>
-                    <MenuItem text="Members Table" route="/members-table"><PeopleAltIcon /></MenuItem>
+                    <MenuItem text="Dashboard" route="/"><HomeIcon /></MenuItem>
+                    <Divider />
+                    <MenuItem text="Members Table" route="/members/table"><PeopleAltIcon /></MenuItem>
+                    <MenuItem text="Add New Member" route="/members/new"><PersonAddIcon /></MenuItem>
+                    <Divider />
                 </List>
             </AppHeader>
             <Box className="app-main">
