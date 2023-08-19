@@ -9,6 +9,12 @@ interface Member {
     email: string;
     first_name: string;
     last_name: string;
+    occupations: [Occupation];
+}
+
+interface Occupation {
+    company_name: string | null;
+    position: string | null;
 }
 
 interface State {
@@ -22,6 +28,7 @@ const TableRow = (member: Member) => {
             <td>{member.email}</td>
             <td>{member.first_name}</td>
             <td>{member.last_name}</td>
+            <td>{member.occupations.length > 0 ? member.occupations[0].company_name : null}</td>
         </tr>
     )
 }
@@ -32,7 +39,7 @@ const MembersTable = (props: Props) => {
         isLoading: false,
     });
 
-    const columns = ['email', 'first_name', 'last_name'];
+    const columns = ['email', 'first_name', 'last_name', 'occupations(company_name, position)'];
     React.useEffect(() => {
         if (state.data !== null || state.isLoading) {
             return;

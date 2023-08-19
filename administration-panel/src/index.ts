@@ -10,6 +10,7 @@ import '@app/styles/index.css';
 // Import App
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+import { createRoot } from 'react-dom/client';
 
 import initKeycloak from '@app/keycloak';
 import config from '@app/config';
@@ -25,6 +26,8 @@ window.addEventListener("load", () => {
             },
         })
 
-        ReactDOM.render(React.createElement(App, { keycloak, postgrest }), document.getElementById('app'));
+        const container = document.getElementById('app');
+        const root = createRoot(container!);
+        root.render(React.createElement(App, { keycloak, postgrest }));
     });
 });

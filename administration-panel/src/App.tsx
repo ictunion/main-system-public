@@ -3,12 +3,18 @@ import Keycloak from 'keycloak-js';
 import { PostgrestClient } from '@supabase/postgrest-js'
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import {
+    createBrowserRouter,
+    createRoutesFromElements,
+    RouterProvider,
+  } from "react-router-dom";
 
 import Layout from '@app/Layout';
 import WelcomePage from '@app/pages/Welcome';
 import NotFoundPage from '@app/pages/NotFound';
 import MembersTablePage from '@app/pages/MembersTable';
 import NewMemberPage from '@app/pages/NewMember';
+import NewMember from '@app/pages/NewMember';
 
 interface UserInfo {
     name: string,
@@ -47,20 +53,22 @@ export default class App extends React.Component<Props, AppState> {
         this.props.keycloak.logout();
     }
 
-    render() {
-        return (
-            <BrowserRouter>
-                <Routes>
-                    <Route path="/" element={<Layout logout={this.logout.bind(this)} />}>
-                        <Route index element={<WelcomePage userInfo={this.state.userInfo} />} />
-                        <Route path="members" >
-                            <Route path="table" element={<MembersTablePage postgrest={this.props.postgrest} />} />
-                            <Route path="new" element={<NewMemberPage />} />
-                        </Route>
-                        <Route path="*" element={<NotFoundPage />} />
+    render() {   
+        const router = createBrowserRouter(
+            createRoutesFromElements(
+                <Route path="/" element={<Layout logout={this.logout.bind(this)} />}>
+                    <Route index element={<WelcomePage userInfo={this.state.userInfo} />} />
+                    <Route path="members" >
+                        <Route path="table" element={<MembersTablePage postgrest={this.props.postgrest} />} />
+                        <Route path="new" element={<NewMemberPage postgrest={this.props.postgrest}/>} />
                     </Route>
-                </Routes>
-            </BrowserRouter>
+                    <Route path="*" element={<NotFoundPage />} />
+                </Route>
+            )
+        );
+
+        return (
+            <RouterProvider router={router} />
         );
     }
 }
