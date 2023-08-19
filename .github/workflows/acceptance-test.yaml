@@ -1,12 +1,19 @@
-name: "Gray Whale"
+name: "Acceptance Test"
 
 on:
   push:
+  branches:
+    - main
 
 jobs:
-  all:
+  run-acceptance-test:
     runs-on: ubuntu-latest
     services:
+      mailserver:
+        image: rnwood/smtp4dev:v3
+        ports:
+          - 2525:25
+
       postgres:
         image: postgres:15.2-alpine
         env:
@@ -14,6 +21,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_DB: ictunion
           POSTGRES_PASSWORD: superuser
+          POSTGRES_HOST_AUTH_METHOD: "trust"
         ports:
           # maps tcp port 5432 on service container to the host
           - 5432:5432
@@ -31,12 +39,25 @@ jobs:
       - name: Install nix
         uses: cachix/install-nix-action@v18
 
-      - name: Build using nix
-        working-directory: gray-whale
-        run: nix build
-
       - name: Run migrations
         working-directory: gray-whale
         run: |
+          nix build
           cp refinery.example.toml refinery.toml
           ./result/bin/gray-whale-migrate migrate
+
+      - name: Build and configure and run orca
+        working-directory: orca
+        run: |
+          nix build
+          cp Rocket.example.toml Rocket.toml
+          ./result/bin/orca &
+          sleep 500
+        env:
+          ROCKET_SMTP_HOST: "localhost"
+          ROCKET_SMTP_USER: ""
+          ROCKET_SMTP_PASSWORD: ""
+
+      - name: Check status of orca
+        run: |
+          curl localhost:8000/status
