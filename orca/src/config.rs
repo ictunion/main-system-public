@@ -73,15 +73,15 @@ impl Config {
 
         let smtp_host = figment
             .extract_inner("smtp_host")
-            .unwrap_or("localhost".to_string());
+            .expect("smtp_host must be configured");
 
         let smtp_user = figment
             .extract_inner("smtp_user")
-            .unwrap_or("orca".to_string());
+            .expect("smtp_user must be configured");
 
         let smtp_password = figment
             .extract_inner("smtp_password")
-            .unwrap_or(String::new());
+            .expect("smtp_password must be configured");
 
         let templates_path: String = figment.extract_inner("templates_dir").unwrap();
 
