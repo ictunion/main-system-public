@@ -2,6 +2,9 @@ use core::fmt::Display;
 use std::convert::Infallible;
 use std::net::IpAddr;
 
+pub mod jwk;
+pub mod keycloak;
+
 cfg_if::cfg_if! {
     if #[cfg(feature="proxy-support")] {
         use std::str::FromStr;

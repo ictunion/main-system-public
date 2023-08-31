@@ -10,6 +10,8 @@
 //! ```
 //! cargo build --features proxy-support
 //! ```
+
+use server::keycloak::{self, Keycloak};
 extern crate rand;
 #[macro_use]
 extern crate rocket;
@@ -25,8 +27,10 @@ extern crate validator;
 extern crate log;
 extern crate chrono;
 extern crate fern;
+extern crate handlebars;
+extern crate jsonwebtoken;
 extern crate phf;
-// extern crate handlebars;
+extern crate reqwest;
 
 mod api;
 mod config;
@@ -43,6 +47,7 @@ enum StartupError {
     Database(db::SqlError),
     Server(rocket::Error),
     Logger(fern::InitError),
+    Keyclaok(server::keycloak::Error),
 }
 
 impl From<db::SqlError> for StartupError {
@@ -63,6 +68,12 @@ impl From<fern::InitError> for StartupError {
     }
 }
 
+impl From<server::keycloak::Error> for StartupError {
+    fn from(value: server::keycloak::Error) -> Self {
+        Self::Keyclaok(value)
+    }
+}
+
 #[rocket::main]
 async fn main() -> Result<(), StartupError> {
     // Read cofiguration
@@ -70,6 +81,19 @@ async fn main() -> Result<(), StartupError> {
 
     // Configure logger
     logging::setup_logger(config.log_level)?;
+
+    // Configure authorization
+    // poor man's applicative functor
+    let keycloak = match (
+        &config.keycloak_host,
+        &config.keycloak_realm,
+        &config.keycloak_client_id,
+    ) {
+        (Some(host), Some(realm), Some(client_id)) => {
+            server::keycloak::Keycloak::fetch(host, realm, client_id.clone()).await?
+        }
+        _ => Keycloak::disable(),
+    };
 
     let web_db_pool = db::connect(db::Config {
         connection_url: &config.postgres,
@@ -89,6 +113,7 @@ async fn main() -> Result<(), StartupError> {
         .manage(web_db_pool)
         .manage(queue)
         .manage(config)
+        .manage(keycloak)
         .launch()
         .await?;
 

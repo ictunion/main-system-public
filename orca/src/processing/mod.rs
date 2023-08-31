@@ -175,7 +175,7 @@ async fn process(
                         MultiPart::related()
                             .singlepart(SinglePart::html(message_html))
                             .singlepart(
-                                Attachment::new(String::from(pdf_name))
+                                Attachment::new(pdf_name)
                                     // This should never fail
                                     // we generate the pdf ourselves so we know it will be valid
                                     .body(pdf_data, "application/pdf".parse().unwrap()),

@@ -28,6 +28,11 @@ processing_db_pool = 2
 # PDF printing
 tex_exe = "xelatex"
 
+# Authentication / Authorization
+keycloak_host = "https://keycloak.ictunion.cz"
+keycloak_realm = "testing-members"
+keycloak_client_id = "orca"
+
 # Business logic configuration
 processing_queue_size = 16
 

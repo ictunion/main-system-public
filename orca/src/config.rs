@@ -26,6 +26,9 @@ pub struct Config {
     pub smtp_host: String,
     pub smtp_user: String,
     pub smtp_password: String,
+    pub keycloak_host: Option<String>,
+    pub keycloak_realm: Option<String>,
+    pub keycloak_client_id: Option<String>,
     pub templates: templates::Templates<'static>,
 }
 
@@ -89,6 +92,13 @@ impl Config {
         // This makes app fail at startup in case there is some error which we want
         templates.preload_templates(&templates_path).unwrap();
 
+        // read keycloak settings
+        let keycloak_host: Option<String> = figment.extract_inner("keycloak_host").ok();
+
+        let keycloak_realm: Option<String> = figment.extract_inner("keycloak_realm").ok();
+
+        let keycloak_client_id: Option<String> = figment.extract_inner("keycloak_client_id").ok();
+
         Self {
             email_sender_email,
             email_sender_name,
@@ -105,6 +115,9 @@ impl Config {
             smtp_host,
             smtp_user,
             smtp_password,
+            keycloak_host,
+            keycloak_realm,
+            keycloak_client_id,
             templates,
         }
     }

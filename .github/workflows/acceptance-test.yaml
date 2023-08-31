@@ -57,6 +57,8 @@ jobs:
           ROCKET_SMTP_HOST: "localhost"
           ROCKET_SMTP_USER: ""
           ROCKET_SMTP_PASSWORD: ""
+          ROCKET_KEYCLOAK_HOST: "https://keycloak.ictunion.cz"
+          ROCKET_KEYCLOAK_REALM: "testing-members"
 
       - name: Check status of orca
         run: |

@@ -3,7 +3,10 @@ use rocket::{Build, Request, Rocket};
 use tokio::task::JoinError;
 use validator::ValidationError;
 
+mod applications;
 mod registration;
+mod stats;
+
 use crate::processing::SenderError;
 
 #[derive(Debug)]
@@ -49,12 +52,39 @@ impl<'r> response::Responder<'r, 'static> for SenderError {
     }
 }
 
+#[derive(Debug)]
+pub struct JwtError(jsonwebtoken::errors::Error);
+
+impl<'r> Responder<'r, 'static> for JwtError {
+    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        use jsonwebtoken::errors::ErrorKind;
+        use rocket::http::Status;
+
+        let kind = self.0.kind();
+
+        info!("JWT verification failed with {:?}", kind);
+        match kind {
+            ErrorKind::ExpiredSignature => Err(Status::Forbidden),
+            _ => Err(Status::Unauthorized),
+        }
+    }
+}
+
 #[derive(Debug, Responder)]
 pub enum ApiError {
+    #[response(status = 500)]
     DbErr(SqlError),
     Status(rocket::http::Status),
+    #[response(status = 500)]
     ThreadFail(ThreadingError),
+    #[response(status = 500)]
     QueueSender(SenderError),
+    #[response(status = 401)]
+    InvalidToken(JwtError),
+    #[response(status = 403)]
+    MissingRole(String),
+    #[response(status = 401)]
+    AuthorizationDisabled(()),
 }
 
 impl From<sqlx::Error> for ApiError {
@@ -81,6 +111,12 @@ impl From<SenderError> for ApiError {
     }
 }
 
+impl From<jsonwebtoken::errors::Error> for ApiError {
+    fn from(err: jsonwebtoken::errors::Error) -> Self {
+        Self::InvalidToken(JwtError(err))
+    }
+}
+
 #[get("/status")]
 fn status_api() -> SuccessResponse {
     SuccessResponse::Ok
@@ -90,6 +126,8 @@ pub fn build() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![status_api])
         .mount("/registration", registration::routes())
+        .mount("/applications", applications::routes())
+        .mount("/stats", stats::routes())
         .register(
             "/registration",
             catchers![rocket_validation::validation_catcher],

@@ -1,5 +1,5 @@
 import Keycloak from 'keycloak-js';
-import config, { Url } from './config';
+import config from './config';
 
 export interface UserInfo {
     name: string,
