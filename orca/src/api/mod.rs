@@ -5,9 +5,11 @@ use validator::ValidationError;
 
 mod applications;
 mod registration;
+mod session;
 mod stats;
 
 use crate::processing::SenderError;
+use crate::server::keycloak;
 
 #[derive(Debug)]
 pub struct SqlError(sqlx::Error);
@@ -52,20 +54,25 @@ impl<'r> response::Responder<'r, 'static> for SenderError {
     }
 }
 
-#[derive(Debug)]
-pub struct JwtError(jsonwebtoken::errors::Error);
-
-impl<'r> Responder<'r, 'static> for JwtError {
+impl<'r> Responder<'r, 'static> for keycloak::Error {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        use jsonwebtoken::errors::ErrorKind;
+        use keycloak::Error::*;
         use rocket::http::Status;
 
-        let kind = self.0.kind();
+        info!("JWT verification failed with {:?}", self);
 
-        info!("JWT verification failed with {:?}", kind);
-        match kind {
-            ErrorKind::ExpiredSignature => Err(Status::Forbidden),
-            _ => Err(Status::Unauthorized),
+        match self {
+            Disabled => Err(Status::NotAcceptable),
+            BadKey(_) => Err(Status::InternalServerError),
+            MissingRole(_) => Err(Status::Forbidden),
+            BadToken(jwt_err) => {
+                use jsonwebtoken::errors::ErrorKind;
+
+                match jwt_err.kind() {
+                    ErrorKind::ExpiredSignature => Err(Status::Unauthorized),
+                    _ => Err(Status::Forbidden),
+                }
+            }
         }
     }
 }
@@ -80,9 +87,7 @@ pub enum ApiError {
     #[response(status = 500)]
     QueueSender(SenderError),
     #[response(status = 401)]
-    InvalidToken(JwtError),
-    #[response(status = 403)]
-    MissingRole(String),
+    InvalidToken(keycloak::Error),
     #[response(status = 401)]
     AuthorizationDisabled(()),
 }
@@ -111,9 +116,9 @@ impl From<SenderError> for ApiError {
     }
 }
 
-impl From<jsonwebtoken::errors::Error> for ApiError {
-    fn from(err: jsonwebtoken::errors::Error) -> Self {
-        Self::InvalidToken(JwtError(err))
+impl From<keycloak::Error> for ApiError {
+    fn from(err: keycloak::Error) -> Self {
+        Self::InvalidToken(err)
     }
 }
 
@@ -127,6 +132,7 @@ pub fn build() -> Rocket<Build> {
         .mount("/", routes![status_api])
         .mount("/registration", registration::routes())
         .mount("/applications", applications::routes())
+        .mount("/session", session::routes())
         .mount("/stats", stats::routes())
         .register(
             "/registration",

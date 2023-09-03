@@ -6,8 +6,6 @@ use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::Deserialize;
 use rocket::serde::Serialize;
 
-use crate::api::ApiError;
-
 use super::jwk;
 
 struct ConnectedKeycloak {
@@ -42,16 +40,12 @@ impl ConnectedKeycloak {
         jsonwebtoken::decode::<JwtClaims>(token.0, &self.key, &self.validation)
     }
 
-    pub fn require_role(
-        &self,
-        token: JwtToken,
-        role: &str,
-    ) -> Result<TokenData<JwtClaims>, ApiError> {
+    pub fn require_role(&self, token: JwtToken, role: &str) -> Result<TokenData<JwtClaims>, Error> {
         let token_data = self.decode_jwt(token)?;
         if self.has_role(&token_data.claims, role) {
             Ok(token_data)
         } else {
-            Err(ApiError::MissingRole(role.to_string()))
+            Err(Error::MissingRole(role.to_string()))
         }
     }
 
@@ -63,40 +57,38 @@ impl ConnectedKeycloak {
     }
 }
 
-pub enum Keycloak {
+pub enum KeycloakState {
     Connected(Box<ConnectedKeycloak>),
     Disconnected,
 }
 
+pub struct Keycloak(KeycloakState);
+
 impl Keycloak {
     pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Keycloak, Error> {
         let k = ConnectedKeycloak::fetch(host, realm, client_id).await?;
-        Ok(Self::Connected(Box::new(k)))
+        Ok(Keycloak(KeycloakState::Connected(Box::new(k))))
     }
 
     pub fn disable() -> Self {
         warn!("Keycloak authorization not configured. Authorization disabled");
-        Self::Disconnected
+        Keycloak(KeycloakState::Disconnected)
     }
 
     pub fn decode_jwt(&self, token: JwtToken) -> Result<TokenData<JwtClaims>, Error> {
-        match self {
-            Self::Connected(k) => {
+        match &self.0 {
+            KeycloakState::Connected(k) => {
                 let res = k.decode_jwt(token)?;
                 Ok(res)
             }
-            Self::Disconnected => Err(Error::Disabled),
+            KeycloakState::Disconnected => Err(Error::Disabled),
         }
     }
 
-    pub fn require_role(
-        &self,
-        token: JwtToken,
-        role: &str,
-    ) -> Result<TokenData<JwtClaims>, ApiError> {
-        match self {
-            Self::Connected(k) => k.require_role(token, role),
-            Self::Disconnected => Err(ApiError::AuthorizationDisabled(())),
+    pub fn require_role(&self, token: JwtToken, role: &str) -> Result<TokenData<JwtClaims>, Error> {
+        match &self.0 {
+            KeycloakState::Connected(k) => k.require_role(token, role),
+            KeycloakState::Disconnected => Err(Error::Disabled),
         }
     }
 }
@@ -105,6 +97,7 @@ impl Keycloak {
 pub enum Error {
     BadKey(jwk::Error),
     BadToken(jsonwebtoken::errors::Error),
+    MissingRole(String),
     Disabled,
 }
 

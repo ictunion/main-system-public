@@ -1,7 +1,5 @@
 use rocket::serde::json::Json;
-use rocket::{serde::Serialize, Responder, Route, State};
-
-use rocket::http::{ContentType, Header};
+use rocket::{serde::Serialize, Route, State};
 
 use super::Response;
 use crate::db::DbPool;
@@ -24,7 +22,7 @@ async fn basic_stats<'r>(
     token: JwtToken<'r>,
 ) -> Response<Json<BasicStats>> {
     // Every authenticated user is able to see stats
-    let _ = keycloak.inner().decode_jwt(token);
+    keycloak.inner().decode_jwt(token)?;
 
     let (unverified,) = query::count_unverified().fetch_one(db_pool.inner()).await?;
 

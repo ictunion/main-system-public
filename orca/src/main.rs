@@ -11,7 +11,7 @@
 //! cargo build --features proxy-support
 //! ```
 
-use server::keycloak::{self, Keycloak};
+use server::keycloak::Keycloak;
 extern crate rand;
 #[macro_use]
 extern crate rocket;
