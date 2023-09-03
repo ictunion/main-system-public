@@ -91,6 +91,13 @@ impl Keycloak {
             KeycloakState::Disconnected => Err(Error::Disabled),
         }
     }
+
+    pub fn is_connected(&self) -> bool {
+        match self.0 {
+            KeycloakState::Connected(_) => true,
+            KeycloakState::Disconnected => false,
+        }
+    }
 }
 
 #[derive(Debug)]

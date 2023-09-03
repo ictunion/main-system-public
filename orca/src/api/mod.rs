@@ -1,5 +1,6 @@
 use rocket::response::{self, Responder};
-use rocket::{Build, Request, Rocket};
+use rocket::serde::{json::Json, Serialize};
+use rocket::{Build, Request, Rocket, State};
 use tokio::task::JoinError;
 use validator::ValidationError;
 
@@ -8,8 +9,9 @@ mod registration;
 mod session;
 mod stats;
 
+use crate::db::DbPool;
 use crate::processing::SenderError;
-use crate::server::keycloak;
+use crate::server::keycloak::{self, Keycloak};
 
 #[derive(Debug)]
 pub struct SqlError(sqlx::Error);
@@ -88,8 +90,6 @@ pub enum ApiError {
     QueueSender(SenderError),
     #[response(status = 401)]
     InvalidToken(keycloak::Error),
-    #[response(status = 401)]
-    AuthorizationDisabled(()),
 }
 
 impl From<sqlx::Error> for ApiError {
@@ -122,9 +122,32 @@ impl From<keycloak::Error> for ApiError {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct StatusResponse<'a> {
+    http_status: u32,
+    http_message: &'a str,
+    authorization_connected: bool,
+    database_connected: bool,
+}
+
 #[get("/status")]
-fn status_api() -> SuccessResponse {
-    SuccessResponse::Ok
+async fn status_api<'a>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+) -> Json<StatusResponse<'a>> {
+    let authorization_connected = keycloak.is_connected();
+
+    let res: Result<(bool,), sqlx::Error> = sqlx::query_as("SELECT true")
+        .fetch_one(db_pool.inner())
+        .await;
+    let database_connected = res.is_ok();
+
+    Json(StatusResponse {
+        http_status: 200,
+        http_message: "ok",
+        authorization_connected,
+        database_connected,
+    })
 }
 
 pub fn build() -> Rocket<Build> {
@@ -148,20 +171,24 @@ pub type Response<T> = Result<T, ApiError>;
 #[derive(Debug)]
 pub enum SuccessResponse {
     Accepted,
-    Ok,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OkResponse<'a> {
+    status: u32,
+    message: &'a str,
 }
 
 impl<'r> Responder<'r, 'static> for SuccessResponse {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
         use rocket::response::status;
-        use rocket::serde::json::Json;
 
         match &self {
-            Self::Accepted => {
-                status::Accepted(Some(Json("{ 'status': 202, 'message': 'Accepted' }")))
-                    .respond_to(request)
-            }
-            Self::Ok => Json(" { 'status: 200, 'message': 'OK' }").respond_to(request),
+            Self::Accepted => status::Accepted(Some(Json(OkResponse {
+                status: 202,
+                message: "Accepted",
+            })))
+            .respond_to(request),
         }
     }
 }
