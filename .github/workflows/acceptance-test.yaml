@@ -52,7 +52,7 @@ jobs:
           nix build
           cp Rocket.example.toml Rocket.toml
           ./result/bin/orca &
-          sleep 500
+          sleep 5
         env:
           ROCKET_SMTP_HOST: "localhost"
           ROCKET_SMTP_USER: ""

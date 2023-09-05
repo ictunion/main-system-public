@@ -41,6 +41,28 @@ We also use cargo features for compile time configuration like:
 cargo build --features proxy-support
 ```
 
+### Keycloak Authorization
+
+Configure keycloak to enable administration APIs:
+
+```toml
+# Part of Rocket.toml
+keycloak_host = "https://keycloak.ictunion.cz"
+keycloak_realm = "testing-members"
+keycloak_client_id = "orca"
+```
+
+If you don't want to have administration features simply don't set these values.
+Orca can run without keycloak but it won't allow any administration API to be used.
+
+The permissions to many admin features are granular.
+Orca is using [Keycloak's client roles](https://www.keycloak.org/docs/latest/server_admin/#core-concepts-and-terms)
+which needs to be configured for the `keycloak_client_id` set in the `Rocket.toml`:
+
+| Role Name         | Description                                                  |
+|-------------------|--------------------------------------------------------------|
+| list-applications | Allow listing of applications/registrations in various state |
+
 ## Developing
 
 ### Toolchain

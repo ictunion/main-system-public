@@ -14,6 +14,25 @@ struct ConnectedKeycloak {
     client_id: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Role {
+    ListApplications,
+}
+
+impl Role {
+    fn to_json_val(&self) -> &str {
+        match self {
+            Self::ListApplications => "list-applications",
+        }
+    }
+}
+
+impl ToString for Role {
+    fn to_string(&self) -> String {
+        self.to_json_val().to_string()
+    }
+}
+
 impl ConnectedKeycloak {
     pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Self, Error> {
         let key = jwk::fetch_jwk(&format!(
@@ -40,9 +59,9 @@ impl ConnectedKeycloak {
         jsonwebtoken::decode::<JwtClaims>(token.0, &self.key, &self.validation)
     }
 
-    pub fn require_role(&self, token: JwtToken, role: &str) -> Result<TokenData<JwtClaims>, Error> {
+    pub fn require_role(&self, token: JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error> {
         let token_data = self.decode_jwt(token)?;
-        if self.has_role(&token_data.claims, role) {
+        if self.has_role(&token_data.claims, role.to_json_val()) {
             Ok(token_data)
         } else {
             Err(Error::MissingRole(role.to_string()))
@@ -57,7 +76,7 @@ impl ConnectedKeycloak {
     }
 }
 
-pub enum KeycloakState {
+enum KeycloakState {
     Connected(Box<ConnectedKeycloak>),
     Disconnected,
 }
@@ -85,7 +104,7 @@ impl Keycloak {
         }
     }
 
-    pub fn require_role(&self, token: JwtToken, role: &str) -> Result<TokenData<JwtClaims>, Error> {
+    pub fn require_role(&self, token: JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
             KeycloakState::Connected(k) => k.require_role(token, role),
             KeycloakState::Disconnected => Err(Error::Disabled),

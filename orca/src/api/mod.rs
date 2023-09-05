@@ -27,6 +27,8 @@ impl<'r> Responder<'r, 'static> for SqlError {
         use rocket::http::Status;
         use sqlx::error::Error::*;
 
+        error!("SQL Error: {:?}", self);
+
         match self.0 {
             RowNotFound => Err(Status::NotFound),
             PoolTimedOut => Err(Status::ServiceUnavailable),
@@ -46,12 +48,16 @@ impl From<JoinError> for ThreadingError {
 
 impl<'r> response::Responder<'r, 'static> for ThreadingError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        error!("Threading Error: {:?}", self);
+
         Err(rocket::http::Status::InternalServerError)
     }
 }
 
 impl<'r> response::Responder<'r, 'static> for SenderError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        error!("Sender Error: {:?}", self);
+
         Err(rocket::http::Status::InternalServerError)
     }
 }
@@ -61,7 +67,7 @@ impl<'r> Responder<'r, 'static> for keycloak::Error {
         use keycloak::Error::*;
         use rocket::http::Status;
 
-        info!("JWT verification failed with {:?}", self);
+        warn!("JWT verification failed with {:?}", self);
 
         match self {
             Disabled => Err(Status::NotAcceptable),

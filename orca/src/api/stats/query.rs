@@ -27,7 +27,7 @@ SELECT count(*) FROM registration_requests_rejected
 pub fn count_processing<'a>() -> QueryAs<'a, (i64,)> {
     sqlx::query_as(
         "
-SELECT count(*) FROM registration_requests_procession
+SELECT count(*) FROM registration_requests_processing
 ",
     )
 }

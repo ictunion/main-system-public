@@ -1,3 +1,4 @@
+use rocket::serde::Serialize;
 use std::error::Error;
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -23,6 +24,15 @@ impl<T> Display for Id<T> {
 impl<T> Type<Postgres> for Id<T> {
     fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
         <Uuid as Type<Postgres>>::type_info()
+    }
+}
+
+impl<T> Serialize for Id<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
     }
 }
 

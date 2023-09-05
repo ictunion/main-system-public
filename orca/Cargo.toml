@@ -12,7 +12,7 @@ rocket = { version = "0.5.0-rc.2", features = [ "json" ] }
 serde = { version = "1.0.147", features = ["derive"] }
 rocket-validation = "0.1.3"
 validator = "0.16.0"
-sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "macros", "all-types", "uuid" ] }
+sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "macros", "all-types", "uuid", "chrono" ] }
 time = { version = "0.3.19", features = [ "serde-human-readable" ] }
 rustc-serialize = "0.3.24"
 tokio = { version = "1.25.0", features = [ "io-std", "fs", "process" ] }
@@ -20,7 +20,7 @@ image = "0.24.5"
 cfg-if = "1.0.0"
 log = "0.4.17"
 fern = "0.6.1"
-chrono = "0.4.24"
+chrono = { version = "0.4.24", features = [ "serde" ] }
 uuid = { version = "1.3.0", features = [ "v4", "serde" ] }
 phf = { version = "0.11.1", features = [ "macros" ] }
 lettre = { version = "0.10.4", features = [ "tokio1", "tokio1-native-tls" ] }

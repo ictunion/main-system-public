@@ -62,7 +62,6 @@ impl<'a> Templates<'a> {
     }
 
     fn load_template(&mut self, path: &str, template: &Template) -> Result<(), Error> {
-        println!("{}", path);
         // Tempalte can be directory containing different translations
         // default.html is translation which gets used when no other translation is found.
         match fs::read_dir(format!("{}/{}", path, template.name)) {
