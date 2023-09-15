@@ -2,6 +2,7 @@ use core::fmt::Display;
 use std::convert::Infallible;
 use std::net::IpAddr;
 
+pub mod cors;
 pub mod jwk;
 pub mod keycloak;
 

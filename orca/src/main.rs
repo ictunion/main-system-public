@@ -110,6 +110,7 @@ async fn main() -> Result<(), StartupError> {
     let queue = processing::start(&config, processing_db_pool);
 
     let _rocket = api::build()
+        .attach(server::cors::Cors)
         .manage(web_db_pool)
         .manage(queue)
         .manage(config)

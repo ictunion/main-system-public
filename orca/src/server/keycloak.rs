@@ -20,7 +20,7 @@ pub enum Role {
 }
 
 impl Role {
-    fn to_json_val(&self) -> &str {
+    fn to_json_val(self) -> &'static str {
         match self {
             Self::ListApplications => "list-applications",
         }
