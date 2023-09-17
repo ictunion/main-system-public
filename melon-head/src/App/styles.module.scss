@@ -12,8 +12,8 @@
 }
 
 .main-container {
-    display: grid;
     flex: 100% 1 1;
     grid-area: main;
-    grid-template-areas: 'header' 'body' 'footer';
+    display: flex;
+    flex-direction: column;
 }

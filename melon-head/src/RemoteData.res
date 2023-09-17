@@ -14,3 +14,10 @@ let fromResult = (result: result<'a, 'b>): t<'a, 'b> => {
 }
 
 let setLoading = _ => Loading
+
+let unwrap = (t: t<'a, 'e>, ~default: 'b, f: 'a => 'b): 'b => {
+  switch t {
+  | Success(a) => f(a)
+  | _ => default
+  }
+}

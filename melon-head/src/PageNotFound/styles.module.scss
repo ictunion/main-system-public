@@ -1,0 +1,19 @@
+.title {
+    display: flex;
+    font-weight: 800;
+    font-size: 48px;
+    flex-direction: column;
+    color: #211D22;
+}
+
+.status-code {
+    font-family: 'Abril Fatface', cursive;
+    line-height: 0.7em;
+    font-size: 128px;
+    color: #EF562E;
+}
+
+.desc {
+    font-size: 16px;
+    font-style: italic;
+}

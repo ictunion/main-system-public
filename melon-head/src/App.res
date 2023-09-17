@@ -7,8 +7,10 @@ module ConfiguredApp = {
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
 
-    let (isNavOpen, setIsNavOpen) = React.useState(_ => true)
+    let (isNavOpen, setIsNavOpen) = React.useState(_ => false)
     let (isProfileOpen, setIsProfileOpen) = React.useState(_ => false)
+
+    let url = RescriptReactRouter.useUrl()
 
     React.useEffect0(() => {
       let req = api->Api.getJson(~path="/session/current", ~decoder=Session.Decode.session)
@@ -28,11 +30,15 @@ module ConfiguredApp = {
       }}
       <div className={styles["main-container"]}>
         <AppHeader
-          session={sessionState}
           toggleNav={_ => setIsNavOpen(v => !v)}
           isNavOpen={isNavOpen}
           openProfile={_ => setIsProfileOpen(_ => true)}
         />
+        /* Routing to pages */
+        {switch url.path {
+        | list{} => <Dashboard session=sessionState api />
+        | _ => <PageNotFound />
+        }}
       </div>
       {if isProfileOpen {
         <Profile

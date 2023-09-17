@@ -4,6 +4,7 @@
   "description": "Oeca web clinet",
   "scripts": {
     "build": "rescript && parcel build src/index.html",
+    "clean": "rm -rf .parcel-cache",
     "start": "parcel serve src/index.html",
     "watch": "rescript build -w",
     "format": "rescript format -all",

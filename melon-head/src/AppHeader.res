@@ -3,7 +3,6 @@
 
 @react.component
 let make = (
-  ~session: Api.webData<Session.t>,
   ~toggleNav: JsxEvent.Mouse.t => unit,
   ~openProfile: JsxEvent.Mouse.t => unit,
   ~isNavOpen: bool,

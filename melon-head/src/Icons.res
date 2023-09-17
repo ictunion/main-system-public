@@ -2,6 +2,10 @@
 @module external melonSvg: string = "/static/svg/melon.svg"
 @module external profileImg: string = "/static/png/profile.png"
 
+type variant =
+  | Dark
+  | Light
+
 module Hamburger = {
   @react.component
   let make = (~isOpen: bool) => {
@@ -14,10 +18,6 @@ module Hamburger = {
 }
 
 module Profile = {
-  type variant =
-    | Dark
-    | Light
-
   @react.component
   let make = (~variant: variant=Dark) => {
     let cssClass = switch variant {
@@ -40,8 +40,12 @@ module Close = {
 
 module Loading = {
   @react.component
-  let make = () => {
-    <div className={styles["loading"]}>
+  let make = (~variant: variant=Light) => {
+    let className = switch variant {
+    | Light => styles["loading-light"]
+    | Dark => styles["loading-dark"]
+    }
+    <div className>
       <div />
       <div />
       <div />

@@ -15,7 +15,6 @@ $divider: 1px solid rgba(white, 0.2);
 }
 
 .root {
-    grid-area: 'header';
     background: #211D22;
     color: white;
 
@@ -38,6 +37,14 @@ $divider: 1px solid rgba(white, 0.2);
     font-size: 24px;
     font-weight: 600;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+
+    @media screen and (max-width: 620px) {
+        & {
+            font-size: 16px;
+        }
+    }
 }
 
 .profile-btn {

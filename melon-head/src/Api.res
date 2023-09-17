@@ -34,12 +34,12 @@ let mapDecodingError = (res: result<'a, string>): result<'a, error> => {
   }
 }
 
-type api = {
+type t = {
   host: string,
   keycloak: Keycloak.t,
 }
 
-let make = (~config: Config.t, ~keycloak: Keycloak.t): api => {
+let make = (~config: Config.t, ~keycloak: Keycloak.t): t => {
   {
     host: config.apiUrl,
     keycloak,
@@ -62,9 +62,7 @@ let fromRequest = (future, decoder) => {
 
 type webData<'a> = RemoteData.t<'a, error>
 
-let getJson = (api: api, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<
-  result<'a, error>,
-> => {
+let getJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<result<'a, error>> => {
   Request.make(
     ~url=api.host ++ path,
     ~responseType=Json,
