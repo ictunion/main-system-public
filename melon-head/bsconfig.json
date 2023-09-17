@@ -1,0 +1,20 @@
+{
+  "name": "Test App",
+  "sources": {
+    "dir": "src",
+    "subdirs" : true
+  },
+  "suffix": ".bs.js",
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "jsx": { "version": 4, "mode": "classic" },
+  "bsc-flags": [ "-open JsonCombinators" ],
+  "bs-dependencies": [
+    "@rescript/react",
+    "@glennsl/rescript-json-combinators",
+    "rescript-future",
+    "rescript-request"
+  ]
+}

@@ -1,0 +1,46 @@
+$divider: 1px solid rgba(white, 0.2);
+
+@mixin btn {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 0;
+    cursor: pointer;
+    transition: background .2s ease-in-out;
+
+    &:hover {
+        background: rgba(white, 0.1);
+    }
+}
+
+.root {
+    grid-area: 'header';
+    background: #211D22;
+    color: white;
+
+    display: grid;
+    grid-template-areas: 'left center right';
+    grid-template-columns: 64px auto 64px;
+    column-gap: 12px;
+    height: 64px;
+}
+
+.nav-btn {
+    @include btn;
+    border-right: $divider;
+}
+
+.app-title {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.profile-btn {
+    @include btn;
+    border-left: $divider;
+}

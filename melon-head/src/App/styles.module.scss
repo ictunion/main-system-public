@@ -1,0 +1,19 @@
+.root {
+    display: flex;
+    align-items: stretch;
+    height: 100%;
+}
+
+.app-nav {
+    grid-area: nav;
+    flex: 250px 0 0;
+    background: #211D22;
+    box-shadow: -6px 0 6px 0 rgba(0,0,0,0.3) inset;
+}
+
+.main-container {
+    display: grid;
+    flex: 100% 1 1;
+    grid-area: main;
+    grid-template-areas: 'header' 'body' 'footer';
+}

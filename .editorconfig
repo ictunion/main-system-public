@@ -35,3 +35,11 @@ indent_size = 4
 [*.json]
 indent_style = space
 indent_size = 2
+
+[*.res]
+indent_style = space
+indent_size = 2
+
+[*.css]
+indent_style = space
+indent_size = 4

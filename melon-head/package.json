@@ -1,0 +1,29 @@
+{
+  "name": "melon-head",
+  "version": "0.1.0",
+  "description": "Oeca web clinet",
+  "scripts": {
+    "build": "rescript && parcel build src/index.html",
+    "start": "parcel serve src/index.html",
+    "watch": "rescript build -w",
+    "format": "rescript format -all",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "AGPL-3.0-or-later",
+  "devDependencies": {
+    "@glennsl/rescript-json-combinators": "^1.2.1",
+    "@parcel/transformer-sass": "^2.9.3",
+    "@rescript/react": "^0.11.0",
+    "keycloak-js": "^22.0.3",
+    "parcel": "^2.9.3",
+    "process": "^0.11.10",
+    "rescript": "^10.1.4",
+    "rescript-future": "^2.1.0",
+    "rescript-request": "^3.0.1"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

@@ -1,0 +1,138 @@
+.root {
+    position: fixed;
+    background: rgba(black, 0.6);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: auto 275px;
+}
+
+.side-pane {
+    background: white;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid rgba(#211D22, 0.2);
+    height: 64px;
+}
+
+.nav-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #211D22;
+}
+
+.close-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: background .2s ease-in-out;
+
+    &:hover {
+        background: rgba(#211D22, 0.2);
+    }
+}
+
+.nav-list {
+    & > li {
+        display: flex;
+        align-items: center;
+        padding: 6px 12px;
+    }
+
+    a {
+        color: #211D22;
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+li.nav-divider {
+    padding: 0;
+    margin: 0;
+    line-height: 0;
+    border-bottom: 1px solid rgba(#211D22, 0.2);
+}
+
+.sign-out-btn {
+    border: 1px solid #EF562E;
+    background: rgba(#EF562E, .1);
+    color: #EF562E;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background .2s ease-in-out;
+    margin-top: 6px;
+
+    &:hover {
+        background: #EF562E;
+        color: white;
+    }
+}
+
+.centered-li {
+    justify-content: center;
+}
+
+.profile-detail {
+    background: #211D22;
+    color: white;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.profile-title {
+    font-size: 16px;
+}
+
+.profile-table {
+    width: 100%;
+    font-size: 12px;
+
+    td {
+        vertical-align: top;
+        &:first-child {
+            font-weight: 600;
+        }
+    }
+}
+
+.shorten {
+    overflow: hidden;
+    white-space: nowrap;
+    display: inline-block;
+    max-width: 180px;
+    text-overflow: ellipsis;
+}
+
+.loading {
+    display: flex;
+    justify-content: center;
+}
+
+.role {
+    padding: 2px 4px;
+    border: 1px solid rgba(white, .4);
+    border-radius: 1px;
+}

@@ -20,6 +20,7 @@ Every sub-system has its own documentation within README.md file!
 | Acceptance Test                              | ![status](https://github.com/ictunion/main-system/actions/workflows/acceptance-test.yaml/badge.svg?branch=main)      | Integration test of whole system          | --         |
 | [Gray Whale](gray-whale)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/gray-whale.yaml/badge.svg?branch=main)           | Database migrations and management        | SQL        |
 | [Orca](orca)                                 | ![status](https://github.com/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)                 | Registration and onboarding processing    | Rust       |
+| [Melon Head](melon-head)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/melon-head.yaml/badge.svg?branch=main)           | Web UI client for orca                    | Rescript   |
 | [Member's Panel](members-panel)              | ![status](https://github.com/ictunion/main-system/actions/workflows/members-panel.yaml/badge.svg?branch=main)        | Entry dashboard for organization members  | TypeScript |
 | [Administration Panel](administration-panel) | ![status](https://github.com/ictunion/main-system/actions/workflows/administration-panel.yaml/badge.svg?branch=main) | Administration tool for member management | TypeScript |
 
