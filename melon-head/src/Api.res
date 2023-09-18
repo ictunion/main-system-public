@@ -70,3 +70,21 @@ let getJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<res
     ~headers=makeHeaders(api),
   )->fromRequest(decoder)
 }
+
+type status = {
+  httpStatus: int,
+  httpMessage: string,
+  authorizationConnected: bool,
+  databaseConnected: bool,
+}
+
+module Decode = {
+  open Json.Decode
+
+  let status = object(field => {
+    httpStatus: field.required(. "http_status", int),
+    httpMessage: field.required(. "http_message", string),
+    authorizationConnected: field.required(. "authorization_connected", bool),
+    databaseConnected: field.required(. "database_connected", bool),
+  })
+}

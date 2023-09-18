@@ -1,7 +1,13 @@
 .stats-grid {
     display: grid;
-    grid-template-columns: 25% 25% 25% 25%;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
+
+    @media screen and (max-width: 1220px) {
+        & {
+            grid-template-columns: 1fr;
+        }
+    }
 }
 
 .row-table-wrapper {
@@ -23,6 +29,7 @@
 
 .row-table-table {
     width: 100%;
+    border-collapse: collapse;
 
     tr:first-child td {
         border-top: none;

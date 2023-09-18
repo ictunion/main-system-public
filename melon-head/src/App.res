@@ -12,7 +12,7 @@ module ConfiguredApp = {
 
     let url = RescriptReactRouter.useUrl()
 
-    React.useEffect0(() => {
+    React.useEffect1(() => {
       let req = api->Api.getJson(~path="/session/current", ~decoder=Session.Decode.session)
       setSessionState(RemoteData.setLoading)
 
@@ -20,7 +20,7 @@ module ConfiguredApp = {
         setSessionState(_ => RemoteData.fromResult(res))
       })
       Some(() => Future.cancel(req))
-    })
+    }, [keycloak])
 
     <div className={styles["root"]}>
       {if isNavOpen {

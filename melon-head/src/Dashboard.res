@@ -59,6 +59,19 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
     Some(() => Future.cancel(req))
   })
 
+  let (status, setStatus) = React.useState(RemoteData.init)
+
+  React.useEffect0(() => {
+    let req = api->Api.getJson(~path="/status", ~decoder=Api.Decode.status)
+    setStatus(RemoteData.setLoading)
+
+    req->Future.get(res => {
+      setStatus(_ => RemoteData.fromResult(res))
+    })
+
+    Some(() => Future.cancel(req))
+  })
+
   let applicationsRows = [
     ("Waiting for email verification", ({unverified}) => React.string(unverified->Int.toString)),
     ("In processing", ({processing}) => React.string(processing->Int.toString)),
@@ -73,11 +86,23 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
     ),
   ]
 
+  open Api
+  let statusRows = [
+    ("Http Status", ({httpStatus}) => React.string(httpStatus->Int.toString)),
+    ("Http Message", ({httpMessage}) => React.string(httpMessage)),
+    (
+      "Keycalok Connceted",
+      ({authorizationConnected}) => {<ViewBool value={authorizationConnected} />},
+    ),
+    ("Database Connceted", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),
+  ]
+
   <Page>
     <Page.Title> {React.string("Dashboard")} </Page.Title>
     <div className={styles["stats-grid"]}>
       <RowBasedTable rows=applicationsRows data=basicStats title=Some("Current Applications") />
       <RowBasedTable rows=permissionsRows data=session title=Some("Your Permissions/Roles") />
+      <RowBasedTable rows=statusRows data=status title=Some("Api Status") />
     </div>
   </Page>
 }
