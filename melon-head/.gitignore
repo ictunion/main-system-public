@@ -4,4 +4,4 @@ src/**/*.bs.js
 /dist
 /.parcel-cache
 /config.json
-.bs-lock
+.bsb.lock

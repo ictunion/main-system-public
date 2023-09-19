@@ -51,7 +51,12 @@ let make = (
               <tr>
                 <td> {React.string("roles")} </td>
                 <td>
-                  {React.array(Array.map(r => {<ShowRole role={r} />}, ses.tokenClaims.orcaRoles))}
+                  {React.array(
+                    Array.map(
+                      r => {<ShowRole role={r} key={Session.showOrcaRole(r)} />},
+                      ses.tokenClaims.orcaRoles,
+                    ),
+                  )}
                 </td>
               </tr>
             </tbody>

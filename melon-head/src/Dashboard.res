@@ -4,7 +4,7 @@ open Belt
 
 module ViewBool = {
   @react.component
-  let make = (~value: bool) => {value ? React.string("yes") : React.string("no")}
+  let make = (~value: bool) => {value ? React.string("👍 yes") : React.string("👎 no")}
 }
 
 module RowBasedTable = {
@@ -73,9 +73,9 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
   })
 
   let applicationsRows = [
-    ("Waiting for email verification", ({unverified}) => React.string(unverified->Int.toString)),
-    ("In processing", ({processing}) => React.string(processing->Int.toString)),
-    ("Accpted", ({accepted}) => React.string(accepted->Int.toString)),
+    ("Processing", ({processing}) => React.string(processing->Int.toString)),
+    ("Pending Verification", ({unverified}) => React.string(unverified->Int.toString)),
+    ("Accepted", ({accepted}) => React.string(accepted->Int.toString)),
     ("Rejected", ({rejected}) => React.string(rejected->Int.toString)),
   ]
 
@@ -91,7 +91,7 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
     ("Http Status", ({httpStatus}) => React.string(httpStatus->Int.toString)),
     ("Http Message", ({httpMessage}) => React.string(httpMessage)),
     (
-      "Keycalok Connceted",
+      "Keycloak Connceted",
       ({authorizationConnected}) => {<ViewBool value={authorizationConnected} />},
     ),
     ("Database Connceted", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),

@@ -15,6 +15,15 @@ let fromResult = (result: result<'a, 'b>): t<'a, 'b> => {
 
 let setLoading = _ => Loading
 
+let map = (t: t<'a, 'e>, f: 'a => 'b): t<'b, 'e> => {
+  switch t {
+  | Success(a) => Success(f(a))
+  | Loading => Loading
+  | Failure(e) => Failure(e)
+  | Idle => Idle
+  }
+}
+
 let unwrap = (t: t<'a, 'e>, ~default: 'b, f: 'a => 'b): 'b => {
   switch t {
   | Success(a) => f(a)

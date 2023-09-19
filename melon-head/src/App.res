@@ -22,32 +22,31 @@ module ConfiguredApp = {
       Some(() => Future.cancel(req))
     }, [keycloak])
 
-    <div className={styles["root"]}>
-      {if isNavOpen {
-        <nav className={styles["app-nav"]} />
-      } else {
-        React.null
-      }}
-      <div className={styles["main-container"]}>
-        <AppHeader
-          toggleNav={_ => setIsNavOpen(v => !v)}
-          isNavOpen={isNavOpen}
-          openProfile={_ => setIsProfileOpen(_ => true)}
-        />
-        /* Routing to pages */
-        {switch url.path {
-        | list{} => <Dashboard session=sessionState api />
-        | _ => <PageNotFound />
+    <SessionContext.Provider value={sessionState}>
+      <div className={styles["root"]}>
+        <AppNavigation isOpen={isNavOpen} session=sessionState />
+        <div className={styles["main-container"]}>
+          <AppHeader
+            toggleNav={_ => setIsNavOpen(v => !v)}
+            isNavOpen={isNavOpen}
+            openProfile={_ => setIsProfileOpen(_ => true)}
+          />
+          /* Routing to pages */
+          {switch url.path {
+          | list{} => <Dashboard session=sessionState api />
+          | list{"applications"} => <Applications api />
+          | _ => <PageNotFound />
+          }}
+        </div>
+        {if isProfileOpen {
+          <Profile
+            closeProfile={_ => setIsProfileOpen(_ => false)} session=sessionState config keycloak
+          />
+        } else {
+          React.null
         }}
       </div>
-      {if isProfileOpen {
-        <Profile
-          closeProfile={_ => setIsProfileOpen(_ => false)} session=sessionState config keycloak
-        />
-      } else {
-        React.null
-      }}
-    </div>
+    </SessionContext.Provider>
   }
 }
 

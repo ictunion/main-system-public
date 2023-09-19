@@ -1,0 +1,45 @@
+@import '../variables';
+
+$border-color: rgba($primary, 0.5);
+
+.nav {
+    display: flex;
+    border-bottom: 1px solid $border-color;
+    gap: 6px;
+    overflow-y: hidden;
+    overflow-x: auto;
+}
+
+@mixin tab {
+    display: flex;
+    gap: 12px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-weight: 400;
+    font-size: 16px;
+    border: 1px solid $border-color;
+    letter-spacing: 0.4px;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    align-items: baseline;
+    white-space: nowrap;
+}
+
+.tab {
+    @include tab;
+    background: rgba($border-color, .1);
+    transition: background .2s ease-in-out, border-color .2s linear;
+    margin-top: 6px;
+
+    &:hover {
+        background: rgba($border-color, .05);
+        border-top: 6px solid var(--active-color, $ternary);
+        margin-top: 1px;
+    }
+}
+
+.active-tab {
+    @include tab;
+    background: white;
+    border-top: 6px solid var(--active-color, $ternary);
+}

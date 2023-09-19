@@ -10,6 +10,16 @@ const keycloak = new Keycloak({
     clientId: config.keycloak_client_id,
 });
 
+// Auto refresh keyclok tokens
+keycloak.onTokenExpired = async () => {
+    console.log('token expired, refreshing', keycloak.token);
+    try {
+        keycloak.updateToken(30);
+    } catch (error) {
+        keycloak.logout();
+    }
+}
+
 async function initKeycloak() {
     try {
         const authenticated = await keycloak.init({

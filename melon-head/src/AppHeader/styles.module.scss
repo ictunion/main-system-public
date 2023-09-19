@@ -1,3 +1,5 @@
+@import '../variables';
+
 $divider: 1px solid rgba(white, 0.2);
 
 @mixin btn {
@@ -15,14 +17,14 @@ $divider: 1px solid rgba(white, 0.2);
 }
 
 .root {
-    background: #211D22;
+    background: $primary;
     color: white;
 
     display: grid;
+    flex: 64px 0 0;
     grid-template-areas: 'left center right';
     grid-template-columns: 64px auto 64px;
     column-gap: 12px;
-    height: 64px;
 }
 
 .nav-btn {
@@ -34,11 +36,12 @@ $divider: 1px solid rgba(white, 0.2);
     display: flex;
     gap: 12px;
     align-items: center;
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 600;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
+    cursor: pointer;
 
     @media screen and (max-width: 620px) {
         & {

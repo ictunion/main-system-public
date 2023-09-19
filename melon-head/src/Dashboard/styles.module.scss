@@ -1,3 +1,5 @@
+@import '../variables';
+
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -12,18 +14,16 @@
 
 .row-table-wrapper {
     position: relative;
-    border-radius: 4px;
-    border: 4px solid rgba(#211D22, .4);
-    border-radius: 5px;
+    border: 4px solid $ternary;
     overflow: hidden;
 }
 
 .row-table-title {
-   background:rgba(#211D22, .4);
+   background: $ternary;
    font-size: 16px;
    line-height: 1.5em;
    font-weight: 600;
-   padding: 0 12px 4px;
+   padding: 2px 12px 6px;
    color: white;
 }
 
@@ -37,7 +37,7 @@
 
     td {
         padding: 12px;
-        border-top: 1px solid rgba(#211D22, .4);
+        border-top: 1px solid rgba($primary, .4);
 
         &:first-child {
             font-weight: 600;
@@ -67,6 +67,6 @@
 
 .row-table-error {
     @include overlay;
-    background: #EF562E;
+    background: $secondary;
     padding: 12px;
 }

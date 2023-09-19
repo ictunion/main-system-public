@@ -1,0 +1,18 @@
+@use 'sass:math';
+
+@import '../variables';
+
+.count {
+    $size: 18px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    background: rgba($secondary, .1);
+    border: 1px solid $secondary;
+    color: $primary;
+    height: $size;
+    min-width: $size;
+    border-radius: math.div($size, 2);
+}
