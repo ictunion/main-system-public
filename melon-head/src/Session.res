@@ -9,7 +9,7 @@ let showOrcaRole = (r: orcaRole): string =>
   }
 
 type tokenClaims = {
-  sub: string, // UUID identifying keycloak user
+  sub: Data.Uuid.t,
   realmRoles: array<string>,
   orcaRoles: array<orcaRole>,
 }
@@ -40,7 +40,7 @@ module Decode = {
   )
 
   let tokenClaims = object(field => {
-    sub: field.required(. "sub", string),
+    sub: field.required(. "sub", Data.Uuid.decode),
     realmRoles: field.required(. "realm_access", realmRoles),
     orcaRoles: field.required(. "resource_access", orcaRoles),
   })

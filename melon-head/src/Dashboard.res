@@ -46,31 +46,8 @@ module RowBasedTable = {
 let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
   open Stats
 
-  let (basicStats, setBasicStats) = React.useState(RemoteData.init)
-
-  React.useEffect0(() => {
-    let req = api->Api.getJson(~path="/stats/basic", ~decoder=Stats.Decode.basic)
-    setBasicStats(RemoteData.setLoading)
-
-    req->Future.get(res => {
-      setBasicStats(_ => RemoteData.fromResult(res))
-    })
-
-    Some(() => Future.cancel(req))
-  })
-
-  let (status, setStatus) = React.useState(RemoteData.init)
-
-  React.useEffect0(() => {
-    let req = api->Api.getJson(~path="/status", ~decoder=Api.Decode.status)
-    setStatus(RemoteData.setLoading)
-
-    req->Future.get(res => {
-      setStatus(_ => RemoteData.fromResult(res))
-    })
-
-    Some(() => Future.cancel(req))
-  })
+  let (basicStats, _) = api->Hook.getData(~path="/stats/basic", ~decoder=Stats.Decode.basic)
+  let (status, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
 
   let applicationsRows = [
     ("Processing", ({processing}) => React.string(processing->Int.toString)),

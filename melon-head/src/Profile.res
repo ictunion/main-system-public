@@ -30,10 +30,12 @@ let make = (
         | Success(ses) =>
           <table className={styles["profile-table"]}>
             <tbody>
-              <tr title={ses.tokenClaims.sub}>
+              <tr title={ses.tokenClaims.sub->Data.Uuid.toString}>
                 <td> {React.string("sub")} </td>
                 <td>
-                  <span className={styles["shorten"]}> {React.string(ses.tokenClaims.sub)} </span>
+                  <span className={styles["shorten"]}>
+                    {React.string(ses.tokenClaims.sub->Data.Uuid.toString)}
+                  </span>
                 </td>
               </tr>
               <tr>

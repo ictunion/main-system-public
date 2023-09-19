@@ -2,12 +2,16 @@
 
 $border-color: rgba($primary, 0.5);
 
+.scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 0;
+}
+
 .nav {
     display: flex;
     border-bottom: 1px solid $border-color;
     gap: 6px;
-    overflow-y: hidden;
-    overflow-x: auto;
 }
 
 @mixin tab {

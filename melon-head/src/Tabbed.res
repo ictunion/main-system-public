@@ -7,7 +7,9 @@ let make = default => {
 module Tabs = {
   @react.component
   let make = (~children) => {
-    <nav className={styles["nav"]}> children </nav>
+    <div className={styles["scroll-container"]}>
+      <nav className={styles["nav"]}> children </nav>
+    </div>
   }
 }
 
