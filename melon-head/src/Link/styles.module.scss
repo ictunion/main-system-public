@@ -1,0 +1,34 @@
+@import '../variables';
+
+.email {
+    color: $ternary;
+}
+
+.tel {
+    color: $ternary;
+}
+
+.uuid {
+    position: relative;
+    font-size: 12px;
+    color: $ternary;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover > span {
+        display: block;
+    }
+}
+
+.uuid-full {
+    position: absolute;
+    display: none;
+    top: -6px;
+    left: -12px;
+    background: rgba(white, 0.5);
+    backdrop-filter: blur(6px);
+    white-space: nowrap;
+    padding: 6px 12px;
+    border-radius: 6px;
+    box-shadow: 2px 1px 5px 1px rgba(black, .2);
+}

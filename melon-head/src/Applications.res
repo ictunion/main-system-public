@@ -15,7 +15,7 @@ module Data = {
     email: option<Email.t>,
     firstName: option<string>,
     lastName: option<string>,
-    phoneNumber: option<string>,
+    phoneNumber: option<PhoneNumber.t>,
     city: option<string>,
     companyName: option<string>,
     registrationLocal: Local.t,
@@ -28,7 +28,7 @@ module Data = {
     email: option<Email.t>,
     firstName: option<string>,
     lastName: option<string>,
-    phoneNumber: option<string>,
+    phoneNumber: option<PhoneNumber.t>,
     city: option<string>,
     companyName: option<string>,
     registrationLocal: Local.t,
@@ -44,7 +44,7 @@ module Data = {
       email: field.required(. "email", option(Email.decode)),
       firstName: field.required(. "first_name", option(string)),
       lastName: field.required(. "last_name", option(string)),
-      phoneNumber: field.required(. "phone_number", option(string)),
+      phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
       city: field.required(. "city", option(string)),
       companyName: field.required(. "company_name", option(string)),
       registrationLocal: field.required(. "registration_local", Local.decode),
@@ -57,7 +57,7 @@ module Data = {
       email: field.required(. "email", option(Email.decode)),
       firstName: field.required(. "first_name", option(string)),
       lastName: field.required(. "last_name", option(string)),
-      phoneNumber: field.required(. "phone_number", option(string)),
+      phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
       city: field.required(. "city", option(string)),
       companyName: field.required(. "company_name", option(string)),
       registrationLocal: field.required(. "registration_local", Local.decode),
@@ -112,19 +112,11 @@ let make = (~api: Api.t) => {
             {
               name: "ID",
               minMax: ("100px", "1fr"),
-              view: r =>
-                React.string(
-                  Uuid.toString(r.id)->Js.String.substrAtMost(~from=0, ~length=7) ++ "...",
-                ),
-            },
-            {
-              name: "Email",
-              minMax: ("200px", "2fr"),
-              view: r => React.string(r.email->Option.mapWithDefault("--", Email.toString)),
+              view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
             },
             {
               name: "First Name",
-              minMax: ("150px", "2fr"),
+              minMax: ("150px", "1fr"),
               view: r => React.string(r.firstName->Option.getWithDefault("--")),
             },
             {
@@ -133,9 +125,18 @@ let make = (~api: Api.t) => {
               view: r => React.string(r.lastName->Option.getWithDefault("--")),
             },
             {
+              name: "Email",
+              minMax: ("200px", "2fr"),
+              view: r =>
+                r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+            },
+            {
               name: "Phone",
-              minMax: ("150px", "2fr"),
-              view: r => React.string(r.phoneNumber->Option.getWithDefault("--")),
+              minMax: ("250px", "2fr"),
+              view: r =>
+                r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
+                  <Link.Tel phoneNumber />
+                ),
             },
             {
               name: "City",
@@ -149,7 +150,7 @@ let make = (~api: Api.t) => {
             },
             {
               name: "Language",
-              minMax: ("50px", "1fr"),
+              minMax: ("125px", "1fr"),
               view: r => React.string(r.registrationLocal->Local.toString),
             },
             {
@@ -167,19 +168,11 @@ let make = (~api: Api.t) => {
             {
               name: "ID",
               minMax: ("100px", "1fr"),
-              view: r =>
-                React.string(
-                  Uuid.toString(r.id)->Js.String.substrAtMost(~from=0, ~length=7) ++ "...",
-                ),
-            },
-            {
-              name: "Email",
-              minMax: ("200px", "2fr"),
-              view: r => React.string(r.email->Option.mapWithDefault("--", Email.toString)),
+              view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
             },
             {
               name: "First Name",
-              minMax: ("150px", "2fr"),
+              minMax: ("150px", "1fr"),
               view: r => React.string(r.firstName->Option.getWithDefault("--")),
             },
             {
@@ -188,9 +181,18 @@ let make = (~api: Api.t) => {
               view: r => React.string(r.lastName->Option.getWithDefault("--")),
             },
             {
+              name: "Email",
+              minMax: ("200px", "2fr"),
+              view: r =>
+                r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+            },
+            {
               name: "Phone",
               minMax: ("150px", "2fr"),
-              view: r => React.string(r.phoneNumber->Option.getWithDefault("--")),
+              view: r =>
+                r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
+                  <Link.Tel phoneNumber />
+                ),
             },
             {
               name: "City",
@@ -204,13 +206,16 @@ let make = (~api: Api.t) => {
             },
             {
               name: "Language",
-              minMax: ("50px", "1fr"),
+              minMax: ("125px", "1fr"),
               view: r => React.string(r.registrationLocal->Local.toString),
             },
             {
               name: "Email sent at",
               minMax: ("150px", "2fr"),
-              view: r => React.string(r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleString)),
+              view: r =>
+                React.string(
+                  r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleString),
+                ),
             },
           ]}
         />

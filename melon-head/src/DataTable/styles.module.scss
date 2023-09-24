@@ -29,7 +29,6 @@ $border-color: rgba($primary, 0.3);
     grid-template-columns: var(--grid-template-columns);
     min-width: 100%;
     border-top: 1px solid $border-color;
-    font-size: 15px;
     min-width: fit-content;
     align-items: center;
 
@@ -40,7 +39,6 @@ $border-color: rgba($primary, 0.3);
 
 .td {
     padding: 12px 24px;
-    overflow: hidden;
 }
 
 .head-cell {

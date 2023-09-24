@@ -16,5 +16,7 @@ module Uuid = MakeOpaqueString()
 
 module Email = MakeOpaqueString()
 
+module PhoneNumber = MakeOpaqueString()
+
 // TODO: This should be using closed variant type
 module Local = MakeOpaqueString()
