@@ -14,6 +14,7 @@
     color: $ternary;
     text-decoration: underline;
     cursor: pointer;
+    font-weight: 600;
 
     &:hover > span {
         display: block;

@@ -7,7 +7,7 @@ let make = default => {
 module Tabs = {
   @react.component
   let make = (~children) => {
-    <div className={styles["scroll-container"]}>
+    <div className={styles["scrollContainer"]}>
       <nav className={styles["nav"]}> children </nav>
     </div>
   }
@@ -20,7 +20,7 @@ module Tab = {
     let activate = _ => setActive(_ => value)
 
     let cssClass = if active == value {
-      styles["active-tab"]
+      styles["activeTab"]
     } else {
       styles["tab"]
     }

@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import * as React from "react";
 const config = require("../config.json");
 
+import "../static/css/main.css";
+
 const keycloak = new Keycloak({
     url: config.keycloak_url,
     realm: config.keycloak_realm,

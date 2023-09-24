@@ -16,19 +16,19 @@ let make = (
 ) =>
   <div className={styles["root"]}>
     <div onClick={closeProfile} />
-    <aside className={styles["side-pane"]}>
+    <aside className={styles["sidePane"]}>
       <header className={styles["header"]}>
         <Icons.Profile variant=Icons.Light />
         <h4 className={styles["nav-title"]}> {React.string("Profile")} </h4>
-        <button onClick={closeProfile} className={styles["close-btn"]}>
+        <button onClick={closeProfile} className={styles["closeBtn"]}>
           <Icons.Close />
         </button>
       </header>
-      <section className={styles["profile-detail"]}>
+      <section className={styles["profileDetail"]}>
         <h4 className={styles["profile-title"]}> {React.string("Profile details")} </h4>
         {switch session {
         | Success(ses) =>
-          <table className={styles["profile-table"]}>
+          <table className={styles["profileTable"]}>
             <tbody>
               <tr title={ses.tokenClaims.sub->Data.Uuid.toString}>
                 <td> {React.string("sub")} </td>
@@ -72,7 +72,7 @@ let make = (
         }}
       </section>
       <nav>
-        <ul className={styles["nav-list"]}>
+        <ul className={styles["navList"]}>
           <li key="1">
             <a href={config.profileUrl} target="_blank"> {React.string("Profile")} </a>
           </li>
@@ -81,9 +81,9 @@ let make = (
               {React.string("Account Settings")}
             </a>
           </li>
-          <li key="3" className={styles["nav-divider"]} />
-          <li key="4" className={styles["centered-li"]}>
-            <button className={styles["sign-out-btn"]} onClick={_ => Keycloak.logout(keycloak)}>
+          <li key="3" className={styles["navDivider"]} />
+          <li key="4" className={styles["centeredLi"]}>
+            <button className={styles["signOutBtn"]} onClick={_ => Keycloak.logout(keycloak)}>
               {React.string("Sign Out")}
             </button>
           </li>

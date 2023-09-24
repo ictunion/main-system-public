@@ -9,14 +9,14 @@ let make = (
 ) => {
   let openHome = _ => RescriptReactRouter.push("/")
   <header className={styles["root"]}>
-    <button className={styles["nav-btn"]} onClick={toggleNav}>
+    <button className={styles["navBtn"]} onClick={toggleNav}>
       <Icons.Hamburger isOpen={isNavOpen} />
     </button>
-    <h1 className={styles["app-title"]} onClick={openHome}>
+    <h1 className={styles["appTitle"]} onClick={openHome}>
       <img src={melonSvg} />
       {React.string("Orca's Melon Head Manager")}
     </h1>
-    <button className={styles["profile-btn"]} onClick={openProfile}>
+    <button className={styles["profileBtn"]} onClick={openProfile}>
       <Icons.Profile />
     </button>
   </header>

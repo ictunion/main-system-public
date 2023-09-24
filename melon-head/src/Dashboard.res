@@ -18,21 +18,21 @@ module RowBasedTable = {
 
     let viewRows = rows->Array.mapWithIndex(viewRow)->React.array
 
-    <div className={styles["row-table-wrapper"]}>
+    <div className={styles["rowTableWrapper"]}>
       {switch title {
-      | Some(str) => <h2 className={styles["row-table-title"]}> {React.string(str)} </h2>
+      | Some(str) => <h2 className={styles["rowTableTitle"]}> {React.string(str)} </h2>
       | None => React.null
       }}
-      <table className={styles["row-table-table"]}>
+      <table className={styles["rowTableTable"]}>
         <tbody> viewRows </tbody>
       </table>
       {switch data {
       | Loading =>
-        <div className={styles["row-table-loading"]}>
+        <div className={styles["rowTableLoading"]}>
           <Icons.Loading variant=Icons.Dark />
         </div>
       | Failure(err) =>
-        <div className={styles["row-table-error"]}>
+        <div className={styles["rowTableRrror"]}>
           <h4> {React.string("Error loading data")} </h4>
           <pre> {React.string(Api.showError(err))} </pre>
         </div>
@@ -76,7 +76,7 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
 
   <Page>
     <Page.Title> {React.string("Dashboard")} </Page.Title>
-    <div className={styles["stats-grid"]}>
+    <div className={styles["statsGrid"]}>
       <RowBasedTable rows=applicationsRows data=basicStats title=Some("Current Applications") />
       <RowBasedTable rows=permissionsRows data=session title=Some("Your Permissions/Roles") />
       <RowBasedTable rows=statusRows data=status title=Some("Api Status") />

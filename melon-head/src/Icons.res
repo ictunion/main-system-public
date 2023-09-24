@@ -9,7 +9,7 @@ type variant =
 module Hamburger = {
   @react.component
   let make = (~isOpen: bool) => {
-    let classNames = styles["hamburger"] ++ (isOpen ? " " ++ styles["hamburger-open"] : "")
+    let classNames = styles["hamburger"] ++ (isOpen ? " " ++ styles["hamburgerOpen"] : "")
 
     <span className={classNames}>
       <i />
@@ -21,8 +21,8 @@ module Profile = {
   @react.component
   let make = (~variant: variant=Dark) => {
     let cssClass = switch variant {
-    | Dark => styles["profile-dark"]
-    | Light => styles["profile-light"]
+    | Dark => styles["profileDark"]
+    | Light => styles["profileLight"]
     }
 
     <span className={cssClass}>
@@ -42,8 +42,8 @@ module Loading = {
   @react.component
   let make = (~variant: variant=Light) => {
     let className = switch variant {
-    | Light => styles["loading-light"]
-    | Dark => styles["loading-dark"]
+    | Light => styles["loadingLight"]
+    | Dark => styles["loadingDark"]
     }
     <div className>
       <div />

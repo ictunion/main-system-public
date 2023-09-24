@@ -25,7 +25,7 @@ module ConfiguredApp = {
     <SessionContext.Provider value={sessionState}>
       <div className={styles["root"]}>
         <AppNavigation isOpen={isNavOpen} session=sessionState />
-        <div className={styles["main-container"]}>
+        <div className={styles["mainContainer"]}>
           <AppHeader
             toggleNav={_ => setIsNavOpen(v => !v)}
             isNavOpen={isNavOpen}

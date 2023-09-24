@@ -43,7 +43,7 @@ module Uuid = {
     }
     <a className={styles["uuid"]} onClick={openPath}>
       {React.string(shorten)}
-      <span className={styles["uuid-full"]}> {React.string(Data.Uuid.toString(uuid))} </span>
+      <span className={styles["uuidFull"]}> {React.string(Data.Uuid.toString(uuid))} </span>
     </a>
   }
 }

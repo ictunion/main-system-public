@@ -11,7 +11,7 @@ type column<'t> = {
 module HeadCell = {
   @react.component
   let make = (~column: column<'t>) => {
-    <div className={styles["head-cell"]}> {React.string(column.name)} </div>
+    <div className={styles["headCell"]}> {React.string(column.name)} </div>
   }
 }
 
@@ -56,7 +56,7 @@ let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>) => {
     ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--grid-template-columns", gridTemplate)
 
   <div className={styles["root"]} style>
-    <div className={styles["scroll-container"]}>
+    <div className={styles["scrollContainer"]}>
       <THead columns />
       {switch data {
       | Success(rows) =>

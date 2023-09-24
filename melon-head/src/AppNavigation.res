@@ -13,7 +13,7 @@ module NavItem = {
     }
 
     if accessible {
-      <li className={styles["nav-item"]} onClick={openRoute}>
+      <li className={styles["navItem"]} onClick={openRoute}>
         <a> {React.string(text)} </a>
       </li>
     } else {
@@ -33,7 +33,7 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
     <nav className={styles["root"]}>
       {switch session {
       | Success(session) =>
-        <ul className={styles["nav-list"]}>
+        <ul className={styles["navList"]}>
           <NavItem key="1" path="/" text="Dashboard" session />
           <NavSeprator key="2" />
           <NavItem
