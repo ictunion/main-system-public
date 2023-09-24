@@ -3,17 +3,25 @@
     font-weight: 800;
     font-size: 48px;
     flex-direction: column;
-    color: #211D22;
+    color: var(--color1);
 }
 
 .status-code {
     font-family: 'Abril Fatface', cursive;
     line-height: 0.7em;
     font-size: 128px;
-    color: #EF562E;
+    color: var(--color7);
 }
 
 .desc {
     font-size: 16px;
     font-style: italic;
+}
+
+.code {
+    background: rgba(var(--rgb_color3), .2);
+    padding: 0 2px;
+    font-family: monospace;
+    font-style: normal;
+    border-radius: 2px;
 }

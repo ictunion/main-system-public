@@ -1,6 +1,4 @@
-@import '../variables';
-
-$divider: 1px solid rgba(white, 0.2);
+$divider: 1px solid rgba(var(--rgb_color2), 0.2);
 
 @mixin btn {
     background: transparent;
@@ -12,19 +10,20 @@ $divider: 1px solid rgba(white, 0.2);
     transition: background .2s ease-in-out;
 
     &:hover {
-        background: rgba(white, 0.1);
+        background: rgba(var(--rgb_color2), 0.1);
     }
 }
 
 .root {
-    background: $primary;
-    color: white;
+    background: var(--color1);
+    color: var(--color2);
 
     display: grid;
     flex: 64px 0 0;
     grid-template-areas: 'left center right';
     grid-template-columns: 64px auto 64px;
     column-gap: 12px;
+    align-items: stretch;
 }
 
 .nav-btn {

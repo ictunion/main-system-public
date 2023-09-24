@@ -1,6 +1,4 @@
-@import '../variables';
-
-$border-color: rgba($primary, 0.5);
+$border-color: rgba(var(--rgb_color1), 0.5);
 
 .scroll-container {
     overflow-x: auto;
@@ -30,13 +28,13 @@ $border-color: rgba($primary, 0.5);
 
 .tab {
     @include tab;
-    background: rgba($border-color, .1);
+    background: rgba(var(--rgb_color1), .1);
     transition: background .2s ease-in-out, border-color .2s linear;
     margin-top: 6px;
 
     &:hover {
-        background: rgba($border-color, .05);
-        border-top: 6px solid var(--active-color, $ternary);
+        background: rgba(var(--rgb_color1), .05);
+        border-top: 6px solid var(--active-color, var(--color4));
         margin-top: 1px;
     }
 }
@@ -44,5 +42,5 @@ $border-color: rgba($primary, 0.5);
 .active-tab {
     @include tab;
     background: white;
-    border-top: 6px solid var(--active-color, $ternary);
+    border-top: 6px solid var(--active-color, var(--color4));
 }

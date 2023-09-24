@@ -15,17 +15,7 @@ let make = (~children: React.element, ~requireAnyRole=[]) => {
       } else if Array.some(requireAnyRole, role => session->Session.hasRole(~role)) {
         children
       } else {
-        <div className={styles["error"]}>
-          <h1> {React.string("Forbidden")} </h1>
-          <p> {React.string("This page requires at least one of the following roles: ")} </p>
-          <ul>
-            {requireAnyRole
-            ->Array.mapWithIndex((i, role) =>
-              <li key={Int.toString(i)}> {React.string(role->Session.showOrcaRole)} </li>
-            )
-            ->React.array}
-          </ul>
-        </div>
+        <ErrorPage.Forbidden roles={requireAnyRole} />
       }
     | Loading =>
       <div className={styles["loading"]}>

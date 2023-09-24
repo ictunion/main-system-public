@@ -1,3 +1,41 @@
+$colors-light: (
+    color1: #211d22,
+    color2: #ffffff,
+    color3: #4b4848,
+    color4: #1781fa,
+    color5: #a63ded,
+    color6: #00c49f,
+    color7: #ef562e,
+);
+
+@function hexToRGB($hex) {
+  @return red($hex), green($hex), blue($hex);
+}
+
+@mixin generate_colors($colors) {
+  // Colors
+  @each $color, $value in $colors {
+    @if str-slice(#{$value}, 1, 1) == "#" {
+      --#{$color}: #{$value};
+    } @else {
+      --#{$color}: var(--#{$value});
+    }
+  }
+
+  // RGB Colors
+  @each $color, $value in $colors {
+    @if str-slice(#{$value}, 1, 1) == "#" {
+      --rgb_#{$color}: #{hexToRGB($value)};
+    } @else {
+      --rgb_#{$color}: var(--rgb_#{$value});
+    }
+  }
+}
+
+:root {
+  @include generate_colors($colors-light);
+}
+
 .root {
     display: flex;
     align-items: stretch;
@@ -10,4 +48,11 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+.app-error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
 }

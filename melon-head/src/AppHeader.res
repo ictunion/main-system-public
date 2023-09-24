@@ -14,7 +14,7 @@ let make = (
     </button>
     <h1 className={styles["appTitle"]} onClick={openHome}>
       <img src={melonSvg} />
-      {React.string("Orca's Melon Head Manager")}
+      {React.string("Orca / Melon Head")}
     </h1>
     <button className={styles["profileBtn"]} onClick={openProfile}>
       <Icons.Profile />

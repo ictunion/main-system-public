@@ -86,7 +86,7 @@ let make = (~api: Api.t) => {
 
   <Page requireAnyRole=[ListApplications]>
     <Page.Title> {React.string("Applications")} </Page.Title>
-    <div className={styles["main-content"]}>
+    <div className={styles["mainContent"]}>
       <Tabbed.Tabs>
         <Tabbed.Tab value={Processing} handlers={tabHandlers}>
           <span> {React.string("Processing")} </span>

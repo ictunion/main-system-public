@@ -1,9 +1,7 @@
-@import "../variables.scss";
-
 .root {
     flex: 250px 0 0;
-    background: $secondary;
-    box-shadow: -6px 0 6px 0 rgba(0,0,0,0.3) inset;
+    background: var(--color3);
+    box-shadow: -6px 0 6px 0 rgba(var(--rgb_color1), 0.3) inset;
 }
 
 .loading {
@@ -17,7 +15,7 @@
     display: flex;
     flex-direction: column;
     margin-top: 64px;
-    border-top: 1px solid rgba(white, .2);
+    border-top: 1px solid rgba(var(--rgb_color2), .2);
     padding: 12px 0;
 }
 
@@ -29,7 +27,7 @@
     a {
         display: flex;
         gap: 12px;
-        color: white;
+        color: var(--color2);
         font-weight: 600;
         letter-spacing: 0.2px;
         font-size: 16px;
@@ -37,12 +35,12 @@
     }
 
     &:hover {
-        background: rgba(white, .1);
+        background: rgba(var(--rgb_color2), .1);
     }
 }
 
 .separator {
-    border-bottom: 1px solid rgba(white, .2);
+    border-bottom: 1px solid rgba(var(--rgb_color2), .2);
     margin: 12px 0;
 }
 

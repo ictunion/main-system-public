@@ -35,7 +35,10 @@ module ConfiguredApp = {
           {switch url.path {
           | list{} => <Dashboard session=sessionState api />
           | list{"applications"} => <Applications api />
-          | _ => <PageNotFound />
+          | _ =>
+            <Page>
+              <ErrorPage.NotFound />
+            </Page>
           }}
         </div>
         {if isProfileOpen {
@@ -56,9 +59,8 @@ module App = {
     switch Config.make(config) {
     | Ok(config) => <ConfiguredApp keycloak={keycloak} config={config} />
     | Error(err) =>
-      <div>
-        <h1> {React.string("Error Loading Application Configuration")} </h1>
-        <pre> {React.string(err)} </pre>
+      <div className={styles["appError"]}>
+          <ErrorPage.Unauthorized error={err} />
       </div>
     }
   }

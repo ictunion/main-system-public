@@ -1,5 +1,3 @@
-@import '../variables';
-
 @mixin stripe($color) {
     width: 100%;
     height: 3px;
@@ -16,18 +14,18 @@
     transition: transform .2s ease-in-out;
 
     &::before {
-        @include stripe(white);
+        @include stripe(var(--color2));
         content: '';
         transition: transform .2s ease-in-out;
     }
 
     & > i {
-        @include stripe(white);
+        @include stripe(var(--color2));
         transition: opacity .2s ease-in-out;
     }
 
     &::after {
-        @include stripe(white);
+        @include stripe(var(--color2));
         content: '';
         transition: transform .2s ease-in-out;
     }
@@ -63,11 +61,11 @@
 }
 
 .profile-dark {
-    @include profile($primary, white);
+    @include profile(var(--color1), var(--rgb_color2));
 }
 
 .profile-light {
-    @include profile(white, $primary);
+    @include profile(var(--color2), var(--rgb_color1));
 }
 
 
@@ -80,13 +78,13 @@
     justify-content: space-between;
 
     &::before {
-        @include stripe($primary);
+        @include stripe(var(--color1));
         content: '';
         transform: rotate(-90deg) translate(-7px, 0);
     }
 
     &::after {
-        @include stripe($primary);
+        @include stripe(var(--color1));
         content: '';
         transform: translate(0, -7px);
     }
@@ -158,9 +156,9 @@
 }
 
 .loading-light {
-    @include loading(white);
+    @include loading(var(--color2));
 }
 
 .loading-dark {
-    @include loading($primary);
+    @include loading(var(--color1));
 }
