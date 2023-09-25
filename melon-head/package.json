@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Oeca web clinet",
   "scripts": {
-    "build": "rescript && webpack --mode production",
+    "build": "rescript build -with-deps && webpack --mode production",
     "start": "webpack-dev-server",
     "watch": "rescript build -w",
     "format": "rescript format -all",

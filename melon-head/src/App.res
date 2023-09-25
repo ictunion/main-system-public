@@ -35,6 +35,7 @@ module ConfiguredApp = {
           {switch url.path {
           | list{} => <Dashboard session=sessionState api />
           | list{"applications"} => <Applications api />
+          | list{"applications", id} => <ApplicationDetail id api />
           | _ =>
             <Page>
               <ErrorPage.NotFound />
@@ -60,7 +61,7 @@ module App = {
     | Ok(config) => <ConfiguredApp keycloak={keycloak} config={config} />
     | Error(err) =>
       <div className={styles["appError"]}>
-          <ErrorPage.Unauthorized error={err} />
+        <ErrorPage.Unauthorized error={err} />
       </div>
     }
   }

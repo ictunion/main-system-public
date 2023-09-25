@@ -62,6 +62,7 @@ which needs to be configured for the `keycloak_client_id` set in the `Rocket.tom
 | Role Name         | Description                                                  |
 |-------------------|--------------------------------------------------------------|
 | list-applications | Allow listing of applications/registrations in various state |
+| view-application  | Access detail of individual applications (by uuid)           |
 
 ## Developing
 

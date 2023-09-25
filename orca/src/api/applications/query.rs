@@ -1,6 +1,7 @@
 use crate::db::QueryAs;
 
-use super::{ProcessingSummary, UnverifiedSummary};
+use super::{Detail, ProcessingSummary, UnverifiedSummary};
+use crate::data::{Id, RegistrationRequest};
 
 pub fn get_unverified_summaries<'a>() -> QueryAs<'a, UnverifiedSummary> {
     sqlx::query_as(
@@ -20,4 +21,18 @@ FROM registration_requests_processing
 ORDER BY confirmed_at DESC
 ",
     )
+}
+
+pub fn get_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+    sqlx::query_as("
+SELECT
+    rr.id, rr.email, rr.first_name, rr.last_name, rr.date_of_birth, rr.phone_number, rr.city, rr.address,
+    rr.postal_code, rr.occupation, rr.company_name, rr.verification_sent_at, rr.confirmed_at,
+    rr.registration_ip, rr.registration_local, rr.registration_user_agent, rr.registration_source, rr.rejected_at, rr.created_at,
+    m.created_at AS accepted_at
+FROM registration_requests AS rr
+LEFT JOIN members AS m ON rr.id = m.registration_request_id
+WHERE rr.id = $1
+")
+    .bind(id)
 }

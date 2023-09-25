@@ -73,6 +73,7 @@ impl<'r> Responder<'r, 'static> for keycloak::Error {
             Disabled => Err(Status::NotAcceptable),
             BadKey(_) => Err(Status::InternalServerError),
             MissingRole(_) => Err(Status::Forbidden),
+            MissingOneOfRoles(_) => Err(Status::Forbidden),
             BadToken(jwt_err) => {
                 use jsonwebtoken::errors::ErrorKind;
 

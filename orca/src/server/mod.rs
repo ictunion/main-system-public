@@ -13,6 +13,7 @@ cfg_if::cfg_if! {
 }
 
 use rocket::request::{FromRequest, Outcome, Request};
+use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, sqlx::Type)]
 #[sqlx(transparent)]
@@ -35,6 +36,15 @@ pub struct IpAddress(IpAddr);
 impl Display for IpAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         self.0.fmt(f)
+    }
+}
+
+impl Serialize for IpAddress {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_string().serialize(serializer)
     }
 }
 

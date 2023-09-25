@@ -1,11 +1,13 @@
 type orcaRole =
   | UnknownOrcaRole(string)
   | ListApplications
+  | ViewApplication
 
 let showOrcaRole = (r: orcaRole): string =>
   switch r {
   | UnknownOrcaRole(str) => str
   | ListApplications => "list-applications"
+  | ViewApplication => "view-application"
   }
 
 type tokenClaims = {
@@ -29,6 +31,7 @@ module Decode = {
   let orcaRole = string->map((. str) => {
     switch str {
     | "list-applications" => ListApplications
+    | "view-application" => ViewApplication
     | _ => UnknownOrcaRole(str)
     }
   })

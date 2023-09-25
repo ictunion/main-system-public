@@ -1,0 +1,11 @@
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+
+    @media screen and (max-width: 1220px) {
+        & {
+            grid-template-columns: 1fr;
+        }
+    }
+}

@@ -1,4 +1,4 @@
-use rocket::serde::Serialize;
+use rocket::{request::FromParam, serde::Serialize};
 use std::error::Error;
 use std::fmt::Display;
 use std::marker::PhantomData;
@@ -33,6 +33,15 @@ impl<T> Serialize for Id<T> {
         S: serde::Serializer,
     {
         self.0.serialize(serializer)
+    }
+}
+
+impl<'a, T> FromParam<'a> for Id<T> {
+    type Error = uuid::Error;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        let uuid = Uuid::parse_str(param)?;
+        Ok(Id(uuid, PhantomData))
     }
 }
 

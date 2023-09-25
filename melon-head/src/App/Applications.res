@@ -1,111 +1,47 @@
+@module external styles: {..} = "./Applications/styles.module.scss"
+
 open Data
 open Belt
 
-@module external styles: {..} = "./Applications/styles.module.scss"
-
-type applicationsTab =
-  | Processing
-  | Unverified
-  | Accepted
-  | Rejected
-
-module Data = {
-  type processingSummary = {
-    id: Uuid.t,
-    email: option<Email.t>,
-    firstName: option<string>,
-    lastName: option<string>,
-    phoneNumber: option<PhoneNumber.t>,
-    city: option<string>,
-    companyName: option<string>,
-    registrationLocal: Local.t,
-    createdAt: Js.Date.t,
-    verifiedAt: Js.Date.t,
-  }
-
-  type unverifiedSummary = {
-    id: Uuid.t,
-    email: option<Email.t>,
-    firstName: option<string>,
-    lastName: option<string>,
-    phoneNumber: option<PhoneNumber.t>,
-    city: option<string>,
-    companyName: option<string>,
-    registrationLocal: Local.t,
-    createdAt: Js.Date.t,
-    verificationSentAt: option<Js.Date.t>,
-  }
-
-  module Decode = {
-    open Json.Decode
-
-    let processingSummary = object(field => {
-      id: field.required(. "id", Uuid.decode),
-      email: field.required(. "email", option(Email.decode)),
-      firstName: field.required(. "first_name", option(string)),
-      lastName: field.required(. "last_name", option(string)),
-      phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
-      city: field.required(. "city", option(string)),
-      companyName: field.required(. "company_name", option(string)),
-      registrationLocal: field.required(. "registration_local", Local.decode),
-      createdAt: field.required(. "created_at", date),
-      verifiedAt: field.required(. "confirmed_at", date),
-    })
-
-    let unverifiedSummary = object(field => {
-      id: field.required(. "id", Uuid.decode),
-      email: field.required(. "email", option(Email.decode)),
-      firstName: field.required(. "first_name", option(string)),
-      lastName: field.required(. "last_name", option(string)),
-      phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
-      city: field.required(. "city", option(string)),
-      companyName: field.required(. "company_name", option(string)),
-      registrationLocal: field.required(. "registration_local", Local.decode),
-      createdAt: field.required(. "created_at", date),
-      verificationSentAt: field.required(. "verification_sent_at", option(date)),
-    })
-  }
-}
-
 @react.component
 let make = (~api: Api.t) => {
-  let tabHandlers = Tabbed.make(Processing)
+  let tabHandlers = Tabbed.make(ApplicationData.Processing)
 
-  let (basicStats, _) = api->Hook.getData(~path="/stats/basic", ~decoder=Stats.Decode.basic)
+  let (basicStats, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
   let (processing, _) =
     api->Hook.getData(
       ~path="/applications/processing",
-      ~decoder=Json.Decode.array(Data.Decode.processingSummary),
+      ~decoder=Json.Decode.array(ApplicationData.Decode.processingSummary),
     )
 
   let (unverified, _) =
     api->Hook.getData(
       ~path="/applications/unverified",
-      ~decoder=Json.Decode.array(Data.Decode.unverifiedSummary),
+      ~decoder=Json.Decode.array(ApplicationData.Decode.unverifiedSummary),
     )
 
   <Page requireAnyRole=[ListApplications]>
     <Page.Title> {React.string("Applications")} </Page.Title>
     <div className={styles["mainContent"]}>
       <Tabbed.Tabs>
-        <Tabbed.Tab value={Processing} handlers={tabHandlers}>
+        <Tabbed.Tab value={ApplicationData.Processing} handlers={tabHandlers}>
           <span> {React.string("Processing")} </span>
           <Chip.Count value={basicStats->RemoteData.map(r => r.processing)} />
         </Tabbed.Tab>
-        <Tabbed.Tab value={Unverified} handlers={tabHandlers} color=Some("#a63ded")>
+        <Tabbed.Tab value={ApplicationData.Unverified} handlers={tabHandlers} color=Some("#a63ded")>
           {React.string("Pending Verification")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.unverified)} />
         </Tabbed.Tab>
-        <Tabbed.Tab value={Accepted} handlers={tabHandlers} color=Some("#00c49f")>
+        <Tabbed.Tab value={ApplicationData.Accepted} handlers={tabHandlers} color=Some("#00c49f")>
           {React.string("Accepted")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.accepted)} />
         </Tabbed.Tab>
-        <Tabbed.Tab value={Rejected} handlers={tabHandlers} color=Some("#ef562e")>
+        <Tabbed.Tab value={ApplicationData.Rejected} handlers={tabHandlers} color=Some("#ef562e")>
           {React.string("Rejected")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.rejected)} />
         </Tabbed.Tab>
       </Tabbed.Tabs>
-      <Tabbed.Content tab={Processing} handlers={tabHandlers}>
+      <Tabbed.Content tab={ApplicationData.Processing} handlers={tabHandlers}>
         <DataTable
           data={processing}
           columns={[
@@ -161,7 +97,7 @@ let make = (~api: Api.t) => {
           ]}
         />
       </Tabbed.Content>
-      <Tabbed.Content tab={Unverified} handlers={tabHandlers}>
+      <Tabbed.Content tab={ApplicationData.Unverified} handlers={tabHandlers}>
         <DataTable
           data={unverified}
           columns={[

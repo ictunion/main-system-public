@@ -17,12 +17,14 @@ struct ConnectedKeycloak {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Role {
     ListApplications,
+    ViewApplication,
 }
 
 impl Role {
     fn to_json_val(self) -> &'static str {
         match self {
             Self::ListApplications => "list-applications",
+            Self::ViewApplication => "view-application",
         }
     }
 }
@@ -64,8 +66,26 @@ impl ConnectedKeycloak {
         if self.has_role(&token_data.claims, role.to_json_val()) {
             Ok(token_data)
         } else {
-            Err(Error::MissingRole(role.to_string()))
+            Err(Error::MissingRole(role))
         }
+    }
+
+    pub fn require_any_role(
+        &self,
+        token: JwtToken,
+        roles: &[Role],
+    ) -> Result<TokenData<JwtClaims>, Error> {
+        let token_data = self.decode_jwt(token)?;
+
+        for role in roles {
+            if self.has_role(&token_data.claims, role.to_json_val()) {
+                return Ok(token_data);
+            } else {
+                continue;
+            }
+        }
+
+        Err(Error::MissingOneOfRoles(roles.to_vec()))
     }
 
     fn has_role(&self, claims: &JwtClaims, role: &str) -> bool {
@@ -111,6 +131,17 @@ impl Keycloak {
         }
     }
 
+    pub fn require_any_role(
+        &self,
+        token: JwtToken,
+        role: &[Role],
+    ) -> Result<TokenData<JwtClaims>, Error> {
+        match &self.0 {
+            KeycloakState::Connected(k) => k.require_any_role(token, role),
+            KeycloakState::Disconnected => Err(Error::Disabled),
+        }
+    }
+
     pub fn is_connected(&self) -> bool {
         match self.0 {
             KeycloakState::Connected(_) => true,
@@ -123,7 +154,8 @@ impl Keycloak {
 pub enum Error {
     BadKey(jwk::Error),
     BadToken(jsonwebtoken::errors::Error),
-    MissingRole(String),
+    MissingRole(Role),
+    MissingOneOfRoles(Vec<Role>),
     Disabled,
 }
 
