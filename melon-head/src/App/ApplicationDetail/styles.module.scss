@@ -93,3 +93,52 @@
         }
     }
 }
+
+.personal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.signature {
+    background: white;
+    border: 1px solid rgb(var(--rgb_color1), 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.files-table {
+    width: 100%;
+    font-size: 14px;
+    font-weight: 400;
+    border-collapse: collapse;
+    margin: 12px 0;
+
+    thead {
+        font-weight: 600;
+
+        td {
+            background: rgba(var(--rgb_color4), .2);
+        }
+    }
+
+    a {
+        font-weight: 600;
+    }
+
+    td {
+        line-height: 2em;
+        padding: 2px 6px;
+    }
+
+    tbody {
+        tr:nth-child(even) td {
+            background: rgba(var(--rgb_color4), .1);
+        }
+    }
+
+    td:last-child {
+        text-align: right;
+    }
+}

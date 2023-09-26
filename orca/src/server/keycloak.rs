@@ -8,6 +8,12 @@ use rocket::serde::Serialize;
 
 use super::jwk;
 
+#[derive(FromForm)]
+pub struct JwtToken<'a> {
+    #[field(name = "token")]
+    string: &'a str,
+}
+
 struct ConnectedKeycloak {
     key: DecodingKey,
     validation: Validation,
@@ -58,7 +64,13 @@ impl ConnectedKeycloak {
         &self,
         token: JwtToken,
     ) -> Result<TokenData<JwtClaims>, jsonwebtoken::errors::Error> {
-        jsonwebtoken::decode::<JwtClaims>(token.0, &self.key, &self.validation)
+        let res = jsonwebtoken::decode::<JwtClaims>(token.string, &self.key, &self.validation);
+        if let Err(err) = &res {
+            warn!("Faild to decode JWT token {}", token.string);
+            warn!("Error: {:?}", err);
+        }
+
+        res
     }
 
     pub fn require_role(&self, token: JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error> {
@@ -183,8 +195,6 @@ pub struct JwtClaims {
     resource_access: HashMap<String, Roles>,
 }
 
-pub struct JwtToken<'a>(&'a str);
-
 #[derive(Responder, Debug)]
 pub enum NetworkResponse {
     #[response(status = 401)]
@@ -203,7 +213,7 @@ impl<'r> FromRequest<'r> for JwtToken<'r> {
             )),
             Some(string) => {
                 let token = string.trim_start_matches("Bearer").trim();
-                Outcome::Success(JwtToken(token))
+                Outcome::Success(JwtToken { string: token })
             }
         }
     }

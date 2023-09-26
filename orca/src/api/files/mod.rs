@@ -1,0 +1,60 @@
+use rocket::response::Responder;
+use rocket::{Route, State};
+
+use crate::api::Response;
+use crate::data::Id;
+use crate::db::DbPool;
+use crate::server::keycloak::{JwtToken, Keycloak, Role};
+use rocket::http::ContentType;
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct File {
+    // This is read only and using Rc<[u8]> rather than Vec<u8> removes some overhead
+    data: Vec<u8>,
+    file_type: String,
+}
+
+impl<'r> Responder<'r, 'static> for File {
+    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+        let prefix = match self.file_type.as_str() {
+            "png" => "image",
+            "jpg" => "image",
+            _ => "application",
+        };
+
+        let content_type = ContentType::new(prefix, self.file_type);
+
+        rocket::response::Response::build_from(self.data.respond_to(req)?)
+            .header(content_type)
+            .ok()
+    }
+}
+
+#[get("/<id>?<token..>")]
+async fn get<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<File>,
+) -> Response<File> {
+    keycloak.require_role(token, Role::ViewApplication)?;
+
+    let file: File = read_file(id).fetch_one(db_pool.inner()).await?;
+    Ok(file)
+}
+
+use crate::db::QueryAs;
+
+fn read_file(id: Id<File>) -> QueryAs<'static, File> {
+    sqlx::query_as(
+        "
+SELECT data, file_type FROM files
+WHERE id = $1
+",
+    )
+    .bind(id)
+}
+
+pub fn routes() -> Vec<Route> {
+    routes![get]
+}

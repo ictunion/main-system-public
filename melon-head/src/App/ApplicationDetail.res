@@ -42,7 +42,11 @@ module DataGrid = {
       ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--grid-template-columns", gridTemplate)
 
     <div className={styles["rowWrap"]}>
-      <h3 className={styles["rowLabel"]}> {React.string(row.label)} </h3>
+      {if row.label != "" {
+        <h3 className={styles["rowLabel"]}> {React.string(row.label)} </h3>
+      } else {
+        React.null
+      }}
       <div style key={Int.toString(rowI)} className={styles["row"]}>
         {row.cells
         ->Array.mapWithIndex((i, c) =>
@@ -159,16 +163,53 @@ let timeRows: array<RowBasedTable.row<ApplicationData.detail>> = [
   ("Accepted", d => viewOption(d.acceptedAt, a => a->Js.Date.toLocaleString->React.string)),
 ]
 
+let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
+  <div className={styles["signature"]}>
+    {switch signature {
+    | Some(file) => {
+        let src =
+          api.host ++
+          "/files/" ++
+          file.id->Uuid.toString ++
+          "?token=" ++
+          api.keycloak->Keycloak.getToken
+        <img alt="signature" src />
+      }
+    | None => React.string("Not Found")
+    }}
+  </div>
+}
+
+let viewFile = (~api: Api.t, file) => {
+  let fileName = file.name ++ "." ++ file.fileType
+  let fileUrl =
+    api.host ++ "/files/" ++ file.id->Uuid.toString ++ "?token=" ++ api.keycloak->Keycloak.getToken
+
+  <tr key={file.id->Uuid.toString}>
+    <td>
+      <a href=fileUrl target="_blank"> {React.string(fileName)} </a>
+    </td>
+    <td> {file.createdAt->Js.Date.toLocaleString->React.string} </td>
+  </tr>
+}
+
 type tabs =
   | Metadata
   | Checklist
+  | Files
 
 @react.component
 let make = (~id: string, ~api: Api.t) => {
   let (detail, _) =
     api->Hook.getData(~path="/applications/" ++ id, ~decoder=ApplicationData.Decode.detail)
 
-  let tabHandlers = Tabbed.make(Metadata)
+  let (files, _) =
+    api->Hook.getData(
+      ~path="/applications/" ++ id ++ "/files",
+      ~decoder=Json.Decode.array(Data.Decode.file),
+    )
+
+  let tabHandlers = Tabbed.make(Files)
 
   <Page requireAnyRole=[ListApplications, ViewApplication]>
     <header>
@@ -190,13 +231,49 @@ let make = (~id: string, ~api: Api.t) => {
       <DataGrid layout data=detail />
     </div>
     <Tabbed.Tabs>
+      <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
       <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
       <Tabbed.Tab value=Checklist handlers=tabHandlers> {React.string("Checklist")} </Tabbed.Tab>
     </Tabbed.Tabs>
+    <Tabbed.Content tab=Files handlers=tabHandlers>
+      <DataGrid
+        data=files
+        layout={[
+          {
+            label: "",
+            cells: [
+              {
+                label: "Signature",
+                minmax: ("150px", "600px"),
+                view: files =>
+                  files
+                  ->Array.getByU((. f) => {
+                    f.name == "signature" && f.fileType == "png"
+                  })
+                  ->viewSignature(~api),
+              },
+              {
+                label: "All Files",
+                minmax: ("150px", "965px"),
+                view: files =>
+                  <table className=styles["filesTable"]>
+                    <thead>
+                      <tr>
+                        <td> {React.string("File Name")} </td>
+                        <td> {React.string("Created at")} </td>
+                      </tr>
+                    </thead>
+                    <tbody> {files->Array.map(viewFile(~api))->React.array} </tbody>
+                  </table>,
+              },
+            ],
+          },
+        ]}
+      />
+    </Tabbed.Content>
     <Tabbed.Content tab=Metadata handlers=tabHandlers>
-      <div className={styles["metadata"]}>
+      <div className=styles["metadata"]>
         <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
-        /* <RowBasedTable rows=metadataRows data=detail title=Some("Files") /> */
         <RowBasedTable rows=metadataRows data=detail title=Some("Metadata") />
       </div>
     </Tabbed.Content>

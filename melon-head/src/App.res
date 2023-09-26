@@ -22,13 +22,13 @@ module ConfiguredApp = {
       Some(() => Future.cancel(req))
     }, [keycloak])
 
-    <SessionContext.Provider value={sessionState}>
+    <SessionContext.Provider value=sessionState>
       <div className={styles["root"]}>
-        <AppNavigation isOpen={isNavOpen} session=sessionState />
+        <AppNavigation isOpen=isNavOpen session=sessionState />
         <div className={styles["mainContainer"]}>
           <AppHeader
             toggleNav={_ => setIsNavOpen(v => !v)}
-            isNavOpen={isNavOpen}
+            isNavOpen
             openProfile={_ => setIsProfileOpen(_ => true)}
           />
           /* Routing to pages */
@@ -60,8 +60,10 @@ module App = {
     switch Config.make(config) {
     | Ok(config) => <ConfiguredApp keycloak={keycloak} config={config} />
     | Error(err) =>
-      <div className={styles["appError"]}>
-        <ErrorPage.Unauthorized error={err} />
+      <div className={styles["root"]}>
+        <div className={styles["appError"]}>
+          <ErrorPage.Unauthorized error=err />
+        </div>
       </div>
     }
   }

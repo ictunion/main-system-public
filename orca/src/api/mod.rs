@@ -5,6 +5,7 @@ use tokio::task::JoinError;
 use validator::ValidationError;
 
 mod applications;
+mod files;
 mod registration;
 mod session;
 mod stats;
@@ -164,6 +165,7 @@ pub fn build() -> Rocket<Build> {
         .mount("/applications", applications::routes())
         .mount("/session", session::routes())
         .mount("/stats", stats::routes())
+        .mount("/files", files::routes())
         .register(
             "/registration",
             catchers![rocket_validation::validation_catcher],

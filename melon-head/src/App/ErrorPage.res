@@ -18,8 +18,7 @@ module Shared = {
 module NotFound = {
   @react.component
   let make = () =>
-    <Shared
-      code={404} title="Page Not Found!" description="Page you're looking for does not exist.">
+    <Shared code=404 title="Page Not Found!" description="Page you're looking for does not exist.">
       <p className={styles["desc"]}>
         {React.string("Have a look into navigation if you can find what you're looking for.")}
       </p>
@@ -35,7 +34,7 @@ module Forbidden = {
   @react.component
   let make = (~roles: array<Session.orcaRole>) =>
     <Shared
-      code={403} title="Forbidden" description="This page requires explicit role you don't have.">
+      code=403 title="Forbidden" description="This page requires explicit role you don't have.">
       <p className={styles["desc"]}>
         {React.string("This page requires at least one of the following roles: ")}
         {roles
@@ -52,7 +51,7 @@ module Forbidden = {
 module Unauthorized = {
   @react.component
   let make = (~error: string) =>
-    <Shared code={401} title="Unauthorized" description="Error loading application configuration.">
+    <Shared code=401 title="Unauthorized" description="Error loading application configuration.">
       <p className={styles["desc"]}>
         {React.string("Following error occured during application initialization:")}
         <p>

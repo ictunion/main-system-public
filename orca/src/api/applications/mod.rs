@@ -10,6 +10,8 @@ use crate::db::DbPool;
 use crate::server::keycloak::{JwtToken, Keycloak, Role};
 use crate::server::IpAddress;
 
+use self::query::get_application_files;
+
 mod query;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -94,6 +96,14 @@ pub struct Detail {
     created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct File {
+    id: Id<crate::api::files::File>,
+    name: String,
+    file_type: String,
+    created_at: DateTime<Utc>,
+}
+
 #[get("/<id>")]
 async fn detail<'r>(
     db_pool: &State<DbPool>,
@@ -110,6 +120,19 @@ async fn detail<'r>(
     Ok(Json(detail))
 }
 
+#[get("/<id>/files")]
+async fn files<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<RegistrationRequest>,
+) -> Response<Json<Vec<File>>> {
+    keycloak.require_role(token, Role::ViewApplication)?;
+
+    let files = get_application_files(id).fetch_all(db_pool.inner()).await?;
+    Ok(Json(files))
+}
+
 pub fn routes() -> Vec<Route> {
-    routes![list_unverified, list_processing, detail]
+    routes![list_unverified, list_processing, detail, files]
 }

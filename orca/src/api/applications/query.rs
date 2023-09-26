@@ -1,6 +1,6 @@
 use crate::db::QueryAs;
 
-use super::{Detail, ProcessingSummary, UnverifiedSummary};
+use super::{Detail, File, ProcessingSummary, UnverifiedSummary};
 use crate::data::{Id, RegistrationRequest};
 
 pub fn get_unverified_summaries<'a>() -> QueryAs<'a, UnverifiedSummary> {
@@ -34,5 +34,18 @@ FROM registration_requests AS rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
 WHERE rr.id = $1
 ")
+    .bind(id)
+}
+
+pub fn get_application_files<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, File> {
+    sqlx::query_as(
+        "
+    SELECT f.id, f.name, f.file_type, f.created_at
+FROM registration_requests_files AS rrf
+INNER JOIN files AS f ON f.id = rrf.file_id
+WHERE rrf.registration_request_id = $1
+ORDER BY f.created_at DESC
+",
+    )
     .bind(id)
 }
