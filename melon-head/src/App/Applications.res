@@ -62,7 +62,7 @@ let make = (~api: Api.t) => {
             },
             {
               name: "Email",
-              minMax: ("200px", "2fr"),
+              minMax: ("250px", "2fr"),
               view: r =>
                 r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
             },
@@ -118,7 +118,7 @@ let make = (~api: Api.t) => {
             },
             {
               name: "Email",
-              minMax: ("200px", "2fr"),
+              minMax: ("250px", "2fr"),
               view: r =>
                 r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
             },
@@ -147,7 +147,7 @@ let make = (~api: Api.t) => {
             },
             {
               name: "Email sent at",
-              minMax: ("150px", "2fr"),
+              minMax: ("200px", "2fr"),
               view: r =>
                 React.string(
                   r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleString),

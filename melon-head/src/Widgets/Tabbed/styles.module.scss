@@ -4,6 +4,8 @@ $border-color: rgba(var(--rgb_color1), 0.5);
     overflow-x: auto;
     overflow-y: hidden;
     padding: 6px 0;
+    flex-grow: 0;
+    flex-shrink: 0;
 }
 
 .nav {
