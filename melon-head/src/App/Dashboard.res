@@ -38,6 +38,10 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
       "View application detail",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ViewApplication)} />},
     ),
+    (
+      "Resolve (Approve or Reject) applications",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ResolveApplications)} />},
+    ),
   ]
 
   <Page>

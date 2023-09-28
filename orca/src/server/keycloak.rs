@@ -24,6 +24,7 @@ struct ConnectedKeycloak {
 pub enum Role {
     ListApplications,
     ViewApplication,
+    ResolveApplications,
 }
 
 impl Role {
@@ -31,6 +32,7 @@ impl Role {
         match self {
             Self::ListApplications => "list-applications",
             Self::ViewApplication => "view-application",
+            Self::ResolveApplications => "resolve-applications",
         }
     }
 }

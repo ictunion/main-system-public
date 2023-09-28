@@ -55,14 +55,17 @@ keycloak_client_id = "orca"
 If you don't want to have administration features simply don't set these values.
 Orca can run without keycloak but it won't allow any administration API to be used.
 
+#### Roles
+
 The permissions to many admin features are granular.
 Orca is using [Keycloak's client roles](https://www.keycloak.org/docs/latest/server_admin/#core-concepts-and-terms)
 which needs to be configured for the `keycloak_client_id` set in the `Rocket.toml`:
 
-| Role Name         | Description                                                  |
-|-------------------|--------------------------------------------------------------|
-| list-applications | Allow listing of applications/registrations in various state |
-| view-application  | Access detail of individual applications (by uuid)           |
+| Role Name           | Description                                                  |
+|---------------------|--------------------------------------------------------------|
+| list-applications   | Allow listing of applications/registrations in various state |
+| view-application    | Access detail of individual applications (by uuid)           |
+| resolve-application | Resolve (Accept / Reject) applications                       |
 
 ## Developing
 

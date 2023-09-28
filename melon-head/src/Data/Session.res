@@ -2,12 +2,14 @@ type orcaRole =
   | UnknownOrcaRole(string)
   | ListApplications
   | ViewApplication
+  | ResolveApplications
 
 let showOrcaRole = (r: orcaRole): string =>
   switch r {
   | UnknownOrcaRole(str) => str
   | ListApplications => "list-applications"
   | ViewApplication => "view-application"
+  | ResolveApplications => "resolve-applications"
   }
 
 type tokenClaims = {

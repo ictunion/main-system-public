@@ -98,6 +98,8 @@ pub enum ApiError {
     QueueSender(SenderError),
     #[response(status = 401)]
     InvalidToken(keycloak::Error),
+    #[response(status = 409)]
+    DataConflict(String),
 }
 
 impl From<sqlx::Error> for ApiError {
