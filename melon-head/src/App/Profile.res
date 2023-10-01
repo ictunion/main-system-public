@@ -52,7 +52,7 @@ let make = (
               </tr>
               <tr>
                 <td> {React.string("roles")} </td>
-                <td>
+                <td className={styles["roles"]}>
                   {React.array(
                     Array.map(
                       r => {<ShowRole role={r} key={Session.showOrcaRole(r)} />},
@@ -83,9 +83,9 @@ let make = (
           </li>
           <li key="3" className={styles["navDivider"]} />
           <li key="4" className={styles["centeredLi"]}>
-            <button className={styles["signOutBtn"]} onClick={_ => Keycloak.logout(keycloak)}>
+            <Button btnType=Button.Danger onClick={_ => Keycloak.logout(keycloak)}>
               {React.string("Sign Out")}
-            </button>
+            </Button>
           </li>
         </ul>
       </nav>

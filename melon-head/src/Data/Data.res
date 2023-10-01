@@ -2,6 +2,7 @@ module type OpaqueString = {
   type t
 
   let toString: t => string
+  let unsafeFromString: string => t
   let decode: Json.Decode.t<t>
 }
 
@@ -9,6 +10,7 @@ module MakeOpaqueString = (): OpaqueString => {
   type t = string
 
   let toString = uuid => uuid
+  let unsafeFromString = str => str
   let decode = Json.Decode.string
 }
 

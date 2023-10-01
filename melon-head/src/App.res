@@ -12,6 +12,8 @@ module ConfiguredApp = {
 
     let url = RescriptReactRouter.useUrl()
 
+    let modal = Modal.use()
+
     React.useEffect1(() => {
       let req = api->Api.getJson(~path="/session/current", ~decoder=Session.Decode.session)
       setSessionState(RemoteData.setLoading)
@@ -35,7 +37,8 @@ module ConfiguredApp = {
           {switch url.path {
           | list{} => <Dashboard session=sessionState api />
           | list{"applications"} => <Applications api />
-          | list{"applications", id} => <ApplicationDetail id api />
+          | list{"applications", id} =>
+            <ApplicationDetail id={Data.Uuid.unsafeFromString(id)} api modal />
           | _ =>
             <Page>
               <ErrorPage.NotFound />
@@ -50,6 +53,13 @@ module ConfiguredApp = {
           React.null
         }}
       </div>
+      {switch Modal.Interface.state(modal) {
+      | Some(data) =>
+        <Modal title=data.title close={_ => Modal.Interface.closeModal(modal)}>
+          {data.content}
+        </Modal>
+      | None => React.null
+      }}
     </SessionContext.Provider>
   }
 }

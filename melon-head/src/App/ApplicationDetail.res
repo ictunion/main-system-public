@@ -1,5 +1,7 @@
 @module external styles: {..} = "./ApplicationDetail/styles.module.scss"
 
+@send external focus: Dom.element => unit = "focus"
+
 open Belt
 open RemoteData
 open Data
@@ -41,7 +43,7 @@ module DataGrid = {
     let style =
       ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--grid-template-columns", gridTemplate)
 
-    <div className={styles["rowWrap"]}>
+    <div key={Int.toString(rowI)} className={styles["rowWrap"]}>
       {if row.label != "" {
         <h3 className={styles["rowLabel"]}> {React.string(row.label)} </h3>
       } else {
@@ -193,19 +195,242 @@ let viewFile = (~api: Api.t, file) => {
   </tr>
 }
 
+module Actions = {
+  module Reject = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doReject = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.deleteJson(
+            ~path="/applications/" ++ Uuid.toString(id),
+            ~decoder=ApplicationData.Decode.detail,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              // Technically, we probably don't need to be setting this date if we're going to route away anyway
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+
+              // open list
+              RescriptReactRouter.push("/applications")
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you shure you want to ")}
+          <strong> {React.string("reject the application")} </strong>
+          {React.string("?")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button btnType=Button.Danger onClick=doReject> {React.string("Reject")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  module Accept = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+      // DOM node of text input
+      let inputEl = React.useRef(Js.Nullable.null)
+
+      // These two valies cold be also collapesed to option type
+      // which might be nicer in terms of types but a bit less practical
+      // for binding to component properties
+      let (hasCustomNumber, setHasCustomNumber) = React.useState(() => true)
+      let (memberNumber, setMemberNumber) = React.useState(() => "")
+      let toggleHasCustomNumber = _ => setHasCustomNumber(v => !v)
+
+      // Validations
+      let inputEmpyErr = Some("Member number can't be empty.")
+      let (validationErr, setValidationErr) = React.useState(() => inputEmpyErr)
+
+      // Api errors
+      let (error, setError) = React.useState(() => None)
+
+      let doAccept = _ => {
+        open Json
+        let num = if hasCustomNumber {
+          Int.fromString(memberNumber)
+        } else {
+          None
+        }
+        let body: Js.Json.t = Encode.object([("member_number", Encode.option(Encode.int, num))])
+        let path = "/applications/" ++ Uuid.toString(id) ++ "/accept"
+
+        let req = api->Api.postJson(~path, ~decoder=ApplicationData.Decode.detail, ~body)
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              // Technically, we probably don't need to be setting this date if we're going to route away anyway
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+              RescriptReactRouter.push("/applications")
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      React.useEffect0(() => {
+        inputEl.current->Js.Nullable.toOption->Belt.Option.forEach(input => input->focus)
+        None
+      })
+
+      let onInput = (event: JsxEvent.Form.t) => {
+        let newVal = ReactEvent.Form.currentTarget(event)["value"]
+        setMemberNumber(_ => newVal)
+
+        // validate input
+        switch newVal->Int.fromString {
+        | None =>
+          if newVal == "" {
+            setValidationErr(_ => inputEmpyErr)
+          } else {
+            setValidationErr(_ => Some("Expects number, got `" ++ newVal ++ "`."))
+          }
+        | Some(i) =>
+          if i <= 0 {
+            setValidationErr(_ => Some("Member number must be positive number (greater than `0`)."))
+          } else {
+            setValidationErr(_ => None)
+          }
+        }
+      }
+
+      let disabled = if hasCustomNumber {
+        switch validationErr {
+        | Some(_) => true
+        | None => false
+        }
+      } else {
+        false
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Accept application and create a ")}
+          <strong> {React.string("new member")} </strong>
+          {React.string("?")}
+        </p>
+        <div className={styles["memberNumberAuto"]}>
+          <label>
+            <input type_="checkbox" checked={!hasCustomNumber} onChange=toggleHasCustomNumber />
+            <strong> {React.string("Automatically assign member number")} </strong>
+          </label>
+          {if hasCustomNumber {
+            React.null
+          } else {
+            <Message.Info>
+              <strong>
+                {React.string(
+                  "New members will be automatically assigned a number that is one greater (+1) than the highest current existing member number.",
+                )}
+              </strong>
+            </Message.Info>
+          }}
+        </div>
+        {if hasCustomNumber {
+          <form className={styles["memberNumberForm"]}>
+            <label className={styles["memberNumberField"]}>
+              {React.string("Member number:")}
+              <br />
+              <input
+                ref={ReactDOM.Ref.domRef(inputEl)} value=memberNumber onInput placeholder="42"
+              />
+            </label>
+            {validationErr->viewOption(str => {
+              <Message.Error> {React.string(str)} </Message.Error>
+            })}
+          </form>
+        } else {
+          React.null
+        }}
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button disabled btnType=Button.Cta onClick=doAccept> {React.string("Accept")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  let rejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+    title: "Reject Application",
+    content: <Reject api id setDetail modal />,
+  }
+
+  let acceptModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+    title: "Accept Application",
+    content: <Accept api id setDetail modal />,
+  }
+
+  @react.component
+  let make = (
+    ~id: Uuid.t,
+    ~api: Api.t,
+    ~status: ApplicationData.status,
+    ~modal: Modal.Interface.t,
+    ~setDetail,
+  ) => {
+    switch status {
+    | ApplicationData.Processing =>
+      <Button.Panel>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(rejectModal(~id, ~api, ~setDetail, ~modal))}
+          btnType=Button.Danger>
+          {React.string("Reject")}
+        </Button>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(acceptModal(~id, ~api, ~setDetail, ~modal))}
+          btnType=Button.Cta>
+          {React.string("Accept")}
+        </Button>
+      </Button.Panel>
+    | _ => React.null
+    }
+  }
+}
+
 type tabs =
   | Metadata
   | Checklist
   | Files
 
 @react.component
-let make = (~id: string, ~api: Api.t) => {
-  let (detail, _) =
-    api->Hook.getData(~path="/applications/" ++ id, ~decoder=ApplicationData.Decode.detail)
+let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
+  let (detail: Api.webData<ApplicationData.detail>, setDetail) =
+    api->Hook.getData(
+      ~path="/applications/" ++ Uuid.toString(id),
+      ~decoder=ApplicationData.Decode.detail,
+    )
 
   let (files, _) =
     api->Hook.getData(
-      ~path="/applications/" ++ id ++ "/files",
+      ~path="/applications/" ++ Uuid.toString(id) ++ "/files",
       ~decoder=Json.Decode.array(Data.Decode.file),
     )
 
@@ -256,7 +481,7 @@ let make = (~id: string, ~api: Api.t) => {
                 label: "All Files",
                 minmax: ("150px", "965px"),
                 view: files =>
-                  <table className=styles["filesTable"]>
+                  <table className={styles["filesTable"]}>
                     <thead>
                       <tr>
                         <td> {React.string("File Name")} </td>
@@ -272,11 +497,15 @@ let make = (~id: string, ~api: Api.t) => {
       />
     </Tabbed.Content>
     <Tabbed.Content tab=Metadata handlers=tabHandlers>
-      <div className=styles["metadata"]>
+      <div className={styles["metadata"]}>
         <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
         <RowBasedTable rows=metadataRows data=detail title=Some("Metadata") />
       </div>
     </Tabbed.Content>
     <Tabbed.Content tab=Checklist handlers=tabHandlers> {React.string("TODO")} </Tabbed.Content>
+    {switch RemoteData.map(detail, ApplicationData.getStatus) {
+    | Success(status) => <Actions id api modal setDetail status />
+    | _ => React.null
+    }}
   </Page>
 }

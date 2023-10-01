@@ -21,7 +21,9 @@ pub async fn connect(config: Config<'_>) -> Result<PgPool, SqlError> {
         .await
 }
 
-const DUPLICATE_KEY: &str = "32505";
+/// Reference
+/// https://www.postgresql.org/docs/current/errcodes-appendix.html
+const UNIQUE_VIOLATION: &str = "23505";
 
 pub fn is_err_code(err: &sqlx::Error, code: &str) -> bool {
     match err {
@@ -33,10 +35,14 @@ pub fn is_err_code(err: &sqlx::Error, code: &str) -> bool {
     }
 }
 
+pub fn is_conflict(err: &sqlx::Error) -> bool {
+    is_err_code(err, UNIQUE_VIOLATION)
+}
+
 pub fn fail_duplicated<T>(res: &Result<T, sqlx::Error>) -> bool {
     match res {
         Ok(_) => false,
-        Err(err) => is_err_code(err, DUPLICATE_KEY),
+        Err(err) => is_conflict(err),
     }
 }
 

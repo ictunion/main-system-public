@@ -1,0 +1,16 @@
+@mixin message($color) {
+    $c: var(--#{$color});
+    border: 1px solid $c;
+    color: $c;
+    padding: 6px 12px;
+    background: rgba(var(--rgb_#{$color}), 0.1);
+    border-radius: 4px;
+}
+
+.error {
+    @include message(color7);
+}
+
+.info {
+    @include message(color4);
+}

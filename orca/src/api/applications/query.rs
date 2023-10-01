@@ -95,29 +95,29 @@ pub fn reject_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail
     // We can hardcode null because we know rejected application can't belong to user
     sqlx::query_as(
         "
-UPDATE registration_requests as rr
+UPDATE registration_requests
 SET rejected_at = NOW()
-RETURNING rr.id
-, rr.email
-, rr.first_name
-, rr.last_name
-, rr.date_of_birth
-, rr.phone_number
-, rr.city
-, rr.address
-, rr.postal_code
-, rr.occupation
-, rr.company_name
-, rr.verification_sent_at
-, rr.confirmed_at
-, rr.registration_ip
-, rr.registration_local
-, rr.registration_user_agent
-, rr.registration_source
-, rr.rejected_at
-, rr.created_at
-, NULL
-WHERE rr.id = $1
+WHERE id = $1
+RETURNING id
+, email
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, city
+, address
+, postal_code
+, occupation
+, company_name
+, verification_sent_at
+, confirmed_at
+, registration_ip
+, registration_local
+, registration_user_agent
+, registration_source
+, rejected_at
+, created_at
+, NULL AS accepted_at
 ",
     )
     .bind(id)

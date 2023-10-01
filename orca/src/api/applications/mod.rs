@@ -171,10 +171,11 @@ impl ApplicationStatus {
     pub fn assert_in_proceesing(&self) -> Result<(), ApiError> {
         match self {
             Self::InProcessing => Ok(()),
-            _ => Err(ApiError::DataConflict(format!(
-                "Application status must be `InProcessing` but is {:?}",
+            _ => Err(ApiError::DataConflict(Json(format!(
+                "Application status must be `{:?}` but is `{:?}`",
+                ApplicationStatus::InProcessing,
                 self
-            ))),
+            )))),
         }
     }
 }
@@ -219,7 +220,7 @@ async fn accept<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
     new_member: Json<NewMember>,
-) -> Response<Json<Id<Member>>> {
+) -> Response<Json<Detail>> {
     keycloak.require_role(token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
@@ -255,9 +256,13 @@ async fn accept<'r>(
         .execute(&mut tx)
         .await?;
 
+    // Since we return just member_id from the insert query
+    // let's just do an extra query for application detail
+    let detail = query::get_application(id).fetch_one(&mut tx).await?;
+
     tx.commit().await?;
 
-    Ok(Json(member_id))
+    Ok(Json(detail))
 }
 
 #[get("/<id>/files")]

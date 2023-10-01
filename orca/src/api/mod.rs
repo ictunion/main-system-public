@@ -5,12 +5,13 @@ use tokio::task::JoinError;
 use validator::ValidationError;
 
 mod applications;
+mod errors;
 mod files;
 mod registration;
 mod session;
 mod stats;
 
-use crate::db::DbPool;
+use crate::db::{self, DbPool};
 use crate::processing::SenderError;
 use crate::server::keycloak::{self, Keycloak};
 
@@ -30,6 +31,10 @@ impl<'r> Responder<'r, 'static> for SqlError {
 
         error!("SQL Error: {:?}", self);
 
+        if db::is_conflict(&self.0) {
+            return Err(Status::Conflict);
+        }
+
         match self.0 {
             RowNotFound => Err(Status::NotFound),
             PoolTimedOut => Err(Status::ServiceUnavailable),
@@ -47,7 +52,7 @@ impl From<JoinError> for ThreadingError {
     }
 }
 
-impl<'r> response::Responder<'r, 'static> for ThreadingError {
+impl<'r> Responder<'r, 'static> for ThreadingError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
         error!("Threading Error: {:?}", self);
 
@@ -55,7 +60,7 @@ impl<'r> response::Responder<'r, 'static> for ThreadingError {
     }
 }
 
-impl<'r> response::Responder<'r, 'static> for SenderError {
+impl<'r> Responder<'r, 'static> for SenderError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
         error!("Sender Error: {:?}", self);
 
@@ -71,25 +76,17 @@ impl<'r> Responder<'r, 'static> for keycloak::Error {
         warn!("JWT verification failed with {:?}", self);
 
         match self {
-            Disabled => Err(Status::NotAcceptable),
+            Disabled => Err(Status::NotFound),
             BadKey(_) => Err(Status::InternalServerError),
             MissingRole(_) => Err(Status::Forbidden),
             MissingOneOfRoles(_) => Err(Status::Forbidden),
-            BadToken(jwt_err) => {
-                use jsonwebtoken::errors::ErrorKind;
-
-                match jwt_err.kind() {
-                    ErrorKind::ExpiredSignature => Err(Status::Unauthorized),
-                    _ => Err(Status::Forbidden),
-                }
-            }
+            BadToken(_) => Err(Status::Unauthorized),
         }
     }
 }
 
 #[derive(Debug, Responder)]
 pub enum ApiError {
-    #[response(status = 500)]
     DbErr(SqlError),
     Status(rocket::http::Status),
     #[response(status = 500)]
@@ -99,7 +96,8 @@ pub enum ApiError {
     #[response(status = 401)]
     InvalidToken(keycloak::Error),
     #[response(status = 409)]
-    DataConflict(String),
+    // TODO(turbomack): define better way to do custom errors
+    DataConflict(Json<String>),
 }
 
 impl From<sqlx::Error> for ApiError {
@@ -172,6 +170,7 @@ pub fn build() -> Rocket<Build> {
             "/registration",
             catchers![rocket_validation::validation_catcher],
         )
+        .register("/applications", errors::catchers())
 }
 
 pub type Response<T> = Result<T, ApiError>;

@@ -2,14 +2,15 @@ type error =
   | Empty
   | NetworkError
   | Timeout
-  | DecodingError(string)
+  | DecodingError(string, Js.Json.t)
 
 let showError = (err: error): string => {
   switch err {
   | Empty => "Expected JSON value but response was empty"
   | NetworkError => "Network error occured"
   | Timeout => "Request timeout"
-  | DecodingError(err) => "Error decoding data " ++ err
+  | DecodingError(err, json) =>
+    "Error decoding data: " ++ err ++ ". Response: " ++ Js.Json.stringify(json)
   }
 }
 
@@ -27,9 +28,9 @@ let emptyToError = ({Request.response: response}) => {
   }
 }
 
-let mapDecodingError = (res: result<'a, string>): result<'a, error> => {
+let mapDecodingError = (res: result<'a, string>, response): result<'a, error> => {
   switch res {
-  | Error(str) => Error(DecodingError(str))
+  | Error(str) => Error(DecodingError(str, response))
   | Ok(value) => Ok(value)
   }
 }
@@ -50,6 +51,7 @@ let makeHeaders = api => {
   Js.Dict.fromList(list{
     ("Authorization", "Bearer " ++ api.keycloak->Keycloak.getToken),
     ("Accept", "application/json"),
+    ("Content-Type", "application/json"),
   })
 }
 
@@ -57,7 +59,7 @@ let fromRequest = (future, decoder) => {
   future
   ->Future.mapError(~propagateCancel=true, fromRequestError)
   ->Future.mapResult(~propagateCancel=true, emptyToError)
-  ->Future.mapResult(~propagateCancel=true, res => res->Json.decode(decoder)->mapDecodingError)
+  ->Future.mapResult(~propagateCancel=true, res => res->Json.decode(decoder)->mapDecodingError(res))
 }
 
 type webData<'a> = RemoteData.t<'a, error>
@@ -69,6 +71,32 @@ let getJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<res
     (),
     ~headers=makeHeaders(api),
   )->fromRequest(decoder)
+}
+
+let deleteJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<
+  result<'a, error>,
+> => {
+  Request.make(
+    ~url=api.host ++ path,
+    ~responseType=Json,
+    ~method=#DELETE,
+    (),
+    ~headers=makeHeaders(api),
+  )->fromRequest(decoder)
+}
+
+let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Json.t): Future.t<
+  result<'a, error>,
+> => {
+  ()
+  ->Request.make(
+    ~url=api.host ++ path,
+    ~responseType=Json,
+    ~method=#POST,
+    ~headers=makeHeaders(api),
+    ~body=Js.Json.stringify(body),
+  )
+  ->fromRequest(decoder)
 }
 
 type status = {
