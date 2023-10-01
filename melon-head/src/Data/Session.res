@@ -34,6 +34,7 @@ module Decode = {
     switch str {
     | "list-applications" => ListApplications
     | "view-application" => ViewApplication
+    | "resolve-applications" => ResolveApplications
     | _ => UnknownOrcaRole(str)
     }
   })
