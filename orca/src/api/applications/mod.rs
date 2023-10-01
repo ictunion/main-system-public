@@ -171,11 +171,16 @@ impl ApplicationStatus {
     pub fn assert_in_proceesing(&self) -> Result<(), ApiError> {
         match self {
             Self::InProcessing => Ok(()),
-            _ => Err(ApiError::DataConflict(Json(format!(
-                "Application status must be `{:?}` but is `{:?}`",
-                ApplicationStatus::InProcessing,
-                self
-            )))),
+
+            _ => {
+                let message = format!(
+                    "Application status must be `{:?}` but is `{:?}`",
+                    ApplicationStatus::InProcessing,
+                    self
+                );
+
+                Err(ApiError::data_conflict(message))
+            }
         }
     }
 }

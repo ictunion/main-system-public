@@ -85,6 +85,28 @@ impl<'r> Responder<'r, 'static> for keycloak::Error {
     }
 }
 
+#[derive(Debug)]
+pub struct CustomError {
+    status: rocket::http::Status,
+    json: rocket::serde::json::Value,
+}
+
+impl<'r> Responder<'r, 'static> for CustomError {
+    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+        use rocket::http::ContentType;
+        use rocket::response::Response;
+        use std::io::Cursor;
+
+        let body = self.json.to_string();
+
+        Response::build()
+            .header(ContentType::JSON)
+            .status(self.status)
+            .sized_body(body.len(), Cursor::new(body))
+            .ok()
+    }
+}
+
 #[derive(Debug, Responder)]
 pub enum ApiError {
     DbErr(SqlError),
@@ -92,12 +114,32 @@ pub enum ApiError {
     #[response(status = 500)]
     ThreadFail(ThreadingError),
     #[response(status = 500)]
-    QueueSender(SenderError),
+    QueueSender(Box<SenderError>),
     #[response(status = 401)]
-    InvalidToken(keycloak::Error),
-    #[response(status = 409)]
-    // TODO(turbomack): define better way to do custom errors
-    DataConflict(Json<String>),
+    InvalidToken(Box<keycloak::Error>),
+    Custom(CustomError),
+}
+
+impl ApiError {
+    pub fn data_conflict(description: String) -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let custom_error = CustomError {
+            status: Status::Conflict,
+            json: json!(
+            {
+                "error": {
+                    "code": 409,
+                    "reason": "Conflict",
+                    "description": description
+                }
+            }
+            ),
+        };
+
+        Self::Custom(custom_error)
+    }
 }
 
 impl From<sqlx::Error> for ApiError {
@@ -120,13 +162,13 @@ impl From<JoinError> for ApiError {
 
 impl From<SenderError> for ApiError {
     fn from(err: SenderError) -> Self {
-        Self::QueueSender(err)
+        Self::QueueSender(Box::new(err))
     }
 }
 
 impl From<keycloak::Error> for ApiError {
     fn from(err: keycloak::Error) -> Self {
-        Self::InvalidToken(err)
+        Self::InvalidToken(Box::new(err))
     }
 }
 
@@ -162,15 +204,17 @@ pub fn build() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![status_api])
         .mount("/registration", registration::routes())
-        .mount("/applications", applications::routes())
-        .mount("/session", session::routes())
-        .mount("/stats", stats::routes())
-        .mount("/files", files::routes())
         .register(
             "/registration",
             catchers![rocket_validation::validation_catcher],
         )
+        .mount("/applications", applications::routes())
         .register("/applications", errors::catchers())
+        .mount("/session", session::routes())
+        .register("/session", errors::catchers())
+        .mount("/stats", stats::routes())
+        .register("/stats", errors::catchers())
+        .mount("/files", files::routes())
 }
 
 pub type Response<T> = Result<T, ApiError>;

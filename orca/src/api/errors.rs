@@ -1,7 +1,7 @@
-use rocket::serde::{json::Json, Serialize};
+use rocket::serde::json::Value;
 use rocket::Catcher;
 
-#[derive(Serialize)]
+#[derive(Debug)]
 enum ErrorType {
     InternalError,
     NotFound,
@@ -9,47 +9,55 @@ enum ErrorType {
     Forbidden,
 }
 
-#[derive(Serialize)]
-struct ErrorJson<'a> {
-    error_type: ErrorType,
-    message: &'a str,
-}
-
-impl<'a> ErrorJson<'a> {
-    pub fn json(error_type: ErrorType, message: &'a str) -> Json<Self> {
-        Json(ErrorJson {
-            error_type,
-            message,
-        })
+impl ErrorType {
+    fn to_status_code(&self) -> u16 {
+        match self {
+            Self::InternalError => 500,
+            Self::NotFound => 404,
+            Self::Unauthorized => 401,
+            Self::Forbidden => 403,
+        }
     }
 }
 
+fn error_json(error_type: ErrorType, message: &'static str) -> Value {
+    use rocket::serde::json::json;
+
+    json!({
+        "error": {
+            "code": error_type.to_status_code(),
+            "reason": format!("{:?}", error_type),
+            "description": message,
+        }
+    })
+}
+
 #[catch(500)]
-fn internal_error() -> Json<ErrorJson<'static>> {
+fn internal_error() -> Value {
     let error_type = ErrorType::InternalError;
     let message = "Something went wrong.";
-    ErrorJson::json(error_type, message)
+    error_json(error_type, message)
 }
 
 #[catch(404)]
-fn not_found_error() -> Json<ErrorJson<'static>> {
+fn not_found_error() -> Value {
     let error_type = ErrorType::NotFound;
     let message = "The requested resource could not be found.";
-    ErrorJson::json(error_type, message)
+    error_json(error_type, message)
 }
 
 #[catch(401)]
-fn unauthorized_error() -> Json<ErrorJson<'static>> {
+fn unauthorized_error() -> Value {
     let error_type = ErrorType::Unauthorized;
     let message = "The request requires user authentication.";
-    ErrorJson::json(error_type, message)
+    error_json(error_type, message)
 }
 
 #[catch(403)]
-fn forbidden_error() -> Json<ErrorJson<'static>> {
+fn forbidden_error() -> Value {
     let error_type = ErrorType::Forbidden;
     let message = "This request requires permissions not granted to you.";
-    ErrorJson::json(error_type, message)
+    error_json(error_type, message)
 }
 
 pub fn catchers() -> Vec<Catcher> {
