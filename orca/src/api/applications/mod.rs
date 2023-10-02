@@ -6,7 +6,7 @@ use time::Date;
 
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
-use crate::db::DbPool;
+use crate::db::{DbPool, self};
 use crate::server::keycloak::{JwtToken, Keycloak, Role};
 use crate::server::IpAddress;
 
@@ -174,7 +174,24 @@ impl ApplicationStatus {
 
             _ => {
                 let message = format!(
-                    "Application status must be `{:?}` but is `{:?}`",
+                    "Application status must be `{:?}` but is `{:?}`.",
+                    ApplicationStatus::InProcessing,
+                    self
+                );
+
+                Err(ApiError::data_conflict(message))
+            }
+        }
+    }
+
+    pub fn assert_waiting_or_in_processing_or(&self) -> Result<(), ApiError> {
+        match self {
+            Self::InProcessing => Ok(()),
+            Self::WaitingForConfirmation => Ok(()),
+            _ => {
+                let message = format!(
+                    "Application status must be `{:?}` or `{:?} but is `{:?}`.",
+                    ApplicationStatus::WaitingForConfirmation,
                     ApplicationStatus::InProcessing,
                     self
                 );
@@ -203,7 +220,7 @@ async fn reject<'r>(
         .fetch_one(&mut tx)
         .await?
         .to_status()
-        .assert_in_proceesing()?;
+        .assert_waiting_or_in_processing_or()?;
 
     let detail = query::reject_application(id).fetch_one(&mut tx).await?;
 
@@ -249,9 +266,18 @@ async fn accept<'r>(
     };
 
     // Inserting new member data
-    let (member_id,) = query::create_new_member(id, member_number)
+    let result = query::create_new_member(id, member_number)
         .fetch_one(&mut tx)
-        .await?;
+        .await;
+
+    // Gracefully handle colision of member numbers
+    if db::fail_duplicated(&result) {
+        let message = format!("Member number `{}` is already used for different member.", &member_number);
+
+        return Err(ApiError::data_conflict(message))
+    }
+
+    let (member_id,) = result?;
 
     // Populate all the relations for new member
     query::attach_files_to_member(id, member_id)

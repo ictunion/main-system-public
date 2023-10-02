@@ -1,8 +1,44 @@
+type apiError = {
+  code: int,
+  description: string,
+  reason: string, // This could be eventually turned into enum/variant
+}
+
 type error =
   | Empty
   | NetworkError
   | Timeout
   | DecodingError(string, Js.Json.t)
+  | ApiError(apiError)
+
+type status = {
+  httpStatus: int,
+  httpMessage: string,
+  authorizationConnected: bool,
+  databaseConnected: bool,
+}
+
+module Decode = {
+  open Json.Decode
+
+  let status = object(field => {
+    httpStatus: field.required(. "http_status", int),
+    httpMessage: field.required(. "http_message", string),
+    authorizationConnected: field.required(. "authorization_connected", bool),
+    databaseConnected: field.required(. "database_connected", bool),
+  })
+
+  let apiError = object(field => {
+    field.required(.
+      "error",
+      object(field => {
+        code: field.required(. "code", int),
+        description: field.required(. "description", string),
+        reason: field.required(. "reason", string),
+      }),
+    )
+  })
+}
 
 let showError = (err: error): string => {
   switch err {
@@ -11,6 +47,7 @@ let showError = (err: error): string => {
   | Timeout => "Request timeout"
   | DecodingError(err, json) =>
     "Error decoding data: " ++ err ++ ". Response: " ++ Js.Json.stringify(json)
+  | ApiError(apiError) => apiError.description
   }
 }
 
@@ -30,8 +67,12 @@ let emptyToError = ({Request.response: response}) => {
 
 let mapDecodingError = (res: result<'a, string>, response): result<'a, error> => {
   switch res {
-  | Error(str) => Error(DecodingError(str, response))
   | Ok(value) => Ok(value)
+  | Error(str) =>
+    switch Json.decode(response, Decode.apiError) {
+    | Ok(apiError) => Error(ApiError(apiError))
+    | Error(_) => Error(DecodingError(str, response))
+    }
   }
 }
 
@@ -97,22 +138,4 @@ let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Js
     ~body=Js.Json.stringify(body),
   )
   ->fromRequest(decoder)
-}
-
-type status = {
-  httpStatus: int,
-  httpMessage: string,
-  authorizationConnected: bool,
-  databaseConnected: bool,
-}
-
-module Decode = {
-  open Json.Decode
-
-  let status = object(field => {
-    httpStatus: field.required(. "http_status", int),
-    httpMessage: field.required(. "http_message", string),
-    authorizationConnected: field.required(. "authorization_connected", bool),
-    databaseConnected: field.required(. "database_connected", bool),
-  })
 }

@@ -93,6 +93,12 @@ pub struct Member;
 #[derive(Debug, Clone, Copy)]
 pub struct MemberNumber(i32);
 
+impl Display for MemberNumber {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.0.fmt(formatter)
+    }
+}
+
 impl Type<Postgres> for MemberNumber {
     fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
         <i32 as Type<Postgres>>::type_info()

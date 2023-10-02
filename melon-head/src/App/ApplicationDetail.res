@@ -395,6 +395,15 @@ module Actions = {
     ~setDetail,
   ) => {
     switch status {
+    | ApplicationData.Unverified =>
+      <Button.Panel>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(rejectModal(~id, ~api, ~setDetail, ~modal))}
+          btnType=Button.Danger>
+          {React.string("Reject")}
+        </Button>
+      </Button.Panel>
     | ApplicationData.Processing =>
       <Button.Panel>
         <Button
