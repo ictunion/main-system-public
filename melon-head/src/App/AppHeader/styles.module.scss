@@ -20,10 +20,10 @@ $divider: 1px solid rgba(var(--rgb_color2), 0.2);
 
     display: grid;
     flex: 64px 0 0;
+    height: 64px;
     grid-template-areas: 'left center right';
     grid-template-columns: 64px auto 64px;
     column-gap: 12px;
-    align-items: stretch;
 }
 
 .nav-btn {

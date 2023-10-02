@@ -5,6 +5,8 @@ const config = require('./config.json');
 
 module.exports = (env, argv) => {
     const mode = argv.model === 'production' ? 'production' : 'development';
+    const apiHost = env['api-host'] ? env['spi-host'] : 'http://127.0.0.1:8000';
+
     console.log("webpack runs in", mode, "mode");
 
     return {
@@ -57,7 +59,16 @@ module.exports = (env, argv) => {
         },
         devServer: {
             port: 1234,
+            host: "0.0.0.0",
             historyApiFallback: true,
+            proxy: {
+                '/api': {
+                    target: apiHost,
+                    pathRewrite: path => path.replace(/^\/api/g,""),
+                    secure: false,
+                    changeOrigin: true,
+                },
+            },
         },
         plugins: [
             new CleanWebpackPlugin(),
