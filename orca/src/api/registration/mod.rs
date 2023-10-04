@@ -12,8 +12,7 @@ use crate::data::{self, Id};
 use crate::db::{self, DbPool};
 use crate::generate;
 use crate::media::RawBase64;
-use crate::processing::Command;
-use crate::processing::QueueSender;
+use crate::processing::{QueueSender, Command};
 use crate::server::{IpAddress, UserAgent};
 
 mod query;
@@ -117,7 +116,7 @@ async fn api_join<'r>(
         .resize(492, 192)
         .map_err(|_| Status::UnprocessableEntity)?;
 
-    query::create_singature_file(reg_id, &signature_data)
+    query::create_signature_file(reg_id, &signature_data)
         .execute(db_pool.inner())
         .await?;
 
@@ -127,7 +126,6 @@ async fn api_join<'r>(
         .send(Command::NewRegistrationRequest(
             reg_id,
             signature_data,
-            confirmation_token,
         ))
         .await?;
 
@@ -147,6 +145,7 @@ async fn api_confirm(
     code: &'_ str,
 ) -> Response<Redirect> {
     use sqlx::error::Error::*;
+
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {
         Ok((reg_id, local)) => {
             // notify about new registration

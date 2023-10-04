@@ -53,7 +53,7 @@ pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (Id<data::RegistrationRequest
     sqlx::query_as(
         "
 UPDATE registration_requests AS m
-SET   confirmed_at = now()
+SET   confirmed_at = NOW()
     , confirmation_token = NULL
 WHERE confirmation_token = $1
 RETURNING m.id, m.registration_local
@@ -62,7 +62,7 @@ RETURNING m.id, m.registration_local
     .bind(code)
 }
 
-pub fn create_singature_file(
+pub fn create_signature_file(
     reg_id: Id<data::RegistrationRequest>,
     image: &'_ ImageData,
 ) -> Query<'_> {

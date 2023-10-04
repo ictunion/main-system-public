@@ -3,10 +3,31 @@ use crate::{
     db::{Query, QueryAs},
 };
 
-use super::{ApplicationStatusData, Detail, File, ProcessingSummary, UnverifiedSummary};
+use super::{
+    AcceptedSummary, ApplicationStatusData, Detail, File, ProcessingSummary, RejectedSummary,
+    UnverifiedSummary, Summary,
+};
 use crate::data::{Id, RegistrationRequest};
 
-pub fn get_unverified_summaries<'a>() -> QueryAs<'a, UnverifiedSummary> {
+pub fn list_summaries<'a>() -> QueryAs<'a, Summary> {
+    sqlx::query_as(
+        "
+SELECT id
+, email
+, fist_name
+, last_name
+, phone_number
+, city
+, company_name
+, registration_local
+, created_at
+FROM registration_requests_unverified
+ORDER BY created_at DESC
+"
+    )
+}
+
+pub fn list_unverified_summaries<'a>() -> QueryAs<'a, UnverifiedSummary> {
     sqlx::query_as(
         "
 SELECT id
@@ -25,7 +46,7 @@ ORDER BY created_at DESC
     )
 }
 
-pub fn get_processing_summaries<'a>() -> QueryAs<'a, ProcessingSummary> {
+pub fn list_processing_summaries<'a>() -> QueryAs<'a, ProcessingSummary> {
     sqlx::query_as(
         "
 SELECT id
@@ -40,6 +61,46 @@ SELECT id
 , confirmed_at
 FROM registration_requests_processing
 ORDER BY confirmed_at DESC
+",
+    )
+}
+
+pub fn list_accepted_summaries<'a>() -> QueryAs<'a, AcceptedSummary> {
+    sqlx::query_as(
+        "
+SELECT rr.id
+, rr.email
+, rr.first_name
+, rr.last_name
+, rr.phone_number
+, rr.city
+, rr.company_name
+, rr.registration_local
+, rr.created_at
+, m.created_at AS accepted_at
+, m.id AS member_id
+FROM registration_requests_accepted as rr
+LEFT JOIN members AS m ON rr.id = m.registration_request_id
+ORDER BY created_at DESC
+",
+    )
+}
+
+pub fn list_rejected_summaries<'a>() -> QueryAs<'a, RejectedSummary> {
+    sqlx::query_as(
+        "
+SELECT id
+, email
+, first_name
+, last_name
+, phone_number
+, city
+, company_name
+, registration_local
+, created_at
+, rejected_at
+FROM registration_requests_rejected
+ORDER BY created_at DESC
 ",
     )
 }
@@ -75,7 +136,7 @@ WHERE rr.id = $1
     .bind(id)
 }
 
-pub fn get_application_files<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, File> {
+pub fn list_application_files<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, File> {
     sqlx::query_as(
         "
 SELECT f.id
@@ -120,6 +181,64 @@ RETURNING id
 , NULL AS accepted_at
 ",
     )
+    .bind(id)
+}
+
+pub fn unreject_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+    sqlx::query_as("
+UPDATE registration_requests
+SET rejected_at = NULL
+WHERE id = $1
+RETURNING id
+, email
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, city
+, address
+, postal_code
+, occupation
+, company_name
+, verification_sent_at
+, confirmed_at
+, registration_ip
+, registration_local
+, registration_user_agent
+, registration_source
+, rejected_at
+, created_at
+, NULL AS accepted_at
+")
+    .bind(id)
+}
+
+pub fn verify_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+    sqlx::query_as("
+UPDATE registration_requests
+SET confirmed_at = NOW()
+WHERE id = $1
+RETURNING id
+, email
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, city
+, address
+, postal_code
+, occupation
+, company_name
+, verification_sent_at
+, confirmed_at
+, registration_ip
+, registration_local
+, registration_user_agent
+, registration_source
+, rejected_at
+, created_at
+, NULL AS accepted_at
+")
     .bind(id)
 }
 

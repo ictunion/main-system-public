@@ -5,7 +5,19 @@ use crate::data::{Id, RegistrationRequest};
 
 pub fn query_registration<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, RegistrationDetails> {
     sqlx::query_as("
-SELECT first_name, last_name, date_of_birth, phone_number, email, address, city, postal_code, company_name, occupation, confirmation_token, registration_local
+SELECT id
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, email
+, address
+, city
+, postal_code
+, company_name
+, occupation
+, confirmation_token
+, registration_local
 FROM registration_requests WHERE id = $1
 ")
     .bind(id)

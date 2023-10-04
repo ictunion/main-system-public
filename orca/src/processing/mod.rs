@@ -27,18 +27,22 @@ mod query;
 
 #[derive(Debug)]
 pub enum Command {
-    NewRegistrationRequest(Id<RegistrationRequest>, ImageData, String),
+    NewRegistrationRequest(Id<RegistrationRequest>, ImageData),
     RegistrationRequestVerified(Id<RegistrationRequest>),
+    ResentRegistrationEmail(Id<RegistrationRequest>),
 }
 
 impl std::fmt::Display for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            Self::NewRegistrationRequest(id, _, token) => {
-                write!(f, "NewRegistrationRequest id: {id}, token: {token}")
+            Self::NewRegistrationRequest(id, _) => {
+                write!(f, "NewRegistrationRequest id: {id}")
             }
             Self::RegistrationRequestVerified(id) => {
                 write!(f, "RegistrationRequestVerified id: {id}")
+            }
+            Self::ResentRegistrationEmail(id) => {
+                write!(f, "ResentRegistrationEmail id: {id}")
             }
         }
     }
@@ -84,6 +88,7 @@ enum ProcessingError {
     EmailRendering(handlebars::RenderError),
     Lettre(lettre::error::Error),
     Smtp(lettre::transport::smtp::Error),
+    MissingConfirmationToken,
 }
 
 impl From<io::Error> for ProcessingError {
@@ -128,9 +133,20 @@ async fn process(
     db_pool: &DbPool,
 ) -> Result<(), ProcessingError> {
     use Command::*;
+
     match command {
-        NewRegistrationRequest(reg_id, signature, verification_token) => {
-            process_new_registration(reg_id, signature, verification_token, config, db_pool).await
+        NewRegistrationRequest(reg_id, signature) => {
+            process_new_registration(reg_id, signature, config, db_pool).await
+        }
+        ResentRegistrationEmail(reg_id) => {
+            let application_details =
+                query::query_registration(reg_id).fetch_one(db_pool).await?;
+
+            let (pdf_data,) = query::fetch_registration_pdf(reg_id)
+                .fetch_one(db_pool)
+                .await?;
+
+            send_verification_email(config, db_pool, &application_details, pdf_data).await
         }
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured
@@ -152,18 +168,19 @@ async fn process(
                 let message_html = config.templates.render(&renderer)?;
 
                 // We need member details because we want to customize email subject/pdf name
-                let member_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
+                let application_details =
+                    query::query_registration(reg_id).fetch_one(db_pool).await?;
 
                 let email_subject = format!(
                     "New Application - {} {}",
-                    member_details.first_name.as_deref().unwrap_or(""),
-                    member_details.last_name.as_deref().unwrap_or("")
+                    application_details.first_name.as_deref().unwrap_or(""),
+                    application_details.last_name.as_deref().unwrap_or("")
                 );
 
                 let pdf_name = format!(
                     "{}_{}.pdf",
-                    member_details.first_name.as_deref().unwrap_or(""),
-                    member_details.last_name.as_deref().unwrap_or("")
+                    application_details.first_name.as_deref().unwrap_or(""),
+                    application_details.last_name.as_deref().unwrap_or("")
                 );
 
                 let message = Message::builder()
@@ -204,7 +221,6 @@ async fn send_email(config: &Config, message: Message) -> Result<(), ProcessingE
 async fn process_new_registration(
     reg_id: Id<RegistrationRequest>,
     signature: ImageData,
-    verification_token: String,
     config: &Config,
     db_pool: &DbPool,
 ) -> Result<(), ProcessingError> {
@@ -216,23 +232,37 @@ async fn process_new_registration(
         .await?;
 
     // Query for detail information about member
-    // in theory we could also pass this in thje command
+    // in theory we could also pass this in thee command
     // but doing it this way means that all triggers, defaults etc are 100% applied to the data
-    let member_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
-    let lang = &member_details.registration_local;
+    let application_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
 
     // Generate PDF
-    let pdf_path = print_pdf(config, &member_details, &processing_dir).await?;
+    let pdf_path = print_pdf(config, &application_details, &processing_dir).await?;
     let pdf_data = fs::read(pdf_path).await?;
     query::insert_registration_pdf(reg_id, &pdf_data)
         .execute(db_pool)
         .await?;
 
-    // Send email
-    let verify_link = format!(
-        "{}/registration/{}/confirm",
-        config.host, verification_token
-    );
+    send_verification_email(config, db_pool, &application_details, pdf_data).await?;
+
+    // Remove directory containing data for processing
+    fs::remove_dir_all(processing_dir).await?;
+
+    Ok(())
+}
+
+async fn send_verification_email(
+    config: &Config,
+    db_pool: &DbPool,
+    application_details: &RegistrationDetails,
+    pdf_data: Vec<u8>,
+) -> Result<(), ProcessingError> {
+    let token = application_details
+        .confirmation_token
+        .as_ref()
+        .ok_or(ProcessingError::MissingConfirmationToken)?;
+
+    let verify_link = format!("{}/registration/{}/confirm", config.host, token,);
 
     let sender_info: Mailbox = format!(
         "{} <{}>",
@@ -243,23 +273,25 @@ async fn process_new_registration(
 
     let full_name = format!(
         "{} {}",
-        member_details.first_name.as_deref().unwrap_or(""),
-        member_details.last_name.as_deref().unwrap_or("")
+        application_details.first_name.as_deref().unwrap_or(""),
+        application_details.last_name.as_deref().unwrap_or("")
     );
-    let subject = config.email_confirmation_subject_for_local(lang);
+    let subject =
+        config.email_confirmation_subject_for_local(&application_details.registration_local);
 
-    let mut renderer = config
-        .templates
-        .renderer(&templates::EMAIL_VERIFICATION, lang);
+    let mut renderer = config.templates.renderer(
+        &templates::EMAIL_VERIFICATION,
+        &application_details.registration_local,
+    );
 
     renderer
         .bind(
             "first_name",
-            member_details.first_name.as_deref().unwrap_or(""),
+            application_details.first_name.as_deref().unwrap_or(""),
         )
         .bind(
             "last_name",
-            member_details.last_name.as_deref().unwrap_or(""),
+            application_details.last_name.as_deref().unwrap_or(""),
         )
         .bind("verify_link", &verify_link);
 
@@ -268,7 +300,7 @@ async fn process_new_registration(
     let message = Message::builder()
         .from(sender_info.clone())
         .reply_to(sender_info)
-        .to(format!("{} <{}>", full_name, member_details.email).parse()?)
+        .to(format!("{} <{}>", full_name, application_details.email).parse()?)
         .subject(subject)
         .multipart(
             MultiPart::related()
@@ -284,18 +316,16 @@ async fn process_new_registration(
     send_email(config, message).await?;
 
     // Update info in DB about email being sent
-    query::track_verification_sent_at(reg_id)
+    query::track_verification_sent_at(application_details.id)
         .execute(db_pool)
         .await?;
-
-    // Remove directory containing data for processing
-    fs::remove_dir_all(processing_dir).await?;
 
     Ok(())
 }
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct RegistrationDetails {
+    pub id: Id<RegistrationRequest>,
     pub email: String,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -316,7 +346,6 @@ async fn print_tex_header(details: &RegistrationDetails) -> Result<String, Proce
         details.first_name.as_deref().unwrap_or(""),
         details.last_name.as_deref().unwrap_or("")
     );
-    // TODO: implement tex escaping!
     Ok(format!(
         "\
 \\def\\Name{{{}}}
@@ -334,7 +363,7 @@ async fn print_tex_header(details: &RegistrationDetails) -> Result<String, Proce
         details.first_name.as_deref().escape_tex(),
         details.last_name.as_deref().escape_tex(),
         // This doesn't need to be escaped because
-        // Date isn't arbitrary string of characters.
+        // Date is not arbitrary string of characters.
         details.date_of_birth.escape_tex(),
         details.phone_number.as_deref().escape_tex(),
         details.email.as_str().escape_tex(),
@@ -364,7 +393,7 @@ fn get_pdf_localization(lang: &str) -> &'static str {
 /// application using xelatex and return path to the PDF file
 async fn print_pdf(
     config: &Config,
-    member_details: &RegistrationDetails,
+    application_details: &RegistrationDetails,
     dir: &str,
 ) -> Result<String, ProcessingError> {
     // inline static files
@@ -372,7 +401,7 @@ async fn print_pdf(
     let logo_png = include_bytes!("../../latex/logo.png");
 
     // Write data file for tex
-    let tex_header = print_tex_header(member_details).await?;
+    let tex_header = print_tex_header(application_details).await?;
     let mut tex_file = fs::File::create(format!("{dir}/data.tex")).await?;
     tex_file.write_all(tex_header.as_bytes()).await?;
     tex_file.flush().await?;
@@ -382,7 +411,7 @@ async fn print_pdf(
     fs::write(format!("{dir}/registration.tex"), form_tex).await?;
     fs::write(
         format!("{dir}/lang.tex"),
-        get_pdf_localization(&member_details.registration_local),
+        get_pdf_localization(&application_details.registration_local),
     )
     .await?;
     fs::write(format!("{dir}/logo.png"), logo_png).await?;

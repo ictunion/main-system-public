@@ -6,15 +6,40 @@ use time::Date;
 
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
-use crate::db::{DbPool, self};
+use crate::db::{self, DbPool};
+use crate::processing::{Command, QueueSender};
 use crate::server::keycloak::{JwtToken, Keycloak, Role};
 use crate::server::IpAddress;
 
-use self::query::get_application_files;
-
-use super::ApiError;
+use super::{ApiError, SuccessResponse};
 
 mod query;
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct Summary {
+    id: Id<RegistrationRequest>,
+    email: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    phone_number: Option<String>,
+    city: Option<String>,
+    company_name: Option<String>,
+    registration_local: String,
+    created_at: DateTime<Utc>,
+}
+
+#[get("/")]
+async fn list<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<Summary>>> {
+    keycloak.require_role(token, Role::ListApplications)?;
+
+    let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
+
+    Ok(Json(summaries))
+}
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct UnverifiedSummary {
@@ -38,7 +63,66 @@ async fn list_unverified<'r>(
 ) -> Response<Json<Vec<UnverifiedSummary>>> {
     keycloak.require_role(token, Role::ListApplications)?;
 
-    let summaries = query::get_unverified_summaries()
+    let summaries = query::list_unverified_summaries()
+        .fetch_all(db_pool.inner())
+        .await?;
+
+    Ok(Json(summaries))
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct AcceptedSummary {
+    id: Id<RegistrationRequest>,
+    email: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    phone_number: Option<String>,
+    city: Option<String>,
+    company_name: Option<String>,
+    registration_local: String,
+    created_at: DateTime<Utc>,
+    accepted_at: DateTime<Utc>,
+    member_id: Id<Member>,
+}
+
+#[get("/accepted")]
+async fn list_accepted<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<AcceptedSummary>>> {
+    keycloak.require_role(token, Role::ListApplications)?;
+
+    let summaries = query::list_accepted_summaries()
+        .fetch_all(db_pool.inner())
+        .await?;
+
+    Ok(Json(summaries))
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct RejectedSummary {
+    id: Id<RegistrationRequest>,
+    email: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    phone_number: Option<String>,
+    city: Option<String>,
+    company_name: Option<String>,
+    registration_local: String,
+    created_at: DateTime<Utc>,
+    rejected_at: DateTime<Utc>,
+}
+
+#[get("/rejected")]
+async fn list_rejected<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<RejectedSummary>>> {
+    keycloak.require_role(token, Role::ListApplications)?;
+
+    let summaries = query::list_rejected_summaries()
         .fetch_all(db_pool.inner())
         .await?;
 
@@ -67,7 +151,7 @@ async fn list_processing<'r>(
 ) -> Response<Json<Vec<ProcessingSummary>>> {
     keycloak.require_role(token, Role::ListApplications)?;
 
-    let summaries = query::get_processing_summaries()
+    let summaries = query::list_processing_summaries()
         .fetch_all(db_pool.inner())
         .await?;
 
@@ -168,6 +252,21 @@ pub enum ApplicationStatus {
 }
 
 impl ApplicationStatus {
+    pub fn assert_waiting_for_confirmation(&self) -> Result<(), ApiError> {
+        match self {
+            Self::WaitingForConfirmation => Ok(()),
+            _ => {
+                let message = format!(
+                    "Application status must be `{:?}` but is `{:?}`.",
+                    ApplicationStatus::WaitingForConfirmation,
+                    self
+                );
+
+                Err(ApiError::data_conflict(message))
+            }
+        }
+    }
+
     pub fn assert_in_proceesing(&self) -> Result<(), ApiError> {
         match self {
             Self::InProcessing => Ok(()),
@@ -200,6 +299,17 @@ impl ApplicationStatus {
             }
         }
     }
+
+    pub fn assert_rejected(&self) -> Result<(), ApiError> {
+        match self {
+            Self::Rejected(_) => Ok(()),
+            _ => {
+                let message = format!("Application status must be `Rejected` but is `{:?}`.", self);
+
+                Err(ApiError::data_conflict(message))
+            }
+        }
+    }
 }
 
 #[delete("/<id>")]
@@ -223,6 +333,33 @@ async fn reject<'r>(
         .assert_waiting_or_in_processing_or()?;
 
     let detail = query::reject_application(id).fetch_one(&mut tx).await?;
+
+    tx.commit().await?;
+
+    Ok(Json(detail))
+}
+
+#[patch("/<id>/unreject")]
+async fn unreject<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<RegistrationRequest>,
+) -> Response<Json<Detail>> {
+    keycloak.require_role(token, Role::ResolveApplications)?;
+
+    // transaction suppose to rollback on drop automatically
+    // so we don't need to explicitely clean it
+    let mut tx = db_pool.inner().begin().await?;
+
+    // check that the application status is in processing
+    query::get_application_status_data(id)
+        .fetch_one(&mut tx)
+        .await?
+        .to_status()
+        .assert_rejected()?;
+
+    let detail = query::unreject_application(id).fetch_one(&mut tx).await?;
 
     tx.commit().await?;
 
@@ -272,9 +409,12 @@ async fn accept<'r>(
 
     // Gracefully handle colision of member numbers
     if db::fail_duplicated(&result) {
-        let message = format!("Member number `{}` is already used for different member.", &member_number);
+        let message = format!(
+            "Member number `{}` is already used for different member.",
+            &member_number
+        );
 
-        return Err(ApiError::data_conflict(message))
+        return Err(ApiError::data_conflict(message));
     }
 
     let (member_id,) = result?;
@@ -297,7 +437,7 @@ async fn accept<'r>(
 }
 
 #[get("/<id>/files")]
-async fn files<'r>(
+async fn list_files<'r>(
     db_pool: &State<DbPool>,
     keycloak: &State<Keycloak>,
     token: JwtToken<'r>,
@@ -305,17 +445,81 @@ async fn files<'r>(
 ) -> Response<Json<Vec<File>>> {
     keycloak.require_role(token, Role::ViewApplication)?;
 
-    let files = get_application_files(id).fetch_all(db_pool.inner()).await?;
+    let files = query::list_application_files(id)
+        .fetch_all(db_pool.inner())
+        .await?;
     Ok(Json(files))
+}
+
+#[patch("/<id>/verify")]
+async fn verify<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    queue: &State<QueueSender>,
+    id: Id<RegistrationRequest>,
+) -> Response<Json<Detail>> {
+    keycloak.require_role(token, Role::ResolveApplications)?;
+
+    // transaction suppose to rollback on drop automatically
+    // so we don't need to explicitely clean it
+    let mut tx = db_pool.inner().begin().await?;
+
+    // check that the application status is in processing
+    query::get_application_status_data(id)
+        .fetch_one(&mut tx)
+        .await?
+        .to_status()
+        .assert_waiting_for_confirmation()?;
+
+    let detail = query::verify_application(id).fetch_one(&mut tx).await?;
+
+    // Trigger event to send a notification out
+    queue
+        .inner()
+        .send(Command::RegistrationRequestVerified(id))
+        .await?;
+
+    Ok(Json(detail))
+}
+
+#[post("/<id>/resend_email")]
+async fn resend_email<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    queue: &State<QueueSender>,
+    id: Id<RegistrationRequest>,
+) -> Response<SuccessResponse> {
+    keycloak.require_role(token, Role::ResolveApplications)?;
+
+    query::get_application_status_data(id)
+        .fetch_one(db_pool.inner())
+        .await?
+        .to_status()
+        .assert_waiting_for_confirmation()?;
+
+    queue
+        .inner()
+        .send(Command::ResentRegistrationEmail(id))
+        .await?;
+
+    Ok(SuccessResponse::Accepted)
 }
 
 pub fn routes() -> Vec<Route> {
     routes![
+        list,
         list_unverified,
         list_processing,
+        list_accepted,
+        resend_email,
+        list_rejected,
         detail,
-        files,
+        list_files,
         reject,
+        unreject,
+        verify,
         accept
     ]
 }
