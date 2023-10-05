@@ -1,6 +1,7 @@
 @module external styles: {..} = "./ApplicationDetail/styles.module.scss"
 
 @send external focus: Dom.element => unit = "focus"
+@scope("window") @val external window_open: (string, string) => unit = "open"
 
 open Belt
 open RemoteData
@@ -184,12 +185,21 @@ let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
 
 let viewFile = (~api: Api.t, file) => {
   let fileName = file.name ++ "." ++ file.fileType
-  let fileUrl =
-    api.host ++ "/files/" ++ file.id->Uuid.toString ++ "?token=" ++ api.keycloak->Keycloak.getToken
+
+  let openFile = _ => {
+    let fileUrl =
+      api.host ++
+      "/files/" ++
+      file.id->Uuid.toString ++
+      "?token=" ++
+      api.keycloak->Keycloak.getToken
+
+    window_open(fileUrl, "_blank")
+  }
 
   <tr key={file.id->Uuid.toString}>
     <td>
-      <a href=fileUrl target="_blank"> {React.string(fileName)} </a>
+      <a href="#" onClick=openFile> {React.string(fileName)} </a>
     </td>
     <td> {file.createdAt->Js.Date.toLocaleString->React.string} </td>
   </tr>
@@ -499,7 +509,9 @@ module Actions = {
       <Modal.Content>
         <p>
           {React.string("Are you shure you want to ")}
-          <strong> {React.string("move this application back to processing to be re-evaluated")} </strong>
+          <strong>
+            {React.string("move this application back to processing to be re-evaluated")}
+          </strong>
           {React.string(" again?")}
         </p>
         {switch error {
@@ -510,7 +522,9 @@ module Actions = {
           <Button onClick={_ => Modal.Interface.closeModal(modal)}>
             {React.string("Cancel")}
           </Button>
-          <Button btnType=Button.Danger onClick=doUnReject> {React.string("Move Back to Processing")} </Button>
+          <Button btnType=Button.Danger onClick=doUnReject>
+            {React.string("Move Back to Processing")}
+          </Button>
         </Button.Panel>
       </Modal.Content>
     }
