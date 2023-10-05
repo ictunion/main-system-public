@@ -12,6 +12,7 @@ let applicationsRows: array<RowBasedTable.row<StatsData.basic>> = [
   ("Pending Verification", s => React.string(s.unverified->Int.toString)),
   ("Accepted", s => React.string(s.accepted->Int.toString)),
   ("Rejected", s => React.string(s.rejected->Int.toString)),
+  ("All", s => React.string(StatsData.all(s)->Int.toString)),
 ]
 
 let statusRows: array<RowBasedTable.row<Api.status>> = [

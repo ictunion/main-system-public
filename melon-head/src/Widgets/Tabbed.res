@@ -35,9 +35,16 @@ module Tab = {
   }
 }
 
+module TabSpacer = {
+  @react.component
+  let make = () => {
+    <div className={styles["tabSpacer"]} />
+  }
+}
+
 module Content = {
   @react.component
-  let make = (~children, ~tab, ~handlers) => {
+  let make = (~children=React.null, ~tab, ~handlers) => {
     if fst(handlers) == tab {
       <div> children </div>
     } else {

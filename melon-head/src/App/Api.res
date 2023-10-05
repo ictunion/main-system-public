@@ -139,3 +139,17 @@ let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Js
   )
   ->fromRequest(decoder)
 }
+
+let patchJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Json.t): Future.t<
+  result<'a, error>,
+> => {
+  ()
+  ->Request.make(
+    ~url=api.host ++ path,
+    ~responseType=Json,
+    ~method=#PATCH,
+    ~headers=makeHeaders(api),
+    ~body=Js.Json.stringify(body),
+  )
+  ->fromRequest(decoder)
+}

@@ -5,6 +5,10 @@ type basic = {
   processing: int,
 }
 
+let all = (b: basic): int => {
+  b.unverified + b.accepted + b.rejected + b.processing
+}
+
 module Decode = {
   open Json.Decode
 

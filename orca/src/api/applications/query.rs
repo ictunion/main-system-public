@@ -5,7 +5,7 @@ use crate::{
 
 use super::{
     AcceptedSummary, ApplicationStatusData, Detail, File, ProcessingSummary, RejectedSummary,
-    UnverifiedSummary, Summary,
+    Summary, UnverifiedSummary,
 };
 use crate::data::{Id, RegistrationRequest};
 
@@ -14,16 +14,16 @@ pub fn list_summaries<'a>() -> QueryAs<'a, Summary> {
         "
 SELECT id
 , email
-, fist_name
+, first_name
 , last_name
 , phone_number
 , city
 , company_name
 , registration_local
 , created_at
-FROM registration_requests_unverified
+FROM registration_requests
 ORDER BY created_at DESC
-"
+",
     )
 }
 
@@ -185,7 +185,8 @@ RETURNING id
 }
 
 pub fn unreject_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
-    sqlx::query_as("
+    sqlx::query_as(
+        "
 UPDATE registration_requests
 SET rejected_at = NULL
 WHERE id = $1
@@ -209,16 +210,20 @@ RETURNING id
 , rejected_at
 , created_at
 , NULL AS accepted_at
-")
+",
+    )
     .bind(id)
 }
 
 pub fn verify_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
-    sqlx::query_as("
+    sqlx::query_as(
+        "
 UPDATE registration_requests
-SET confirmed_at = NOW()
+SET   confirmed_at = NOW()
+    , confirmation_token = NULL
 WHERE id = $1
-RETURNING id
+RETURNING
+, id
 , email
 , first_name
 , last_name
@@ -238,7 +243,8 @@ RETURNING id
 , rejected_at
 , created_at
 , NULL AS accepted_at
-")
+",
+    )
     .bind(id)
 }
 

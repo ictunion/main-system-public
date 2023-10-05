@@ -4,7 +4,8 @@ use super::RegistrationDetails;
 use crate::data::{Id, RegistrationRequest};
 
 pub fn query_registration<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, RegistrationDetails> {
-    sqlx::query_as("
+    sqlx::query_as(
+        "
 SELECT id
 , first_name
 , last_name
@@ -19,7 +20,8 @@ SELECT id
 , confirmation_token
 , registration_local
 FROM registration_requests WHERE id = $1
-")
+",
+    )
     .bind(id)
 }
 

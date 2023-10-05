@@ -44,6 +44,45 @@ let getStatus = (detail: detail): status => {
   }
 }
 
+type summary = {
+  id: Uuid.t,
+  email: option<Email.t>,
+  firstName: option<string>,
+  lastName: option<string>,
+  phoneNumber: option<PhoneNumber.t>,
+  city: option<string>,
+  companyName: option<string>,
+  registrationLocal: Local.t,
+  createdAt: Js.Date.t,
+}
+
+type acceptedSummary = {
+  id: Uuid.t,
+  email: option<Email.t>,
+  firstName: option<string>,
+  lastName: option<string>,
+  phoneNumber: option<PhoneNumber.t>,
+  city: option<string>,
+  companyName: option<string>,
+  registrationLocal: Local.t,
+  createdAt: Js.Date.t,
+  acceptedAt: Js.Date.t,
+  memberId: Uuid.t,
+}
+
+type rejectedSummary = {
+  id: Uuid.t,
+  email: option<Email.t>,
+  firstName: option<string>,
+  lastName: option<string>,
+  phoneNumber: option<PhoneNumber.t>,
+  city: option<string>,
+  companyName: option<string>,
+  registrationLocal: Local.t,
+  createdAt: Js.Date.t,
+  rejectedAt: Js.Date.t,
+}
+
 type processingSummary = {
   id: Uuid.t,
   email: option<Email.t>,
@@ -94,6 +133,45 @@ module Decode = {
     rejectedAt: field.required(. "rejected_at", option(date)),
     acceptedAt: field.required(. "accepted_at", option(date)),
     createdAt: field.required(. "created_at", date),
+  })
+
+  let summary = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    email: field.required(. "email", option(Email.decode)),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
+    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    city: field.required(. "city", option(string)),
+    companyName: field.required(. "company_name", option(string)),
+    registrationLocal: field.required(. "registration_local", Local.decode),
+    createdAt: field.required(. "created_at", date),
+  })
+
+  let acceptedSummary = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    email: field.required(. "email", option(Email.decode)),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
+    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    city: field.required(. "city", option(string)),
+    companyName: field.required(. "company_name", option(string)),
+    registrationLocal: field.required(. "registration_local", Local.decode),
+    createdAt: field.required(. "created_at", date),
+    acceptedAt: field.required(. "accepted_at", date),
+    memberId: field.required(. "member_id", Uuid.decode),
+  })
+
+  let rejectedSummary = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    email: field.required(. "email", option(Email.decode)),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
+    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    city: field.required(. "city", option(string)),
+    companyName: field.required(. "company_name", option(string)),
+    registrationLocal: field.required(. "registration_local", Local.decode),
+    createdAt: field.required(. "created_at", date),
+    rejectedAt: field.required(. "rejected_at", date),
   })
 
   let processingSummary = object(field => {

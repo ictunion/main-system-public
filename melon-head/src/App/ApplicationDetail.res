@@ -376,6 +376,146 @@ module Actions = {
     }
   }
 
+  module Verify = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doVerify = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.patchJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/verify",
+            ~decoder=ApplicationData.Decode.detail,
+            ~body=Js.Json.null,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you shure you want to ")}
+          <strong> {React.string("manualy verify the email address for this application")} </strong>
+          {React.string("?")}
+        </p>
+        <p>
+          {React.string(
+            "Email address might not be valid or used. Doing this will bypass the verification process.",
+          )}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button btnType=Button.Danger onClick=doVerify> {React.string("Verify Anyway")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  module ReSend = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doReSend = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.postJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/resend_email",
+            ~decoder=ApplicationData.Decode.detail,
+            ~body=Js.Json.null,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              // Technically, we probably don't need to be setting this date if we're going to route away anyway
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+
+              RescriptReactRouter.push("/applications")
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you shure you want to ")}
+          <strong> {React.string("send verification email to applicant")} </strong>
+          {React.string(" again?")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button btnType=Button.Cta onClick=doReSend> {React.string("Send Email")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  module UnReject = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doUnReject = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.patchJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/unreject",
+            ~decoder=ApplicationData.Decode.detail,
+            ~body=Js.Json.null,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you shure you want to ")}
+          <strong> {React.string("move this application back to processing to be re-evaluated")} </strong>
+          {React.string(" again?")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button btnType=Button.Danger onClick=doUnReject> {React.string("Move Back to Processing")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
   let rejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
     title: "Reject Application",
     content: <Reject api id setDetail modal />,
@@ -384,6 +524,21 @@ module Actions = {
   let acceptModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
     title: "Accept Application",
     content: <Accept api id setDetail modal />,
+  }
+
+  let verifyModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+    title: "Mark as Verified",
+    content: <Verify api id setDetail modal />,
+  }
+
+  let resendModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+    title: "Re-Send Email Verification",
+    content: <ReSend api id setDetail modal />,
+  }
+
+  let unRejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+    title: "Move Application Back to Processing",
+    content: <UnReject api id setDetail modal />,
   }
 
   @react.component
@@ -403,6 +558,18 @@ module Actions = {
           btnType=Button.Danger>
           {React.string("Reject")}
         </Button>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(verifyModal(~id, ~api, ~setDetail, ~modal))}
+          btnType=Button.Danger>
+          {React.string("Mark as Verified")}
+        </Button>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(resendModal(~id, ~api, ~setDetail, ~modal))}
+          btnType=Button.Cta>
+          {React.string("Re-send Email")}
+        </Button>
       </Button.Panel>
     | ApplicationData.Processing =>
       <Button.Panel>
@@ -419,7 +586,16 @@ module Actions = {
           {React.string("Accept")}
         </Button>
       </Button.Panel>
-    | _ => React.null
+    | ApplicationData.Rejected =>
+      <Button.Panel>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(unRejectModal(~id, ~api, ~setDetail, ~modal))}
+          btnType=Button.Danger>
+          {React.string("Re-Evaluate")}
+        </Button>
+      </Button.Panel>
+    | ApplicationData.Accepted => React.null
     }
   }
 }
@@ -445,8 +621,15 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
 
   let tabHandlers = Tabbed.make(Files)
 
+  let backToApplications = _ => {
+    RescriptReactRouter.push("/applications")
+  }
+
   <Page requireAnyRole=[ListApplications, ViewApplication]>
-    <header>
+    <header className={styles["header"]}>
+      <a className={styles["backBtn"]} href="#" onClick=backToApplications>
+        {React.string("🠔 Back to applications")}
+      </a>
       <h1 className={styles["title"]}>
         {React.string("Application ")}
         <span className={styles["titleId"]}>

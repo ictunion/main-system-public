@@ -1,9 +1,23 @@
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.back-btn {
+    font-weight: 700;
+    align-self: flex-start;
+
+    &:hover {
+        background: rgba(var(--rgb_color4), .2);
+    }
+}
+
 .title {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 24px;
-    margin-bottom: 6px;
     font-weight: 700;
     max-width: 100%;
     overflow: hidden;

@@ -12,7 +12,7 @@ use crate::data::{self, Id};
 use crate::db::{self, DbPool};
 use crate::generate;
 use crate::media::RawBase64;
-use crate::processing::{QueueSender, Command};
+use crate::processing::{Command, QueueSender};
 use crate::server::{IpAddress, UserAgent};
 
 mod query;
@@ -123,10 +123,7 @@ async fn api_join<'r>(
     // Rest of the processing then happens on async thread outside of web worker
     queue
         .inner()
-        .send(Command::NewRegistrationRequest(
-            reg_id,
-            signature_data,
-        ))
+        .send(Command::NewRegistrationRequest(reg_id, signature_data))
         .await?;
 
     info!(

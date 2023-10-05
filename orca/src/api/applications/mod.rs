@@ -480,6 +480,8 @@ async fn verify<'r>(
         .send(Command::RegistrationRequestVerified(id))
         .await?;
 
+    tx.commit().await?;
+
     Ok(Json(detail))
 }
 

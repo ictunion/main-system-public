@@ -139,8 +139,7 @@ async fn process(
             process_new_registration(reg_id, signature, config, db_pool).await
         }
         ResentRegistrationEmail(reg_id) => {
-            let application_details =
-                query::query_registration(reg_id).fetch_one(db_pool).await?;
+            let application_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
 
             let (pdf_data,) = query::fetch_registration_pdf(reg_id)
                 .fetch_one(db_pool)
