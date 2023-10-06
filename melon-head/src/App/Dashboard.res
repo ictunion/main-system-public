@@ -19,7 +19,7 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
   ("Http Status", s => React.string(s.httpStatus->Int.toString)),
   ("Http Message", s => React.string(s.httpMessage)),
   (
-    "Keycloak Connceted",
+    "Keycloak Connected",
     ({authorizationConnected}) => {<ViewBool value={authorizationConnected} />},
   ),
   ("Database Connceted", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),
