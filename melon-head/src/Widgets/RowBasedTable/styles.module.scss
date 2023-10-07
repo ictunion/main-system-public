@@ -1,4 +1,4 @@
-$border-color: rgba(var(--rgb_color1), 0.2);
+$border-color: #17a6b8;
 $bg-color: rgba(var(--rgb_color1), 0.1);
 
 .root {
@@ -8,7 +8,7 @@ $bg-color: rgba(var(--rgb_color1), 0.1);
 }
 
 .row-table-title {
-    background: $bg-color;
+    background: #d7eff2;
     border-bottom: 1px solid $border-color;
     font-size: 16px;
     line-height: 1.5em;

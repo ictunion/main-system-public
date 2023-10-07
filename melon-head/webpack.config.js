@@ -4,7 +4,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const config = require('./config.json');
 
 module.exports = (env, argv) => {
-    const mode = argv.model === 'production' ? 'production' : 'development';
+    const mode = argv.mode === 'production' ? 'production' : 'development';
     const apiHost = env['api-host'] ? env['spi-host'] : 'http://127.0.0.1:8000';
 
     console.log("webpack runs in", mode, "mode");
@@ -75,6 +75,7 @@ module.exports = (env, argv) => {
             new HtmlWebpackPlugin({
                 template: path.resolve(__dirname, "./src/index.html"),
                 publicPath: '/',
+                favicon: "./static/svg/melon-head.svg",
             }),
         ],
     };

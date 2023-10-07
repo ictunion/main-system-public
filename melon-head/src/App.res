@@ -7,7 +7,7 @@ module ConfiguredApp = {
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
 
-    let (isNavOpen, setIsNavOpen) = React.useState(_ => false)
+    let (isNavOpen, setIsNavOpen) = React.useState(_ => true)
     let (isProfileOpen, setIsProfileOpen) = React.useState(_ => false)
 
     let url = RescriptReactRouter.useUrl()

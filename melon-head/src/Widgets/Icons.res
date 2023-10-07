@@ -1,6 +1,6 @@
 @module external styles: {..} = "./Icons/styles.module.scss"
 @module external melonSvg: string = "/static/svg/melon.svg"
-@module external profileImg: string = "/static/png/profile.png"
+@module external profileImg: string = "/static/svg/profile.svg"
 
 type variant =
   | Dark

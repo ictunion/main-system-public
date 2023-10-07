@@ -350,7 +350,7 @@ module Actions = {
             <Message.Info>
               <strong>
                 {React.string(
-                  "New members will be automatically assigned a number that is one greater (+1) than the highest current existing member number.",
+                  "New member will be automatically assigned a number that is one greater (+1) than the highest current existing member number.",
                 )}
               </strong>
             </Message.Info>

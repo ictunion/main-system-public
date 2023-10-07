@@ -1,5 +1,20 @@
 $divider: 1px solid rgba(var(--rgb_color2), 0.2);
 
+.root {
+    color: var(--color2);
+
+    display: grid;
+    flex: 64px 0 0;
+    height: 64px;
+    grid-template-columns: 64px auto 64px;
+    column-gap: 12px;
+
+}
+
+.with-nav {
+    grid-template-columns: auto 64px;
+}
+
 @mixin btn {
     background: transparent;
     display: flex;
@@ -14,21 +29,37 @@ $divider: 1px solid rgba(var(--rgb_color2), 0.2);
     }
 }
 
-.root {
-    background: var(--color1);
-    color: var(--color2);
-
-    display: grid;
-    flex: 64px 0 0;
-    height: 64px;
-    grid-template-areas: 'left center right';
-    grid-template-columns: 64px auto 64px;
-    column-gap: 12px;
-}
-
 .nav-btn {
+    $size: 64px;
     @include btn;
     border-right: $divider;
+    width: $size;
+    height: $size;
+}
+
+.nav-btn-inner {
+    $size: 32px;
+    width: $size;
+    height: $size;
+    border-radius: 100%;
+    transition: background .2s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.nav-btn-close {
+    position: absolute;
+    left: 6px;
+    border-right: 0;
+
+    &:hover {
+        background: transparent;
+
+        .nav-btn-inner {
+            background: rgba(var(--rgb_color2), 0.1);
+        }
+    }
 }
 
 .app-title {
@@ -52,4 +83,8 @@ $divider: 1px solid rgba(var(--rgb_color2), 0.2);
 .profile-btn {
     @include btn;
     border-left: $divider;
+}
+
+.logo {
+    width: 48px;
 }

@@ -25,7 +25,7 @@ let make = (
         </button>
       </header>
       <section className={styles["profileDetail"]}>
-        <h4 className={styles["profile-title"]}> {React.string("Profile details")} </h4>
+        <h4 className={styles["profileTitle"]}> {React.string("Profile details")} </h4>
         {switch session {
         | Success(ses) =>
           <table className={styles["profileTable"]}>
@@ -39,13 +39,13 @@ let make = (
                 </td>
               </tr>
               <tr>
-                <td> {React.string("email")} </td>
+                <td> {React.string("name")} </td>
                 <td>
                   <span className={styles["shorten"]}> {React.string("TBA")} </span>
                 </td>
               </tr>
               <tr>
-                <td> {React.string("name")} </td>
+                <td> {React.string("email")} </td>
                 <td>
                   <span className={styles["shorten"]}> {React.string("TBA")} </span>
                 </td>
@@ -71,7 +71,7 @@ let make = (
         | Failure(err) => React.string(Api.showError(err))
         }}
       </section>
-      <nav>
+      <nav className={styles["bottom"]}>
         <ul className={styles["navList"]}>
           <li key="1">
             <a href={config.profileUrl} target="_blank"> {React.string("Profile")} </a>
@@ -89,5 +89,6 @@ let make = (
           </li>
         </ul>
       </nav>
+      <footer className={styles["footer"]} onClick={closeProfile} />
     </aside>
   </div>

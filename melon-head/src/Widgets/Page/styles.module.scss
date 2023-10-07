@@ -3,14 +3,24 @@
     padding: 32px 24px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 24px;
     overflow: auto;
     max-width: 100%;
+    background: var(--color2);
+    border-top-left-radius: 12px;
 }
 
 .title {
-    font-size: 32px;
-    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 24px;
+    font-weight: 700;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #0d3945;
 }
 
 .loading {

@@ -9,6 +9,7 @@
     justify-content: center;
     align-items: center;
     z-index: 999;
+    backdrop-filter: blur(4px);
 }
 
 .overlay {
@@ -21,24 +22,31 @@
 
 .box {
     position: relative;
-    background: var(--color2);
     border-radius: 4px;
     width: 600px;
     max-width: 100%;
+    box-shadow: 1px 4px 64px 6px rgba(0,0,0,.2);
 }
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid rgba(var(--rgb_color1), .2);
+    background: linear-gradient(233deg, rgba(56, 152, 190, .8) 0%, rgba(24, 101, 157, .8) 100%);
+    backdrop-filter: blur(4px);
+    color: white;
     padding: 12px;
     font-weight: 600;
     font-size: 18px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
 }
 
 .body {
     padding: 12px;
+    background: var(--color2);
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
 }
 
 .close-btn {

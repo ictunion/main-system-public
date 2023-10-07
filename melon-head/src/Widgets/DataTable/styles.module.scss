@@ -1,8 +1,7 @@
-$border-color: rgba(var(--rgb_color1), 0.3);
+$border-color: #17a6b8;
 
 .root {
     border: 1px solid $border-color;
-    border-radius: 4px;
     background: var(--color2);
 }
 
@@ -18,7 +17,7 @@ $border-color: rgba(var(--rgb_color1), 0.3);
     grid-template-columns: var(--grid-template-columns);
     font-size: 15px;
     min-width: fit-content;
-    background: rgba(var(--rgb_color1), .05);
+    background: #d7eff2;
 }
 
 .tr {

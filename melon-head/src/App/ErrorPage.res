@@ -5,7 +5,7 @@ open Belt
 module Shared = {
   @react.component
   let make = (~code: int, ~title: string, ~description: string, ~children: React.element) =>
-    <div>
+    <div className={styles["container"]}>
       <h1 className={styles["title"]}>
         <span className={styles["statusCode"]}> {React.string(code->Int.toString)} </span>
         {React.string(title)}
@@ -51,7 +51,7 @@ module Forbidden = {
 module Unauthorized = {
   @react.component
   let make = (~error: string) =>
-    <Shared code=401 title="Unauthorized" description="Error loading application configuration.">
+    <Shared code=401 title="Unauthorized" description="Error loading application.">
       <p className={styles["desc"]}>
         {React.string("Following error occured during application initialization:")}
         <p>

@@ -18,7 +18,7 @@ module Count = {
 module ApplicationStatus = {
   @react.component
   let make = (~value: RemoteData.t<ApplicationData.status, 'e>) => {
-    <span className={styles["count"]}>
+    <span className={styles["appStatus"]}>
       {switch value {
       | Success(status) =>
         React.string(

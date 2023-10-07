@@ -2,10 +2,10 @@ $colors-light: (
     color1: #211d22,
     color2: #ffffff,
     color3: #4b4848,
-    color4: #1781fa,
+    color4: #109AC0,
     color5: #a63ded,
     color6: #00c49f,
-    color7: #ef562e,
+    color7: #FF5C93,
 );
 
 @function hexToRGB($hex) {
@@ -41,6 +41,8 @@ $colors-light: (
     align-items: stretch;
     height: 100%;
     overflow: hidden;
+    background: linear-gradient(233deg, rgba(35,152,168,1) 0%, rgba(0,192,213,1) 42%, rgba(35,112,168,1) 100%);
+    padding-left: 6px;
 }
 
 .main-container {

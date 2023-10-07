@@ -5,11 +5,18 @@
 }
 
 .back-btn {
-    font-weight: 700;
+    font-weight: 600;
+    padding: 2px 6px;
+    margin: 0 -6px;
     align-self: flex-start;
+    border-radius: 3px;
+    transition: background 0.2s ease-in-out;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
 
     &:hover {
-        background: rgba(var(--rgb_color4), .2);
+        background: #DCEFF2;
     }
 }
 
@@ -23,6 +30,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: #0d3945;
 }
 
 .title-id {
@@ -38,11 +46,10 @@
     gap: 6px;
     font-weight: 600;
     font-size: 16px;
+    Color: #30849b;
 }
 
 .cell {
-    background: rgba(var(--rgb_color1), .05);
-    border: 1px solid rgba(var(--rgb_color1), 0.3);
     padding: 6px 12px;
     display: flex;
     flex-direction: column;
@@ -51,11 +58,16 @@
     font-weight: 600;
     font-size: 16px;
     overflow: hidden;
-    text-overflow: elipsis;
+    background: #d7eff2;
+    color: #0d3945;
+
+    a {
+        color: #0d3945;
+    }
 }
 
 .label {
-    color: rgba(var(--rgb_color1), .5);
+    color: #30849b;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.2px;
@@ -90,9 +102,9 @@
 
 .row-label {
     font-size: 16px;
-    color: var(--color3);
+    color: #30849b;
     font-weight: 700;
-    border-bottom: 2px solid rgba(var(--rgb_color1), .2);
+    border-bottom: 2px solid #cfe0e5;
 }
 
 .metadata {
@@ -116,10 +128,10 @@
 
 .signature {
     background: white;
-    border: 1px solid rgb(var(--rgb_color1), 0.2);
     display: flex;
     justify-content: center;
     align-items: center;
+    border-radius: 6px;
 }
 
 .files-table {

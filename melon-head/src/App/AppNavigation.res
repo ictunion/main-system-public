@@ -12,8 +12,17 @@ module NavItem = {
     | Some(role) => Session.hasRole(session, ~role)
     }
 
+    let isOpen = switch RescriptReactRouter.useUrl().path {
+    | list{} => path == "/"
+    | list{route} => "/" ++ route == path
+    | list{route, _} => "/" ++ route == path
+    | _ => false
+    }
+
+    let className = styles["navItem"] ++ (isOpen ? " " ++ styles["navItemOpen"] : "")
+
     if accessible {
-      <li className={styles["navItem"]} onClick={openRoute}>
+      <li className onClick={openRoute}>
         <a> {React.string(text)} </a>
       </li>
     } else {
@@ -43,6 +52,43 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             session
             requiredRole=Some(Session.ListApplications)
           />
+          /* <NavItem */
+          /* key="4" */
+          /* path="/checklist" */
+          /* text="Checklist" */
+          /* session */
+          /* requiredRole=Some(Session.ListApplications) */
+          /* /> */
+          /* <NavSeprator key="5" /> */
+          /* <NavItem */
+          /* key="6" */
+          /* path="/members" */
+          /* text="Members" */
+          /* session */
+          /* requiredRole=Some(Session.ListApplications) */
+          /* /> */
+          /* <NavItem */
+          /* key="7" */
+          /* path="/workplaces" */
+          /* text="Workplaces" */
+          /* session */
+          /* requiredRole=Some(Session.ListApplications) */
+          /* /> */
+          /* <NavItem */
+          /* key="8" */
+          /* path="/keycloak-mappings" */
+          /* text="Login Mapping" */
+          /* session */
+          /* requiredRole=Some(Session.ListApplications) */
+          /* /> */
+          /* <NavSeprator key="9" /> */
+          /* <NavItem */
+          /* key="10" */
+          /* path="/settings" */
+          /* text="Settings" */
+          /* session */
+          /* requiredRole=Some(Session.ListApplications) */
+          /* /> */
         </ul>
       | Loading =>
         <div className={styles["loading"]}>

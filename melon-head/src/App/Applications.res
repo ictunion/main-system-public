@@ -42,7 +42,7 @@ module Processing = {
         },
         {
           name: "Phone",
-          minMax: ("250px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
               <Link.Tel phoneNumber />
@@ -65,7 +65,7 @@ module Processing = {
         },
         {
           name: "Verified at",
-          minMax: ("150px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r => React.string(r.verifiedAt->Js.Date.toLocaleString),
         },
       ]}
@@ -108,7 +108,7 @@ module Unverified = {
         },
         {
           name: "Phone",
-          minMax: ("150px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
               <Link.Tel phoneNumber />
@@ -131,7 +131,7 @@ module Unverified = {
         },
         {
           name: "Email sent at",
-          minMax: ("200px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             React.string(
               r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleString),
@@ -177,7 +177,7 @@ module Accepted = {
         },
         {
           name: "Phone",
-          minMax: ("150px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
               <Link.Tel phoneNumber />
@@ -200,7 +200,7 @@ module Accepted = {
         },
         {
           name: "Accepted at",
-          minMax: ("125px", "1fr"),
+          minMax: ("220px", "1fr"),
           view: r => React.string(r.acceptedAt->Js.Date.toLocaleString),
         },
       ]}
@@ -243,7 +243,7 @@ module Rejected = {
         },
         {
           name: "Phone",
-          minMax: ("150px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
               <Link.Tel phoneNumber />
@@ -266,7 +266,7 @@ module Rejected = {
         },
         {
           name: "Rejected at",
-          minMax: ("125px", "1fr"),
+          minMax: ("220px", "1fr"),
           view: r => React.string(r.rejectedAt->Js.Date.toLocaleString),
         },
       ]}
@@ -309,7 +309,7 @@ module All = {
         },
         {
           name: "Phone",
-          minMax: ("150px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
               <Link.Tel phoneNumber />

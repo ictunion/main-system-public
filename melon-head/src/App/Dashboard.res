@@ -22,7 +22,7 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
     "Keycloak Connected",
     ({authorizationConnected}) => {<ViewBool value={authorizationConnected} />},
   ),
-  ("Database Connceted", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),
+  ("Database Connected", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),
 ]
 
 @react.component
@@ -45,12 +45,28 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
     ),
   ]
 
+  let openLink = (path: string, _) => {
+    RescriptReactRouter.push(path)
+  }
+
   <Page>
     <Page.Title> {React.string("Dashboard")} </Page.Title>
     <div className={styles["statsGrid"]}>
-      <RowBasedTable rows=applicationsRows data=basicStats title=Some("Current Applications") />
-      <RowBasedTable rows=permissionsRows data=session title=Some("Your Permissions/Roles") />
-      <RowBasedTable rows=statusRows data=status title=Some("Api Status") />
+      <div className={styles["gridItem"]}>
+        <h2 className={styles["itemTitle"]}> {React.string("Applications")} </h2>
+        <RowBasedTable rows=applicationsRows data=basicStats title=Some("Applications Stats") />
+        <a onClick={openLink("/applications")} className={styles["pageLink"]}>
+          {React.string("See Applications")}
+        </a>
+      </div>
+      <div className={styles["gridItem"]}>
+        <h2 className={styles["itemTitle"]}> {React.string("Permissions")} </h2>
+        <RowBasedTable rows=permissionsRows data=session title=Some("Your Permissions/Roles") />
+      </div>
+      <div className={styles["gridItem"]}>
+        <h2 className={styles["itemTitle"]}> {React.string("System")} </h2>
+        <RowBasedTable rows=statusRows data=status title=Some("Api Status") />
+      </div>
     </div>
   </Page>
 }

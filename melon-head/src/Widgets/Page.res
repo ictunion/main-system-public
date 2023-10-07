@@ -21,12 +21,7 @@ let make = (~children: React.element, ~requireAnyRole=[]) => {
       <div className={styles["loading"]}>
         <Icons.Loading variant=Icons.Dark />
       </div>
-    | Failure(err) =>
-      <div className={styles["error"]}>
-        <h1> {React.string("Unauthorized")} </h1>
-        <p> {React.string("There was an erro while loading session data")} </p>
-        <pre> {React.string(Api.showError(err))} </pre>
-      </div>
+    | Failure(err) => <ErrorPage.Unauthorized error={Api.showError(err)} />
     }}
   </main>
 }
