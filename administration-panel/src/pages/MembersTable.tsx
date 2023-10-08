@@ -3,8 +3,9 @@ import {
   PostgrestClient,
   PostgrestSingleResponse,
 } from "@supabase/postgrest-js";
-import { DataGrid, GridColDef, GridValueGetterParams } from "@mui/x-data-grid";
+import { DataGrid, GridColDef, GridValueGetterParams, GridEventListener } from "@mui/x-data-grid";
 import Box from "@mui/material/Box";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   postgrest: PostgrestClient;
@@ -45,6 +46,9 @@ const MembersTable = (props: Props) => {
     "last_name",
     "phone_number",
   ];
+
+  const navigate = useNavigate();
+
   React.useEffect(() => {
     if (state.initialDataLoaded !== false || state.isLoading) {
       return;
@@ -66,6 +70,15 @@ const MembersTable = (props: Props) => {
         }
       });
   });
+
+  const handleCellClick: GridEventListener<'cellClick'> = (params) => {
+    if (params.field == 'member_number') {
+        //navigate to member detail
+        //console.log(`We should navigate to ${params.row.member_number} detail of user ${params.row.first_name} ${params.row.last_name}`);
+        navigate(`/members/` + params.row.member_number);
+    }
+  };
+  
 
   const gridcolumns: GridColDef[] = [
     {
@@ -120,6 +133,7 @@ const MembersTable = (props: Props) => {
               },
             },
           }}
+          onCellClick={handleCellClick} {...state.data}
           pageSizeOptions={[100, 50, 25]}
           disableRowSelectionOnClick
         />

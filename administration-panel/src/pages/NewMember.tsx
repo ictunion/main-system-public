@@ -3,6 +3,7 @@ import { Button, TextField, MenuItem } from '@mui/material';
 import { Form } from 'react-router-dom';
 import Box from '@mui/material/Box';
 
+import { Navigate } from "react-router-dom";
 import { PostgrestClient, PostgrestSingleResponse } from '@supabase/postgrest-js'
 
 interface Member {
@@ -32,7 +33,7 @@ interface State {
     newMember: Member;
     newMemberOccupation: Occupation;
     isUpdating: boolean;
-
+    redirect: boolean;
 }
 
 const languages = [
@@ -51,6 +52,7 @@ export default class NewMember extends React.Component<Props, State> {
             company_name: null, position: null, member_id: null,
         },
         isUpdating: false,
+        redirect: false,
     }
 
 
@@ -189,7 +191,7 @@ export default class NewMember extends React.Component<Props, State> {
                                 return;
                             }
 
-                            this.setState({ ...this.state, isUpdating: false })
+                            this.setState({ ...this.state, isUpdating: false, redirect: true })
                     })
 
                 })
@@ -316,6 +318,9 @@ export default class NewMember extends React.Component<Props, State> {
                         </div>
                 </Box>
                 <Button variant="contained" onClick={this.saveNewMember.bind(this)}>Save new member</Button>
+                { 
+                   this.state.redirect && <Navigate to={"/members/" + this.state.newMember.member_number} replace={true}/>
+                }
             </div>
         )
     }

@@ -14,6 +14,7 @@ import WelcomePage from '@app/pages/Welcome';
 import NotFoundPage from '@app/pages/NotFound';
 import MembersTablePage from '@app/pages/MembersTable';
 import NewMemberPage from '@app/pages/NewMember';
+import DetailMemberPage from '@app/pages/DetailMemberPage';
 import NewMember from '@app/pages/NewMember';
 
 interface UserInfo {
@@ -61,6 +62,7 @@ export default class App extends React.Component<Props, AppState> {
                     <Route path="members" >
                         <Route path="table" element={<MembersTablePage postgrest={this.props.postgrest} />} />
                         <Route path="new" element={<NewMemberPage postgrest={this.props.postgrest}/>} />
+                        <Route path=":id" element={<DetailMemberPage postgrest={this.props.postgrest}/>} />
                     </Route>
                     <Route path="*" element={<NotFoundPage />} />
                 </Route>
