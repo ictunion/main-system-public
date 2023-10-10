@@ -1,7 +1,5 @@
-$border-color: #17a6b8;
-
 .root {
-    border: 1px solid $border-color;
+    border: 1px solid var(--border-color);
     background: var(--color2);
 }
 
@@ -17,7 +15,8 @@ $border-color: #17a6b8;
     grid-template-columns: var(--grid-template-columns);
     font-size: 15px;
     min-width: fit-content;
-    background: #d7eff2;
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .tr {
@@ -25,12 +24,16 @@ $border-color: #17a6b8;
     grid-auto-flow: column;
     grid-template-columns: var(--grid-template-columns);
     min-width: 100%;
-    border-top: 1px solid $border-color;
+    border-bottom: 1px solid var(--border-color);
     min-width: fit-content;
     align-items: center;
 
     &:hover {
         background: rgba(var(--rgb_color4), .1);
+    }
+
+    &:last-child {
+        border-bottom: 0;
     }
 }
 
@@ -43,4 +46,20 @@ $border-color: #17a6b8;
     font-weight: 700;
     letter-spacing: .2px;
     overflow: hidden;
+}
+
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--color7);
+    padding: 24px 0;
+    font-size: 16px;
+    font-weight: 600;
 }

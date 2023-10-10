@@ -17,8 +17,8 @@ module Processing = {
       )
 
     <DataTable
-      data={processing}
-      columns={[
+      data=processing
+      columns=[
         {
           name: "ID",
           minMax: ("100px", "1fr"),
@@ -68,7 +68,7 @@ module Processing = {
           minMax: ("220px", "2fr"),
           view: r => React.string(r.verifiedAt->Js.Date.toLocaleString),
         },
-      ]}
+      ]
     />
   }
 }
@@ -83,8 +83,8 @@ module Unverified = {
       )
 
     <DataTable
-      data={unverified}
-      columns={[
+      data=unverified
+      columns=[
         {
           name: "ID",
           minMax: ("100px", "1fr"),
@@ -137,7 +137,7 @@ module Unverified = {
               r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleString),
             ),
         },
-      ]}
+      ]
     />
   }
 }
@@ -152,8 +152,8 @@ module Accepted = {
       )
 
     <DataTable
-      data={all}
-      columns={[
+      data=all
+      columns=[
         {
           name: "ID",
           minMax: ("100px", "1fr"),
@@ -203,7 +203,7 @@ module Accepted = {
           minMax: ("220px", "1fr"),
           view: r => React.string(r.acceptedAt->Js.Date.toLocaleString),
         },
-      ]}
+      ]
     />
   }
 }
@@ -218,8 +218,8 @@ module Rejected = {
       )
 
     <DataTable
-      data={all}
-      columns={[
+      data=all
+      columns=[
         {
           name: "ID",
           minMax: ("100px", "1fr"),
@@ -269,7 +269,7 @@ module Rejected = {
           minMax: ("220px", "1fr"),
           view: r => React.string(r.rejectedAt->Js.Date.toLocaleString),
         },
-      ]}
+      ]
     />
   }
 }
@@ -284,8 +284,8 @@ module All = {
       )
 
     <DataTable
-      data={all}
-      columns={[
+      data=all
+      columns=[
         {
           name: "ID",
           minMax: ("100px", "1fr"),
@@ -330,7 +330,7 @@ module All = {
           minMax: ("125px", "1fr"),
           view: r => React.string(r.registrationLocal->Local.toString),
         },
-      ]}
+      ]
     />
   }
 }

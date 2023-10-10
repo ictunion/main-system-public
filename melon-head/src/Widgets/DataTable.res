@@ -63,7 +63,11 @@ let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>) => {
         React.array(
           rows->Array.mapWithIndex((id, row) => <Tr key={Int.toString(id)} columns row />),
         )
-      | Failure(err) => React.string(err->Api.showError)
+      | Failure(err) => <div className={styles["error"]}> {React.string(err->Api.showError)} </div>
+      | Loading =>
+        <div className={styles["loadingContainer"]}>
+          <Icons.Loading variant=Icons.Dark />
+        </div>
       | _ => React.null
       }}
     </div>

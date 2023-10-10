@@ -197,9 +197,9 @@ let viewFile = (~api: Api.t, file) => {
     window_open(fileUrl, "_blank")
   }
 
-  <tr key={file.id->Uuid.toString}>
+  <tr key={Uuid.toString(file.id)}>
     <td>
-      <a href="#" onClick=openFile> {React.string(fileName)} </a>
+      <a onClick=openFile> {React.string(fileName)} </a>
     </td>
     <td> {file.createdAt->Js.Date.toLocaleString->React.string} </td>
   </tr>
@@ -641,7 +641,7 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
 
   <Page requireAnyRole=[ListApplications, ViewApplication]>
     <header className={styles["header"]}>
-      <a className={styles["backBtn"]} href="#" onClick=backToApplications>
+      <a className={styles["backBtn"]} onClick=backToApplications>
         {React.string("🠔 Back to applications")}
       </a>
       <h1 className={styles["title"]}>
