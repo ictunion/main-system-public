@@ -1,8 +1,7 @@
-$divider: 1px solid rgba(var(--rgb_color2), 0.2);
+$divider: 1px solid var(--separator-light-low-emphasis);
 
 .root {
     color: var(--color2);
-
     display: grid;
     flex: 64px 0 0;
     height: 64px;
@@ -25,7 +24,7 @@ $divider: 1px solid rgba(var(--rgb_color2), 0.2);
     transition: background .2s ease-in-out;
 
     &:hover {
-        background: rgba(var(--rgb_color2), 0.1);
+        background: var(--emphasis-light-overlay);
     }
 }
 
@@ -57,7 +56,7 @@ $divider: 1px solid rgba(var(--rgb_color2), 0.2);
         background: transparent;
 
         .nav-btn-inner {
-            background: rgba(var(--rgb_color2), 0.1);
+            background: var(--emphasis-light-overlay);
         }
     }
 }

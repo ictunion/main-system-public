@@ -1,15 +1,12 @@
-$border-color: #17a6b8;
-$bg-color: rgba(var(--rgb_color1), 0.1);
-
 .root {
     position: relative;
-    border: 1px solid $border-color;
+    border: 1px solid var(--border-color);
     overflow: hidden;
 }
 
 .row-table-title {
-    background: #d7eff2;
-    border-bottom: 1px solid $border-color;
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
     font-size: 16px;
     line-height: 1.5em;
     font-weight: 600;
@@ -26,7 +23,7 @@ $bg-color: rgba(var(--rgb_color1), 0.1);
 
     td {
         padding: 12px;
-        border-top: 1px solid $border-color;
+        border-top: 1px solid var(--border-color);
 
         &:first-child {
             font-weight: 600;

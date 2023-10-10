@@ -350,22 +350,24 @@ let make = (~api: Api.t) => {
           <Chip.Count value={basicStats->RemoteData.map(r => r.processing)} />
         </Tabbed.Tab>
         <Tabbed.Tab
-          value={Some(ApplicationData.Unverified)} handlers={tabHandlers} color=Some("#a63ded")>
+          value={Some(ApplicationData.Unverified)}
+          handlers={tabHandlers}
+          color=Some("var(--color5)")>
           {React.string("Pending Verification")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.unverified)} />
         </Tabbed.Tab>
         <Tabbed.Tab
-          value={Some(ApplicationData.Accepted)} handlers={tabHandlers} color=Some("#00c49f")>
+          value={Some(ApplicationData.Accepted)} handlers={tabHandlers} color=Some("var(--color6)")>
           {React.string("Accepted")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.accepted)} />
         </Tabbed.Tab>
         <Tabbed.Tab
-          value={Some(ApplicationData.Rejected)} handlers={tabHandlers} color=Some("#ef562e")>
+          value={Some(ApplicationData.Rejected)} handlers={tabHandlers} color=Some("var(--color7)")>
           {React.string("Rejected")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.rejected)} />
         </Tabbed.Tab>
         <Tabbed.TabSpacer />
-        <Tabbed.Tab value={None} handlers={tabHandlers} color=Some("#211d22")>
+        <Tabbed.Tab value={None} handlers={tabHandlers} color=Some("var(--color1)")>
           {React.string("All")}
           <Chip.Count value={basicStats->RemoteData.map(StatsData.all)} />
         </Tabbed.Tab>

@@ -1,5 +1,3 @@
-$border-color:  #17a6b8;
-
 .scroll-container {
     overflow-x: auto;
     overflow-y: hidden;
@@ -10,7 +8,7 @@ $border-color:  #17a6b8;
 
 .nav {
     display: flex;
-    border-bottom: 1px solid $border-color;
+    border-bottom: 1px solid var(--border-color);
     gap: 6px;
 }
 
@@ -24,14 +22,14 @@ $border-color:  #17a6b8;
     letter-spacing: 0.4px;
     margin-bottom: -1px;
     border-bottom: 2px solid transparent;
-    color: #0d3945;
+    color: var(--color3);
     align-items: baseline;
     white-space: nowrap;
 }
 
 .tab {
     @include tab;
-    background: #d2eaed;
+    background: var(--background-color);
     transition: background .2s ease-in-out, border-color .2s linear;
     border-top: 8px solid var(--color2);
     margin-bottom: 1px;
@@ -48,7 +46,7 @@ $border-color:  #17a6b8;
 
     &::before {
         content: '';
-        border-left: 1px solid rgba(var(--rgb_color1), 0.4)
+        border-left: 1px solid var(--separator-dark-low-emphasis);
     }
 }
 

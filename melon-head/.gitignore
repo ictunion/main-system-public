@@ -2,7 +2,6 @@ node_modules
 /lib
 src/**/*.bs.js
 /dist
-/.parcel-cache
 /config.json
 .bsb.lock
 .merlin

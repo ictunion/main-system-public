@@ -22,13 +22,12 @@
 .uuid-full {
     position: absolute;
     display: none;
-    top: -7px;
-    left: -12px;
-    backdrop-filter: blur(6px);
-    background-color: rgba(var(--rgb_color2), .5);
+    top: -8px;
+    left: -13px;
+    background-color: var(--color2);
     white-space: nowrap;
     padding: 6px 12px;
     border-radius: 6px;
-    box-shadow: 1px 1px 5px 1px rgba(var(--rgb_color1), .2);
     text-decoration: underline;
+    border: 1px solid var(--border-color);
 }
