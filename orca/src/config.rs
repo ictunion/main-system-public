@@ -62,13 +62,13 @@ impl Config {
 
         let verify_redirects_to = figment
             .extract_inner("verify_redirects_to")
-            .unwrap_or(HashMap::new());
+            .unwrap_or_default();
 
         let notification_email = figment.extract_inner("notification_email").ok();
 
         let email_confirmation_subjects = figment
             .extract_inner("email_confirmation_subjects")
-            .unwrap_or(HashMap::new());
+            .unwrap_or_default();
 
         let log_level = figment
             .extract_inner("log_level")

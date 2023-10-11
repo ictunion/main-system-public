@@ -19,7 +19,7 @@ rustPlatform.buildRustPackage {
   pname = "ict-union-orca";
   version = "0.1.0";
   src = nix-gitignore.gitignoreSource [] ./.;
-  cargoSha256 = "sha256-JGSLmdUXhhB0z8x2w1feKnHUGb7vWviJBP9dbq0E9aY=";
+  cargoSha256 = "sha256-iW18bgQwXIT6jL+PW3UxELqUzDJLxldAwwJv2FudB4o=";
 
   nativeBuildInputs = [ pkg-config makeWrapper ];
 

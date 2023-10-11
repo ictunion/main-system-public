@@ -1,5 +1,3 @@
-use sqlx;
-
 use super::Summary;
 use crate::db::QueryAs;
 
