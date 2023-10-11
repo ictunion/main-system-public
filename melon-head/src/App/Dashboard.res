@@ -43,6 +43,10 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
       "Resolve (Approve or Reject) applications",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ResolveApplications)} />},
     ),
+    (
+      "List all members",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListMembers)} />},
+    ),
   ]
 
   let openLink = (path: string, _) => {

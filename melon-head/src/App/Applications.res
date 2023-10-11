@@ -64,9 +64,9 @@ module Processing = {
           view: r => React.string(r.registrationLocal->Local.toString),
         },
         {
-          name: "Verified at",
+          name: "Verified on",
           minMax: ("220px", "2fr"),
-          view: r => React.string(r.verifiedAt->Js.Date.toLocaleString),
+          view: r => React.string(r.verifiedAt->Js.Date.toLocaleDateString),
         },
       ]
     />
@@ -130,11 +130,11 @@ module Unverified = {
           view: r => React.string(r.registrationLocal->Local.toString),
         },
         {
-          name: "Email sent at",
-          minMax: ("220px", "2fr"),
+          name: "Email Sent On",
+          minMax: ("150px", "2fr"),
           view: r =>
             React.string(
-              r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleString),
+              r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleDateString),
             ),
         },
       ]
@@ -161,7 +161,7 @@ module Accepted = {
         },
         {
           name: "First Name",
-          minMax: ("150px", "1fr"),
+          minMax: ("150px", "2fr"),
           view: r => React.string(r.firstName->Option.getWithDefault("--")),
         },
         {
@@ -199,9 +199,9 @@ module Accepted = {
           view: r => React.string(r.registrationLocal->Local.toString),
         },
         {
-          name: "Accepted at",
-          minMax: ("220px", "1fr"),
-          view: r => React.string(r.acceptedAt->Js.Date.toLocaleString),
+          name: "Accepted On",
+          minMax: ("150px", "1fr"),
+          view: r => React.string(r.acceptedAt->Js.Date.toLocaleDateString),
         },
       ]
     />
@@ -265,9 +265,9 @@ module Rejected = {
           view: r => React.string(r.registrationLocal->Local.toString),
         },
         {
-          name: "Rejected at",
-          minMax: ("220px", "1fr"),
-          view: r => React.string(r.rejectedAt->Js.Date.toLocaleString),
+          name: "Rejected On",
+          minMax: ("150px", "1fr"),
+          view: r => React.string(r.rejectedAt->Js.Date.toLocaleDateString),
         },
       ]
     />

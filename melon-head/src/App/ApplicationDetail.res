@@ -95,7 +95,7 @@ let layout: DataGrid.t<ApplicationData.detail> = [
       },
       {
         label: "Date of Birth",
-        view: d => viewOption(d.dateOfBirth, a => a->Js.Date.toLocaleString->React.string),
+        view: d => viewOption(d.dateOfBirth, a => a->Js.Date.toLocaleDateString->React.string),
         minmax: ("250px", "250px"),
       },
     ],

@@ -59,14 +59,10 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
           /* session */
           /* requiredRole=Some(Session.ListApplications) */
           /* /> */
-          /* <NavSeprator key="5" /> */
-          /* <NavItem */
-          /* key="6" */
-          /* path="/members" */
-          /* text="Members" */
-          /* session */
-          /* requiredRole=Some(Session.ListApplications) */
-          /* /> */
+          <NavSeprator key="5" />
+          <NavItem
+            key="6" path="/members" text="Members" session requiredRole=Some(Session.ListMembers)
+          />
           /* <NavItem */
           /* key="7" */
           /* path="/workplaces" */

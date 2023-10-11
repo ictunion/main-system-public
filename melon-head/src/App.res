@@ -39,6 +39,7 @@ module ConfiguredApp = {
           | list{"applications"} => <Applications api />
           | list{"applications", id} =>
             <ApplicationDetail id={Data.Uuid.unsafeFromString(id)} api modal />
+          | list{"members"} => <Members api />
           | _ =>
             <Page>
               <ErrorPage.NotFound />

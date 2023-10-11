@@ -7,6 +7,7 @@ use validator::ValidationError;
 mod applications;
 mod errors;
 mod files;
+mod members;
 mod registration;
 mod session;
 mod stats;
@@ -215,6 +216,7 @@ pub fn build() -> Rocket<Build> {
         .mount("/stats", stats::routes())
         .register("/stats", errors::catchers())
         .mount("/files", files::routes())
+        .mount("/members", members::routes())
 }
 
 pub type Response<T> = Result<T, ApiError>;
