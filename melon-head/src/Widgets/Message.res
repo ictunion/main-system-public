@@ -13,3 +13,24 @@ module Info = {
     <article className={styles["info"]}> children </article>
   }
 }
+
+module Warning = {
+  @react.component
+  let make = (~children) => {
+    <article className={styles["error"]}> children </article>
+  }
+}
+
+module ButtonPanel = {
+  @react.component
+  let make = (~children) => {
+    <section className={styles["buttonPanel"]}> children </section>
+  }
+}
+
+module Title = {
+  @react.component
+  let make = (~children) => {
+    <h3 className={styles["title"]}> children </h3>
+  }
+}

@@ -41,13 +41,15 @@ let make = (
               <tr>
                 <td> {React.string("name")} </td>
                 <td>
-                  <span className={styles["shorten"]}> {React.string("TBA")} </span>
+                  <span className={styles["shorten"]}> {React.string(ses.tokenClaims.name)} </span>
                 </td>
               </tr>
               <tr>
                 <td> {React.string("email")} </td>
                 <td>
-                  <span className={styles["shorten"]}> {React.string("TBA")} </span>
+                  <span className={styles["shorten"]}>
+                    {React.string(ses.tokenClaims.email->Data.Email.toString)}
+                  </span>
                 </td>
               </tr>
               <tr>

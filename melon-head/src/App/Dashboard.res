@@ -26,11 +26,15 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
 ]
 
 @react.component
-let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
+let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => {
   let (basicStats, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
   let (status, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
 
   let permissionsRows = [
+    (
+      "Recognized as member",
+      (session: Session.t) => {<ViewBool value={session.memberId->Option.isSome} />},
+    ),
     (
       "List all applications",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListApplications)} />},
@@ -53,8 +57,72 @@ let make = (~session: Api.webData<Session.t>, ~api: Api.t) => {
     RescriptReactRouter.push(path)
   }
 
+  let (error, setError) = React.useState(() => None)
+
+  let doPair = _ => {
+    //TODO: implement me
+
+    let req =
+      api->Api.postJson(
+        ~path="/session/current/pair-by-email",
+        ~decoder=Session.Decode.session,
+        ~body=Js.Json.null,
+      )
+
+    req->Future.get(res => {
+      switch res {
+      | Ok(data) => setSessionState(_ => RemoteData.Success(data))
+      | Error(err) => setError(_ => Some(err))
+      }
+    })
+  }
+
   <Page>
     <Page.Title> {React.string("Dashboard")} </Page.Title>
+    <div className={styles["welcome"]}>
+      <h3>
+        {React.string("Hello ")}
+        {React.string(session->RemoteData.unwrap(~default="--", s => s.tokenClaims.name))}
+        {React.string("!")}
+      </h3>
+      {switch session->RemoteData.map(s => s.memberId) {
+      | Success(None) =>
+        <Message.Warning>
+          <Message.Title>
+            {React.string("Your account is not paired with any member!")}
+          </Message.Title>
+          <p>
+            {React.string(
+              "Some functions won't be accessible unless you pair your account. Just be aware that you might need to create member if it doesn't exist yet.",
+            )}
+          </p>
+          <p>
+            {React.string(
+              "If you're not member but administrator you can safely ignore this message. Fuctions which require membership won't be available to you.",
+            )}
+          </p>
+          <Message.ButtonPanel>
+            <Button btnType=Button.Cta onClick=doPair>
+              {React.string(
+                "Pair account by email " ++
+                session->RemoteData.unwrap(~default="canot happen", s =>
+                  Data.Email.toString(s.tokenClaims.email)
+                ),
+              )}
+            </Button>
+          </Message.ButtonPanel>
+        </Message.Warning>
+      | Success(Some(uuid)) =>
+        <p>
+          {React.string("Your account is paired with member id " ++ Data.Uuid.toString(uuid))}
+        </p>
+      | _ => React.null
+      }}
+      {switch error {
+      | None => React.null
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      }}
+    </div>
     <div className={styles["statsGrid"]}>
       <div className={styles["gridItem"]}>
         <h2 className={styles["itemTitle"]}> {React.string("Applications")} </h2>

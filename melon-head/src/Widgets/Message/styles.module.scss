@@ -5,16 +5,32 @@
     padding: 6px 12px;
     background: rgba(var(--rgb_#{$color}), 0.1);
     border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .error {
-    color: var(--color1);
-    font-weight: 600;
-    padding: 6px 12px;
-    background: var(--color7);
+    color: var(--color0);
+    padding: 12px 12px;
+    border: 2px solid var(--error-color);
+    background: var(--error-bgcolor);
     border-radius: 4px;
+    line-height: 1.5em;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .info {
     @include message(color4);
+}
+
+.button-panel {
+    display: flex;
+    gap: 12px;
+}
+
+.title {
+    margin-bottom: 6px;
 }

@@ -1,3 +1,6 @@
+@use "sass:map";
+@use 'sass:color';
+
 $colors-light: (
     color0: #000000,
     color1: #211d22,
@@ -46,6 +49,8 @@ $colors-light: (
   --mutted-overlay: rgba(var(--rgb_color1), 0.6);
   --background-color: #d7eff2;
   --border-color: #17a6b8;
+  --error-color: #{map.get($colors-light, color7)};
+  --error-bgcolor: #{color.mix(map.get($colors-light, color7), map.get($colors-light, color2), $weight: 15%)};
 }
 
 .root {

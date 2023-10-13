@@ -194,9 +194,11 @@ struct Roles {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JwtClaims {
-    sub: uuid::Uuid,
+    pub sub: uuid::Uuid,
     realm_access: Roles,
     resource_access: HashMap<String, Roles>,
+    pub email: String,
+    name: String,
 }
 
 #[derive(Responder, Debug)]

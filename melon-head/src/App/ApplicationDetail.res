@@ -437,7 +437,7 @@ module Actions = {
 
   module ReSend = {
     @react.component
-    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t) => {
       let (error, setError) = React.useState(() => None)
 
       let doReSend = (_: JsxEvent.Mouse.t) => {
@@ -450,7 +450,7 @@ module Actions = {
 
         req->Future.get(res => {
           switch res {
-          | Ok(data) => {
+          | Ok(_) => {
               Modal.Interface.closeModal(modal)
 
               RescriptReactRouter.push("/applications")
@@ -543,9 +543,9 @@ module Actions = {
     content: <Verify api id setDetail modal />,
   }
 
-  let resendModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+  let resendModal = (~id, ~api, ~modal): Modal.modalContent => {
     title: "Re-Send Email Verification",
-    content: <ReSend api id setDetail modal />,
+    content: <ReSend api id modal />,
   }
 
   let unRejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
@@ -577,8 +577,7 @@ module Actions = {
           {React.string("Mark as Verified")}
         </Button>
         <Button
-          onClick={_ =>
-            modal->Modal.Interface.openModal(resendModal(~id, ~api, ~setDetail, ~modal))}
+          onClick={_ => modal->Modal.Interface.openModal(resendModal(~id, ~api, ~modal))}
           btnType=Button.Cta>
           {React.string("Re-send Email")}
         </Button>
