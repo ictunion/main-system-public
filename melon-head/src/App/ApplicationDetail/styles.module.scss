@@ -167,29 +167,3 @@
         text-align: right;
     }
 }
-
-.member-number-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 12px;
-    background: var(--color4);
-    color: var(--color2);
-
-    input {
-        color: var(--color0);
-    }
-}
-
-.member-number-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-weight: 600;
-}
-
-.member-number-auto {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}

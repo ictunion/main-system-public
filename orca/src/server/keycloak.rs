@@ -26,6 +26,7 @@ pub enum Role {
     ViewApplication,
     ResolveApplications,
     ListMembers,
+    ManageMembers,
 }
 
 impl Role {
@@ -35,6 +36,7 @@ impl Role {
             Self::ViewApplication => "view-application",
             Self::ResolveApplications => "resolve-applications",
             Self::ListMembers => "list-members",
+            Self::ManageMembers => "manage-members",
         }
     }
 }

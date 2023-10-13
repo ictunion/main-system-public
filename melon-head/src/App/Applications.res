@@ -10,7 +10,7 @@ open Belt
 module Processing = {
   @react.component
   let make = (~api: Api.t) => {
-    let (processing, _) =
+    let (processing, _, _) =
       api->Hook.getData(
         ~path="/applications/processing",
         ~decoder=Json.Decode.array(ApplicationData.Decode.processingSummary),
@@ -76,7 +76,7 @@ module Processing = {
 module Unverified = {
   @react.component
   let make = (~api: Api.t) => {
-    let (unverified, _) =
+    let (unverified, _, _) =
       api->Hook.getData(
         ~path="/applications/unverified",
         ~decoder=Json.Decode.array(ApplicationData.Decode.unverifiedSummary),
@@ -145,7 +145,7 @@ module Unverified = {
 module Accepted = {
   @react.component
   let make = (~api: Api.t) => {
-    let (all, _) =
+    let (all, _, _) =
       api->Hook.getData(
         ~path="/applications/accepted",
         ~decoder=Json.Decode.array(ApplicationData.Decode.acceptedSummary),
@@ -211,7 +211,7 @@ module Accepted = {
 module Rejected = {
   @react.component
   let make = (~api: Api.t) => {
-    let (all, _) =
+    let (all, _, _) =
       api->Hook.getData(
         ~path="/applications/rejected",
         ~decoder=Json.Decode.array(ApplicationData.Decode.rejectedSummary),
@@ -277,7 +277,7 @@ module Rejected = {
 module All = {
   @react.component
   let make = (~api: Api.t) => {
-    let (all, _) =
+    let (all, _, _) =
       api->Hook.getData(
         ~path="/applications",
         ~decoder=Json.Decode.array(ApplicationData.Decode.summary),
@@ -339,7 +339,7 @@ module All = {
 let make = (~api: Api.t) => {
   let tabHandlers = Tabbed.make(Some(ApplicationData.Processing))
 
-  let (basicStats, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
+  let (basicStats, _, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
 
   <Page requireAnyRole=[ListApplications]>
     <Page.Title> {React.string("Applications")} </Page.Title>

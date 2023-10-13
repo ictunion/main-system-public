@@ -4,6 +4,7 @@ module type OpaqueString = {
   let toString: t => string
   let unsafeFromString: string => t
   let decode: Json.Decode.t<t>
+  let encode: t => Js.Json.t
 }
 
 module MakeOpaqueString = (): OpaqueString => {
@@ -12,6 +13,7 @@ module MakeOpaqueString = (): OpaqueString => {
   let toString = uuid => uuid
   let unsafeFromString = str => str
   let decode = Json.Decode.string
+  let encode = Json.Encode.string
 }
 
 module Uuid = MakeOpaqueString()

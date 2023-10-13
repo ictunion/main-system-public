@@ -11,7 +11,7 @@ module Hamburger = {
   let make = (~isOpen: bool) => {
     let classNames = styles["hamburger"] ++ (isOpen ? " " ++ styles["hamburgerOpen"] : "")
 
-    <span className={classNames}>
+    <span className=classNames>
       <i />
     </span>
   }
@@ -20,21 +20,25 @@ module Hamburger = {
 module Profile = {
   @react.component
   let make = (~variant: variant=Dark) => {
-    let cssClass = switch variant {
+    let className = switch variant {
     | Dark => styles["profileDark"]
     | Light => styles["profileLight"]
     }
 
-    <span className={cssClass}>
-      <img src={profileImg} alt="profile" />
+    <span className>
+      <img src=profileImg alt="profile" />
     </span>
   }
 }
 
 module Close = {
   @react.component
-  let make = () => {
-    <span className={styles["close"]} />
+  let make = (~variant: variant=Dark) => {
+    let className = switch variant {
+    | Dark => styles["closeDark"]
+    | Light => styles["closeLight"]
+    }
+    <span className />
   }
 }
 

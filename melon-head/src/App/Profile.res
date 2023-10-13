@@ -85,7 +85,7 @@ let make = (
           </li>
           <li key="3" className={styles["navDivider"]} />
           <li key="4" className={styles["centeredLi"]}>
-            <Button btnType=Button.Danger onClick={_ => Keycloak.logout(keycloak)}>
+            <Button variant=Button.Danger onClick={_ => Keycloak.logout(keycloak)}>
               {React.string("Sign Out")}
             </Button>
           </li>

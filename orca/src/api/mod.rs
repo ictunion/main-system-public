@@ -215,8 +215,10 @@ pub fn build() -> Rocket<Build> {
         .register("/session", errors::catchers())
         .mount("/stats", stats::routes())
         .register("/stats", errors::catchers())
-        .mount("/files", files::routes())
         .mount("/members", members::routes())
+        .register("/members", errors::catchers())
+        // Files use default catchers
+        .mount("/files", files::routes())
 }
 
 pub type Response<T> = Result<T, ApiError>;

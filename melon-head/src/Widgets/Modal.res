@@ -42,7 +42,7 @@ let make = (~title: string, ~children: React.element, ~close: JsxEvent.Mouse.t =
       <header className={styles["header"]}>
         {React.string(title)}
         <button className={styles["closeBtn"]} onClick=close>
-          <Icons.Close />
+          <Icons.Close variant=Icons.Light />
         </button>
       </header>
       <main className={styles["body"]}> {children} </main>

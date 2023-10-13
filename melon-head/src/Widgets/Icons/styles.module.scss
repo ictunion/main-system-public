@@ -69,7 +69,7 @@
 }
 
 
-.close {
+@mixin close($color) {
     transform: rotate(-45deg);
     width: 17px;
     height: 17px;
@@ -78,16 +78,24 @@
     justify-content: space-between;
 
     &::before {
-        @include stripe(var(--color1));
+        @include stripe($color);
         content: '';
         transform: rotate(-90deg) translate(-7px, 0);
     }
 
     &::after {
-        @include stripe(var(--color1));
+        @include stripe($color);
         content: '';
         transform: translate(0, -7px);
     }
+}
+
+.close-light {
+    @include close(var(--color2));
+}
+
+.close-dark {
+    @include close(var(--color1));
 }
 
 @mixin loading($color) {

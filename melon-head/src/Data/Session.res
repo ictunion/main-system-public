@@ -6,6 +6,7 @@ type orcaRole =
   | ViewApplication
   | ResolveApplications
   | ListMembers
+  | ManageMembers
 
 let showOrcaRole = (r: orcaRole): string =>
   switch r {
@@ -14,6 +15,7 @@ let showOrcaRole = (r: orcaRole): string =>
   | ViewApplication => "view-application"
   | ResolveApplications => "resolve-applications"
   | ListMembers => "list-members"
+  | ManageMembers => "manage-members"
   }
 
 type tokenClaims = {
@@ -45,6 +47,7 @@ module Decode = {
     | "view-application" => ViewApplication
     | "resolve-applications" => ResolveApplications
     | "list-members" => ListMembers
+    | "manage-members" => ManageMembers
     | _ => UnknownOrcaRole(str)
     }
   })

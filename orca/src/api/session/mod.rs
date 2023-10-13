@@ -49,7 +49,7 @@ async fn pair_by_email<'r>(
         .await?
         .map(|(member_id,)| member_id);
 
-    if let None = member_id {
+    if member_id.is_none() {
         let (member_id,) = set_pairing_by_email(&token_data.claims)
             .fetch_one(db_pool.inner())
             .await?;
@@ -61,13 +61,13 @@ async fn pair_by_email<'r>(
 
         Ok(Json(session_info))
     } else {
-        return Err(ApiError::data_conflict(format!(
-            "Member id is already assigned"
-        )));
+        Err(ApiError::data_conflict(
+            "Member id is already assigned".to_string(),
+        ))
     }
 }
 
-fn get_user_id<'a>(claims: &JwtClaims) -> QueryAs<'a, (Id<Member>,)> {
+fn get_user_id(claims: &JwtClaims) -> QueryAs<'_, (Id<Member>,)> {
     sqlx::query_as(
         "
 SELECT id
@@ -78,12 +78,13 @@ WHERE sub = $1
     .bind(claims.sub)
 }
 
-fn set_pairing_by_email<'a>(claims: &'a JwtClaims) -> QueryAs<'a, (Id<Member>,)> {
+fn set_pairing_by_email(claims: &JwtClaims) -> QueryAs<'_, (Id<Member>,)> {
     sqlx::query_as(
         "
 UPDATE members
 SET sub = $1
 WHERE email = $2
+    AND left_at IS NULL
 RETURNING id
 ",
     )

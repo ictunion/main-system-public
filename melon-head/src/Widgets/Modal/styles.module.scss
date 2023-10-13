@@ -21,20 +21,23 @@
 }
 
 .box {
+    display: flex;
+    flex-direction: column;
     position: relative;
     border-radius: 4px;
     width: 600px;
     max-width: 100%;
     box-shadow: 1px 4px 64px 6px rgba(0,0,0,.2);
+    max-height: 100vh;
+    overflow: hidden;
 }
 
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(233deg, rgba(56, 152, 190, .8) 0%, rgba(24, 101, 157, .8) 100%);
-    backdrop-filter: blur(4px);
-    color: white;
+    background: var(--border-color);
+    color: var(--color2);
     padding: 12px;
     font-weight: 600;
     font-size: 18px;
@@ -47,6 +50,8 @@
     background: var(--color2);
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
+    overflow: auto;
+    flex: 100% 1 1;
 }
 
 .close-btn {

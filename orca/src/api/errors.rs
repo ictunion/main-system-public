@@ -62,6 +62,7 @@ fn forbidden_error() -> Value {
 
 pub fn catchers() -> Vec<Catcher> {
     catchers![
+        rocket_validation::validation_catcher,
         internal_error,
         not_found_error,
         unauthorized_error,

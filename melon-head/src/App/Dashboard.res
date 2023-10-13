@@ -27,8 +27,8 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
 
 @react.component
 let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => {
-  let (basicStats, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
-  let (status, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
+  let (basicStats, _, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
+  let (status, _, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
 
   let permissionsRows = [
     (
@@ -51,6 +51,10 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
       "List all members",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListMembers)} />},
     ),
+    (
+      "Manage members",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
+    ),
   ]
 
   let openLink = (path: string, _) => {
@@ -60,8 +64,6 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
   let (error, setError) = React.useState(() => None)
 
   let doPair = _ => {
-    //TODO: implement me
-
     let req =
       api->Api.postJson(
         ~path="/session/current/pair-by-email",
@@ -71,10 +73,17 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
 
     req->Future.get(res => {
       switch res {
-      | Ok(data) => setSessionState(_ => RemoteData.Success(data))
+      | Ok(data) => {
+          setSessionState(_ => RemoteData.Success(data))
+          setError(_ => None)
+        }
       | Error(err) => setError(_ => Some(err))
       }
     })
+  }
+
+  let openMember = uuid => {
+    RescriptReactRouter.push("/members/" ++ uuid->Data.Uuid.toString)
   }
 
   <Page>
@@ -102,7 +111,7 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
             )}
           </p>
           <Message.ButtonPanel>
-            <Button btnType=Button.Cta onClick=doPair>
+            <Button variant=Button.Cta onClick=doPair>
               {React.string(
                 "Pair account by email " ++
                 session->RemoteData.unwrap(~default="canot happen", s =>
@@ -113,9 +122,12 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
           </Message.ButtonPanel>
         </Message.Warning>
       | Success(Some(uuid)) =>
-        <p>
-          {React.string("Your account is paired with member id " ++ Data.Uuid.toString(uuid))}
-        </p>
+        <Message.Info>
+          {React.string("Your account is paired with member id ")}
+          <a className={styles["memberLink"]} onClick={_ => openMember(uuid)}>
+            {React.string(Data.Uuid.toString(uuid))}
+          </a>
+        </Message.Info>
       | _ => React.null
       }}
       {switch error {

@@ -1,7 +1,7 @@
 let getData = (api: Api.t, ~path: string, ~decoder: Json.Decode.t<'a>) => {
   let (data: Api.webData<'a>, setData) = React.useState(RemoteData.init)
 
-  React.useEffect0(() => {
+  let send = () => {
     let req = api->Api.getJson(~path, ~decoder)
     setData(RemoteData.setLoading)
 
@@ -9,8 +9,14 @@ let getData = (api: Api.t, ~path: string, ~decoder: Json.Decode.t<'a>) => {
       setData(_ => RemoteData.fromResult(res))
     })
 
+    req
+  }
+
+  React.useEffect0(() => {
+    let req = send()
+
     Some(() => Future.cancel(req))
   })
 
-  (data, setData)
+  (data, setData, send)
 }

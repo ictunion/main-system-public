@@ -267,21 +267,6 @@ WHERE rr.id = $1
     .bind(id)
 }
 
-// Returns highest existing member_number + 1 or 1
-// to be used as a member number for next new member
-pub fn get_next_member_number<'a>() -> QueryAs<'a, (MemberNumber,)> {
-    sqlx::query_as(
-        "
-SELECT COALESCE
-    (1 + (
-        SELECT member_number FROM members m
-        ORDER BY member_number DESC
-        LIMIT 1)
-    , 1);
-",
-    )
-}
-
 /// TODO: this should return member once we have it type for it
 pub fn create_new_member<'a>(
     id: Id<RegistrationRequest>,

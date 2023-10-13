@@ -29,8 +29,9 @@
     "webpack-dev-server": "^4.15.1"
   },
   "dependencies": {
+    "keycloak-js": "^22.0.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "keycloak-js": "^22.0.3"
+    "react-datepicker": "^4.20.0",
+    "react-dom": "^18.2.0"
   }
 }

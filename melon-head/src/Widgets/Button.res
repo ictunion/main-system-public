@@ -1,22 +1,28 @@
 @module external styles: {..} = "./Button/styles.module.scss"
 
-type btnType =
+type variant =
   | Normal
   | Cta
   | Danger
 
 @react.component
-let make = (~onClick: JsxEvent.Mouse.t => unit, ~btnType=Normal, ~disabled=false, ~children) => {
+let make = (
+  ~onClick: option<JsxEvent.Mouse.t => unit>=?,
+  ~variant=Normal,
+  ~disabled=false,
+  ~type_="button",
+  ~children,
+) => {
   let className =
     styles["base"] ++
     " " ++
-    switch btnType {
+    switch variant {
     | Normal => styles["normal"]
     | Cta => styles["cta"]
     | Danger => styles["danger"]
     }
 
-  <button onClick className disabled> children </button>
+  <button ?onClick type_ className disabled> children </button>
 }
 
 module Panel = {
