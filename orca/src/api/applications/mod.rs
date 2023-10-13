@@ -485,7 +485,7 @@ async fn verify<'r>(
     Ok(Json(detail))
 }
 
-#[post("/<id>/resend_email")]
+#[post("/<id>/resend-email")]
 async fn resend_email<'r>(
     db_pool: &State<DbPool>,
     keycloak: &State<Keycloak>,

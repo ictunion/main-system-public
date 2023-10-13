@@ -18,6 +18,11 @@ type status = {
   databaseConnected: bool,
 }
 
+type acceptedResponse = {
+  status: int,
+  message: string,
+}
+
 module Decode = {
   open Json.Decode
 
@@ -37,6 +42,11 @@ module Decode = {
         reason: field.required(. "reason", string),
       }),
     )
+  })
+
+  let acceptedResponse = object(field => {
+    status: field.required(. "status", int),
+    message: field.required(. "message", string),
   })
 }
 

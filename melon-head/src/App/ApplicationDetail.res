@@ -443,16 +443,14 @@ module Actions = {
       let doReSend = (_: JsxEvent.Mouse.t) => {
         let req =
           api->Api.postJson(
-            ~path="/applications/" ++ Uuid.toString(id) ++ "/resend_email",
-            ~decoder=ApplicationData.Decode.detail,
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/resend-email",
+            ~decoder=Api.Decode.acceptedResponse,
             ~body=Js.Json.null,
           )
 
         req->Future.get(res => {
           switch res {
           | Ok(data) => {
-              // Technically, we probably don't need to be setting this date if we're going to route away anyway
-              setDetail(_ => RemoteData.Success(data))
               Modal.Interface.closeModal(modal)
 
               RescriptReactRouter.push("/applications")
