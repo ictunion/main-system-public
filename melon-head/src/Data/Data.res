@@ -42,3 +42,12 @@ module Decode = {
     createdAt: field.required(. "created_at", date),
   })
 }
+
+module Encode = {
+  open Json.Encode
+
+  let day = (date: Js.Date.t): Js.Json.t => {
+    let str = Js.Date.toJSONUnsafe(date)->Js.String.slice(~from=0, ~to_=10)
+    string(str)
+  }
+}

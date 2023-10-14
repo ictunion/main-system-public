@@ -7,7 +7,7 @@ $colors-light: (
     color2: #ffffff,
     color3: #0d3945,
     color4: #109AC0,
-    color5: #a63ded,
+    color5: #e7ad00,
     color6: #00c49f,
     color7: #FF5C93,
 );
@@ -38,6 +38,7 @@ $colors-light: (
 
 :root {
   @include generate_colors($colors-light);
+
   --page-background: linear-gradient(233deg, rgb(35,152,168) 0%, rgb(0,192,213) 42%, rgb(35,112,168) 100%);
   --secondary-background: linear-gradient(233deg, rgba(56, 152, 190, .5) 0%, rgba(24, 101, 157, .5) 100%);
   --emphasis-light-overlay: rgba(var(--rgb_color2), 0.1);
@@ -51,6 +52,10 @@ $colors-light: (
   --border-color: #17a6b8;
   --error-color: #{map.get($colors-light, color7)};
   --error-bgcolor: #{color.mix(map.get($colors-light, color7), map.get($colors-light, color2), $weight: 15%)};
+  --warning-color: #{map.get($colors-light, color5)};
+  --warning-bgcolor: #{color.mix(map.get($colors-light, color5), map.get($colors-light, color2), $weight: 15%)};
+  --info-color: #{map.get($colors-light, color4)};
+  --info-bgcolor: #{color.mix(map.get($colors-light, color4), map.get($colors-light, color2), $weight: 15%)};
 }
 
 .root {
@@ -59,7 +64,6 @@ $colors-light: (
     height: 100%;
     overflow: hidden;
     background: var(--page-background);
-    padding-left: 6px;
 }
 
 .main-container {

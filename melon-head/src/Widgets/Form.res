@@ -2,6 +2,8 @@
 
 @send external focus: Dom.element => unit = "focus"
 
+open Belt
+
 /* Bind to react-datepicker */
 %%raw("import 'react-datepicker/dist/react-datepicker.css'")
 module DatePicker = {
@@ -18,8 +20,6 @@ module DatePicker = {
     ~isClearable: option<unit>=?,
   ) => React.element = "default"
 }
-
-open Belt
 
 @react.component
 let make = (~onSubmit: JsxEvent.Form.t => unit, ~children): React.element => {
@@ -182,6 +182,11 @@ module LanguageSelect = {
 
   let languages = [
     {
+      code: "",
+      name: "[unknown]",
+      flag: "🏴‍☠️",
+    },
+    {
       code: "cs",
       name: "Czech",
       flag: "🇨🇿",
@@ -197,9 +202,17 @@ module LanguageSelect = {
     <option key=l.code value=l.code> {React.string(l.flag ++ " " ++ l.name)} </option>
   }
 
+  // This is not very type-safe but hope is that eventually we revamp how we deal with these
   @react.component
-  let make = () => {
-    <select> {React.array(Array.map(languages, viewOption))} </select>
+  let make = (~value: string="cs", ~onChange) => {
+    let selectLanguage = (event: JsxEvent.Form.t) => {
+      let newVal = ReactEvent.Form.currentTarget(event)["value"]
+      onChange(newVal)
+    }
+
+    <select value onChange={selectLanguage}>
+      {React.array(Array.map(languages, viewOption))}
+    </select>
   }
 }
 

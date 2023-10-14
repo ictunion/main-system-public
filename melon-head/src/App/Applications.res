@@ -338,11 +338,36 @@ module All = {
 @react.component
 let make = (~api: Api.t) => {
   let tabHandlers = Tabbed.make(Some(ApplicationData.Processing))
+  let (_, setActiveTab) = tabHandlers
 
   let (basicStats, _, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
 
   <Page requireAnyRole=[ListApplications]>
     <Page.Title> {React.string("Applications")} </Page.Title>
+    {switch basicStats {
+    | Success({unverified}) =>
+      if unverified > 0 {
+        <Message.Warning>
+          <Message.Title> {React.string("Some applicants might be stuck..")} </Message.Title>
+          <p> {React.string("Some applications did not pass email verification step yet.")} </p>
+          <p>
+            {React.string("
+              This might be fine since applicants can always verify email later.
+              But it also can be the case that some applicants didn't receive the email
+              or missed the notice about verification altogether.
+              It might be a good idea to
+            ")}
+            <a onClick={_ => setActiveTab(_ => Some(ApplicationData.Unverified))}>
+              {React.string("check the unverified applications")}
+            </a>
+            {React.string(" and make sure this is not the case.")}
+          </p>
+        </Message.Warning>
+      } else {
+        React.null
+      }
+    | _ => React.null
+    }}
     <div className={styles["mainContent"]}>
       <Tabbed.Tabs>
         <Tabbed.Tab value={Some(ApplicationData.Processing)} handlers={tabHandlers}>

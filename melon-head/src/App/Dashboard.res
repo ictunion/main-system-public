@@ -26,7 +26,12 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
 ]
 
 @react.component
-let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => {
+let make = (
+  ~session: Api.webData<Session.t>,
+  ~setSessionState,
+  ~api: Api.t,
+  ~modal: Modal.Interface.t,
+) => {
   let (basicStats, _, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
   let (status, _, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
 
@@ -86,6 +91,11 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
     RescriptReactRouter.push("/members/" ++ uuid->Data.Uuid.toString)
   }
 
+  let createMember = _ => {
+    // TODO: once we have stats for members they should be refreshed there
+    modal->Modal.Interface.openModal(Members.newMemberModal(~api, ~modal, ~refreshMembers=_ => ()))
+  }
+
   <Page>
     <Page.Title> {React.string("Dashboard")} </Page.Title>
     <div className={styles["welcome"]}>
@@ -98,16 +108,18 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
       | Success(None) =>
         <Message.Warning>
           <Message.Title>
-            {React.string("Your account is not paired with any member!")}
+            <p> {React.string("Your account is not paired with any member!")} </p>
           </Message.Title>
           <p>
             {React.string(
-              "Some functions won't be accessible unless you pair your account. Just be aware that you might need to create member if it doesn't exist yet.",
+              "Some functions won't be accessible unless you pair your account. Just be aware that you might need to ",
             )}
+            <a onClick=createMember> {React.string("create a new member")} </a>
+            {React.string(" if it doesn't exist yet.")}
           </p>
           <p>
             {React.string(
-              "If you're not member but administrator you can safely ignore this message. Fuctions which require membership won't be available to you.",
+              "If you're not a member, but an administrator, you can safely ignore this message. Fuctions which require membership won't be available to you.",
             )}
           </p>
           <Message.ButtonPanel>
@@ -120,19 +132,27 @@ let make = (~session: Api.webData<Session.t>, ~setSessionState, ~api: Api.t) => 
               )}
             </Button>
           </Message.ButtonPanel>
+          {switch error {
+          | None => React.null
+          | Some(err) =>
+            <Message.Error>
+              <Message.Title>
+                {React.string("This didin't work as you would wish for...")}
+              </Message.Title>
+              {React.string(err->Api.showError)}
+            </Message.Error>
+          }}
         </Message.Warning>
       | Success(Some(uuid)) =>
         <Message.Info>
-          {React.string("Your account is paired with member id ")}
-          <a className={styles["memberLink"]} onClick={_ => openMember(uuid)}>
-            {React.string(Data.Uuid.toString(uuid))}
-          </a>
+          <p>
+            {React.string("Your account is paired with member id ")}
+            <a className={styles["memberLink"]} onClick={_ => openMember(uuid)}>
+              {React.string(Data.Uuid.toString(uuid))}
+            </a>
+          </p>
         </Message.Info>
       | _ => React.null
-      }}
-      {switch error {
-      | None => React.null
-      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
       }}
     </div>
     <div className={styles["statsGrid"]}>

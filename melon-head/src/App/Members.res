@@ -60,7 +60,14 @@ module NewMember = {
         value=newMember.email
         onInput={email => setNewMember(m => {...m, email})}
       />
-      <Form.LanguageSelect />
+      <Form.Field>
+        <Form.Label>
+          {React.string("Language")}
+          <Form.LanguageSelect
+            value=newMember.language onChange={language => setNewMember(m => {...m, language})}
+          />
+        </Form.Label>
+      </Form.Field>
       <Form.TextField
         label="First Name"
         placeholder="Jane"
@@ -99,8 +106,8 @@ module NewMember = {
       <Form.TextField
         label="Postal Code"
         placeholder="E1 0AA"
-        value=newMember.city
-        onInput={city => setNewMember(m => {...m, city})}
+        value=newMember.postalCode
+        onInput={postalCode => setNewMember(m => {...m, postalCode})}
       />
       <Button.Panel>
         <Button

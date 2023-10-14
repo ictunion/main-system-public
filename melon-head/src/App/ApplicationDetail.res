@@ -264,11 +264,10 @@ module Actions = {
       let disabled = Form.MemberNumber.validate(memberNumber)->Option.isSome
 
       let doAccept = _ => {
-        open Json
-        let body: Js.Json.t = Encode.object([
+        let body: Js.Json.t = Json.Encode.object([
           (
             "member_number",
-            Encode.option(Encode.int, memberNumber->Option.flatMap(Int.fromString)),
+            Json.Encode.option(Json.Encode.int, memberNumber->Option.flatMap(Int.fromString)),
           ),
         ])
         let path = "/applications/" ++ Uuid.toString(id) ++ "/accept"
@@ -532,6 +531,90 @@ module Actions = {
   }
 }
 
+let viewMessage = (status, ~reject, ~resend) => {
+  open ApplicationData
+
+  switch status {
+  | Success(Unverified) =>
+    <Message.Warning>
+      <Message.Title> {React.string("Email was not verified yet!")} </Message.Title>
+      <p>
+        {React.string(
+          "This application is in `Verification Pending` status which means it was succefully submitted but applicant never clicked on verify link in the email.",
+        )}
+      </p>
+      <p>
+        <strong> {React.string("These are the recommended steps to take:")} </strong>
+      </p>
+      <ol>
+        <li>
+          {React.string(
+            "Check when this application was submitted and when the confirmation email was sent using `Metadata` tab.",
+          )}
+        </li>
+        <li>
+          {React.string(
+            "If application is very recent and there is an entry for when email was sent it might be good to just give applicant more time to verify it.",
+          )}
+        </li>
+        <li>
+          {React.string(
+            "If we miss information about email being sent that is most likely an issue on our side. Try to ",
+          )}
+          <a onClick=resend> {React.string("resend the confirmation email")} </a>
+          {React.string(" and check after a minute that it was sent successfully.")}
+        </li>
+        <li>
+          {React.string(
+            "If application is already few days old and there is still no confirmation might be good idea to look closer into it:",
+          )}
+          <ol>
+            <li>
+              {React.string("
+                    You should review the information in the application and check if it's not a spam.
+                    If it is a spam you should
+                ")}
+              <strong> {React.string("report that we got a spam")} </strong>
+              {React.string(" and ")}
+              <a onClick=reject> {React.string("reject this application")} </a>
+              {React.string(" since it's ilegitimate.")}
+            </li>
+            <li>
+              {React.string("
+                    Check if this application is not a duplicate of some other application which is verified.
+                    Applicant might had just found a mistake in this application and decided to create a new one.
+                    If that's the case you should just
+                ")}
+              <a onClick=reject> {React.string("reject this version of application")} </a>
+              {React.string(".")}
+            </li>
+            <li>
+              {React.string("
+                    If everything looks legitimate but you still don't see a verification you can try to
+                ")}
+              <a onClick=resend> {React.string("re-send the verification email again")} </a>
+              {React.string("
+                    if it looks like there is no problem with the email address.
+                    If that doesn't help it might be a good idea to ")}
+              <strong> {React.string("get in touch with the applicant if possible")} </strong>
+              {React.string(" and try to sort thigs out over phone for example.")}
+            </li>
+            <li>
+              {React.string("
+                    If you're not able to get in touch with applicant and we still don't see any verification
+                    there is probably nothing we can do but to
+                ")}
+              <a onClick=reject> {React.string("reject the application")} </a>
+              {React.string(".")}
+            </li>
+          </ol>
+        </li>
+      </ol>
+    </Message.Warning>
+  | _ => React.null
+  }
+}
+
 type tabs =
   | Metadata
   | Checklist
@@ -557,6 +640,8 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
     RescriptReactRouter.push("/applications")
   }
 
+  let status = RemoteData.map(detail, ApplicationData.getStatus)
+
   <Page requireAnyRole=[ListApplications, ViewApplication]>
     <header className={styles["header"]}>
       <a className={styles["backBtn"]} onClick=backToApplications>
@@ -573,9 +658,15 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
       </h1>
       <h2 className={styles["status"]}>
         {React.string("Status:")}
-        <Chip.ApplicationStatus value={RemoteData.map(detail, ApplicationData.getStatus)} />
+        <Chip.ApplicationStatus value=status />
       </h2>
     </header>
+    {viewMessage(
+      status,
+      ~reject=_ =>
+        modal->Modal.Interface.openModal(Actions.rejectModal(~id, ~api, ~setDetail, ~modal)),
+      ~resend=_ => modal->Modal.Interface.openModal(Actions.resendModal(~id, ~api, ~modal)),
+    )}
     <div className={styles["personalInfo"]}>
       <DataGrid layout data=detail />
     </div>

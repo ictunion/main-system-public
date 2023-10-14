@@ -4,13 +4,13 @@ use rocket::{Route, State};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
+use crate::api::members;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::{self, DbPool};
 use crate::processing::{Command, QueueSender};
 use crate::server::keycloak::{JwtToken, Keycloak, Role};
 use crate::server::IpAddress;
-use crate::api::members;
 
 use super::{ApiError, SuccessResponse};
 
@@ -398,7 +398,9 @@ async fn accept<'r>(
     let member_number = match new_member.member_number {
         Some(v) => v,
         None => {
-            let (new_num,) = members::query::get_next_member_number().fetch_one(&mut tx).await?;
+            let (new_num,) = members::query::get_next_member_number()
+                .fetch_one(&mut tx)
+                .await?;
             new_num
         }
     };

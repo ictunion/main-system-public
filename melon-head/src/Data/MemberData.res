@@ -61,7 +61,7 @@ module Encode = {
       ("last_name", strOption(newMember.lastName)),
       ("email", strOption(newMember.email)),
       ("phone_number", strOption(newMember.phoneNumber)),
-      ("date_of_birth", option(date, newMember.dateOfBirth)),
+      ("date_of_birth", option(Data.Encode.day, newMember.dateOfBirth)),
       ("address", strOption(newMember.address)),
       ("city", strOption(newMember.city)),
       ("postal_code", strOption(newMember.city)),

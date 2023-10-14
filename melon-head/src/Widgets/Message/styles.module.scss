@@ -1,26 +1,39 @@
-@mixin message($color) {
-    $c: var(--#{$color});
-    border: 1px solid $c;
-    color: $c;
-    padding: 6px 12px;
-    background: rgba(var(--rgb_#{$color}), 0.1);
-    border-radius: 4px;
-}
+@mixin message($color, $bg-color) {
 
-.error {
     color: var(--color0);
-    padding: 12px 12px;
-    border: 2px solid var(--error-color);
-    background: var(--error-bgcolor);
+    border: 2px solid $color;
+    padding: 12px;
+    background: $bg-color;
     border-radius: 4px;
     line-height: 1.5em;
     display: flex;
     flex-direction: column;
     gap: 6px;
+
+    ol {
+        padding: 6px 0 6px 36px;
+        list-style-type: decimal;
+
+        ol {
+            list-style-type: lower-alpha;
+        }
+    }
+
+    li {
+        padding: 2px 0;
+    }
+}
+
+.error {
+    @include message(var(--error-color), var(--error-bgcolor));
+}
+
+.warning {
+    @include message(var(--warning-color), var(--warning-bgcolor));
 }
 
 .info {
-    @include message(color4);
+    @include message(var(--info-color), var(--info-bgcolor));
 }
 
 .button-panel {

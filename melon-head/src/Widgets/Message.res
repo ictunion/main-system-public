@@ -17,7 +17,7 @@ module Info = {
 module Warning = {
   @react.component
   let make = (~children) => {
-    <article className={styles["error"]}> children </article>
+    <article className={styles["warning"]}> children </article>
   }
 }
 

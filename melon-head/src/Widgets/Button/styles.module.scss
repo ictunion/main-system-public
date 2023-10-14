@@ -34,12 +34,12 @@
 
 .cta {
     border: 1px solid var(--border-color);
-    background: var(--background-color);
-    color: var(--color3);
+    background: var(--border-color);
+    color: var(--color2);
 
     &:hover {
-        background: var(--border-color);
-        color: var(--color2);
+        background: var(--background-color);
+        color: var(--color3);
     }
 }
 
