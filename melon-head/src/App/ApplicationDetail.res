@@ -150,7 +150,7 @@ let layout: DataGrid.t<ApplicationData.detail> = [
 
 let metadataRows: array<RowBasedTable.row<ApplicationData.detail>> = [
   ("Localization", d => d.registrationLocal->Data.Local.toString->React.string),
-  ("Source", d => viewOption(d.registrationSource, React.string)),
+  ("Source", d => viewOption(d.registrationSource, str => <code> {React.string(str)} </code>)),
   ("IP Address", d => viewOption(d.registrationIp, React.string)),
   ("User Agent", d => viewOption(d.registrationUserAgent, React.string)),
 ]
@@ -539,8 +539,10 @@ let viewMessage = (status, ~reject, ~resend) => {
     <Message.Warning>
       <Message.Title> {React.string("Email was not verified yet!")} </Message.Title>
       <p>
+        {React.string("This application has ")}
+        <Chip.ApplicationStatus value=Success(ApplicationData.Unverified) />
         {React.string(
-          "This application is in `Verification Pending` status which means it was succefully submitted but applicant never clicked on verify link in the email.",
+          " status. This means it was succefully submitted but applicant never clicked on verication link in the email.",
         )}
       </p>
       <p>
@@ -549,39 +551,40 @@ let viewMessage = (status, ~reject, ~resend) => {
       <ol>
         <li>
           {React.string(
-            "Check when this application was submitted and when the confirmation email was sent using `Metadata` tab.",
+            "When was this application submitted? Was email verification sent? Have a look into ",
           )}
+          <code> {React.string("Metadata")} </code>
+          {React.string(" tab bellow.")}
         </li>
         <li>
           {React.string(
-            "If application is very recent and there is an entry for when email was sent it might be good to just give applicant more time to verify it.",
+            "If it's very recent, and verification was sent, you should just give them more time to verify the email.",
           )}
         </li>
         <li>
-          {React.string(
-            "If we miss information about email being sent that is most likely an issue on our side. Try to ",
-          )}
-          <a onClick=resend> {React.string("resend the confirmation email")} </a>
-          {React.string(" and check after a minute that it was sent successfully.")}
+          {React.string("If we miss ")}
+          <code> {React.string("Verification Sent")} </code>
+          {React.string(" then there is most likely an ")}
+          <strong> {React.string("issue on our side")} </strong>
+          {React.string(". Try to ")}
+          <a onClick=resend> {React.string("re-send the confirmation email")} </a>
+          {React.string(" and check that it was sent successfully after a minute or so.")}
         </li>
         <li>
-          {React.string(
-            "If application is already few days old and there is still no confirmation might be good idea to look closer into it:",
-          )}
+          {React.string("Applications that are already a few days old deserve more attention:")}
           <ol>
             <li>
               {React.string("
-                    You should review the information in the application and check if it's not a spam.
-                    If it is a spam you should
+                    Review the the application to check it's not a spam. If it
                 ")}
-              <strong> {React.string("report that we got a spam")} </strong>
+              <strong> {React.string("looks like a spam then you should report it")} </strong>
               {React.string(" and ")}
-              <a onClick=reject> {React.string("reject this application")} </a>
+              <a onClick=reject> {React.string("reject")} </a>
               {React.string(" since it's ilegitimate.")}
             </li>
             <li>
               {React.string("
-                    Check if this application is not a duplicate of some other application which is verified.
+                    Check for a duplicates.
                     Applicant might had just found a mistake in this application and decided to create a new one.
                     If that's the case you should just
                 ")}
@@ -590,19 +593,18 @@ let viewMessage = (status, ~reject, ~resend) => {
             </li>
             <li>
               {React.string("
-                    If everything looks legitimate but you still don't see a verification you can try to
+                    If everything looks legitimate you can
                 ")}
               <a onClick=resend> {React.string("re-send the verification email again")} </a>
-              {React.string("
-                    if it looks like there is no problem with the email address.
-                    If that doesn't help it might be a good idea to ")}
-              <strong> {React.string("get in touch with the applicant if possible")} </strong>
-              {React.string(" and try to sort thigs out over phone for example.")}
+              {React.string(".")}
+            </li>
+            <li>
+              <strong> {React.string("Get in touch with the applicant")} </strong>
+              {React.string(" and try to sort thigs out over the phone.")}
             </li>
             <li>
               {React.string("
-                    If you're not able to get in touch with applicant and we still don't see any verification
-                    there is probably nothing we can do but to
+                    If nothing worked then there is nothing we can do but to
                 ")}
               <a onClick=reject> {React.string("reject the application")} </a>
               {React.string(".")}

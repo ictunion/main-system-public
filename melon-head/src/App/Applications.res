@@ -68,8 +68,9 @@ module Processing = {
           minMax: ("220px", "2fr"),
           view: r => React.string(r.verifiedAt->Js.Date.toLocaleDateString),
         },
-      ]
-    />
+      ]>
+      {React.string("There are no applications in processiong.")}
+    </DataTable>
   }
 }
 
@@ -131,14 +132,15 @@ module Unverified = {
         },
         {
           name: "Email Sent On",
-          minMax: ("150px", "2fr"),
+          minMax: ("220px", "2fr"),
           view: r =>
             React.string(
               r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleDateString),
             ),
         },
-      ]
-    />
+      ]>
+      {React.string("There are no applications with pending verification.")}
+    </DataTable>
   }
 }
 
@@ -203,8 +205,9 @@ module Accepted = {
           minMax: ("150px", "1fr"),
           view: r => React.string(r.acceptedAt->Js.Date.toLocaleDateString),
         },
-      ]
-    />
+      ]>
+      {React.string("There are no accepted applications so far.")}
+    </DataTable>
   }
 }
 
@@ -269,8 +272,9 @@ module Rejected = {
           minMax: ("150px", "1fr"),
           view: r => React.string(r.rejectedAt->Js.Date.toLocaleDateString),
         },
-      ]
-    />
+      ]>
+      {React.string("There are no rejected applications so far.")}
+    </DataTable>
   }
 }
 
@@ -330,8 +334,9 @@ module All = {
           minMax: ("125px", "1fr"),
           view: r => React.string(r.registrationLocal->Local.toString),
         },
-      ]
-    />
+      ]>
+      {React.string("There are no applications so far.")}
+    </DataTable>
   }
 }
 
@@ -352,15 +357,15 @@ let make = (~api: Api.t) => {
           <p> {React.string("Some applications did not pass email verification step yet.")} </p>
           <p>
             {React.string("
-              This might be fine since applicants can always verify email later.
-              But it also can be the case that some applicants didn't receive the email
-              or missed the notice about verification altogether.
+              This might be fine! Applicants can always verify email later.
+              But it also can mean that some applicants didn't receive a verification email
+              or missed the notice about email verification altogether.
               It might be a good idea to
             ")}
             <a onClick={_ => setActiveTab(_ => Some(ApplicationData.Unverified))}>
               {React.string("check the unverified applications")}
             </a>
-            {React.string(" and make sure this is not the case.")}
+            {React.string(" to make sure everything is fine.")}
           </p>
         </Message.Warning>
       } else {

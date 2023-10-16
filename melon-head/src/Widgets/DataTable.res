@@ -46,7 +46,7 @@ module Tr = {
 }
 
 @react.component
-let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>) => {
+let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>, ~children=React.null) => {
   let gridTemplate: string = Array.map(columns, r => {
     let (min, max) = r.minMax
     "minmax(" ++ min ++ "," ++ max ++ ") "
@@ -60,9 +60,13 @@ let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>) => {
       <THead columns />
       {switch data {
       | Success(rows) =>
-        React.array(
-          rows->Array.mapWithIndex((id, row) => <Tr key={Int.toString(id)} columns row />),
-        )
+        if Array.length(rows) == 0 {
+          <div className={styles["emptyContainer"]}> children </div>
+        } else {
+          React.array(
+            rows->Array.mapWithIndex((id, row) => <Tr key={Int.toString(id)} columns row />),
+          )
+        }
       | Failure(err) => <div className={styles["error"]}> {React.string(err->Api.showError)} </div>
       | Loading =>
         <div className={styles["loadingContainer"]}>

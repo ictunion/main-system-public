@@ -151,14 +151,13 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
   let (members, _, refreshMembers) =
     api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
 
+  let openNewMemberModal = _ =>
+    Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))
+
   <Page requireAnyRole=[ListMembers]>
     <Page.Title> {React.string("Members")} </Page.Title>
     <Button.Panel>
-      <Button
-        onClick={_ =>
-          Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))}>
-        {React.string("Add New Member")}
-      </Button>
+      <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
     </Button.Panel>
     <DataTable
       data=members
@@ -213,7 +212,15 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
           minMax: ("150px", "1fr"),
           view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
         },
-      ]
-    />
+      ]>
+      <p> {React.string("There are no members yet.")} </p>
+      <p>
+        <small>
+          {React.string("Maybe you want to ")}
+          <a onClick=openNewMemberModal> {React.string("create a first one")} </a>
+          {React.string("?")}
+        </small>
+      </p>
+    </DataTable>
   </Page>
 }

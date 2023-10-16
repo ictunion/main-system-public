@@ -162,11 +162,13 @@ module MemberNumber = {
         </div>
       | None =>
         <Message.Info>
-          {React.string(
-            "New member will be automatically assigned a number that is one greater (+1) than the ",
-          )}
-          <strong> {React.string("highest existing member number")} </strong>
-          {React.string(".")}
+          <p>
+            {React.string(
+              "New member will be automatically assigned a number that is one greater (+1) than the ",
+            )}
+            <strong> {React.string("highest existing member number")} </strong>
+            {React.string(".")}
+          </p>
         </Message.Info>
       }}
     </div>
