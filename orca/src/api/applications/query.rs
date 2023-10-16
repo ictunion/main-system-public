@@ -222,8 +222,7 @@ UPDATE registration_requests
 SET   confirmed_at = NOW()
     , confirmation_token = NULL
 WHERE id = $1
-RETURNING
-, id
+RETURNING id
 , email
 , first_name
 , last_name
