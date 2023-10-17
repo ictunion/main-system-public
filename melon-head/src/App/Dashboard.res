@@ -60,6 +60,10 @@ let make = (
       "Manage members",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
     ),
+    (
+      "Super-Powers (be careful!)",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
+    ),
   ]
 
   let openLink = (path: string, _) => {

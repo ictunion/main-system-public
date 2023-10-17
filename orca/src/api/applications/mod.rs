@@ -353,7 +353,7 @@ async fn unreject<'r>(
     // so we don't need to explicitely clean it
     let mut tx = db_pool.inner().begin().await?;
 
-    // check that the application status is in processing
+    // check that the application status is rejected
     query::get_application_status_data(id)
         .fetch_one(&mut tx)
         .await?
@@ -512,6 +512,29 @@ async fn resend_email<'r>(
     Ok(SuccessResponse::Accepted)
 }
 
+#[delete("/<id>/hard")]
+async fn hard_delete<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<RegistrationRequest>,
+) -> Response<SuccessResponse> {
+    keycloak.require_role(token, Role::SuperPowers)?;
+
+    let mut tx = db_pool.inner().begin().await?;
+
+    // check that the application status is rejected
+    query::get_application_status_data(id)
+        .fetch_one(&mut tx)
+        .await?
+        .to_status()
+        .assert_rejected()?;
+
+    query::dangerous_hard_delete(id).execute(&mut tx).await?;
+
+    Ok(SuccessResponse::Accepted)
+}
+
 pub fn routes() -> Vec<Route> {
     routes![
         list,
@@ -525,6 +548,7 @@ pub fn routes() -> Vec<Route> {
         reject,
         unreject,
         verify,
-        accept
+        accept,
+        hard_delete,
     ]
 }

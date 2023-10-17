@@ -7,6 +7,7 @@ type orcaRole =
   | ResolveApplications
   | ListMembers
   | ManageMembers
+  | SuperPowers
 
 let showOrcaRole = (r: orcaRole): string =>
   switch r {
@@ -16,6 +17,7 @@ let showOrcaRole = (r: orcaRole): string =>
   | ResolveApplications => "resolve-applications"
   | ListMembers => "list-members"
   | ManageMembers => "manage-members"
+  | SuperPowers => "super-powers"
   }
 
 type tokenClaims = {
@@ -48,6 +50,7 @@ module Decode = {
     | "resolve-applications" => ResolveApplications
     | "list-members" => ListMembers
     | "manage-members" => ManageMembers
+    | "super-powers" => SuperPowers
     | _ => UnknownOrcaRole(str)
     }
   })

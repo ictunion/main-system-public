@@ -67,6 +67,7 @@ which needs to be configured for the `keycloak_client_id` set in the `Rocket.tom
 | view-application    | Accessing detail of individual applications (by uuid)  |
 | resolve-application | Resolve (Accept / Reject) applications                 |
 | list-members        | Listing of all past and current members                |
+| super-powers        | Dangerous actions like hard delete of data             |
 
 ## Developing
 

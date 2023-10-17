@@ -14,6 +14,10 @@ to make it work in your setup:
 $ ln -s config.example.json config.json
 ```
 
+Second make sure that **orca is configured with keycloak support**.
+To configure orca you'll need to edit [`Rocket.toml`](../orca/Rocket.example.toml)
+by adding keycloak related entries.
+
 We're using npm and npm scripts while working on project.
 
 | command            | function                     |

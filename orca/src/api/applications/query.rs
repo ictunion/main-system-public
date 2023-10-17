@@ -343,3 +343,18 @@ WHERE rr.id = $1
     .bind(registration_id)
     .bind(member_id)
 }
+
+pub fn dangerous_hard_delete<'a>(registration_id: Id<RegistrationRequest>) -> Query<'a> {
+    sqlx::query(
+        "
+WITH file_ids AS
+    (DELETE FROM registration_requests_files
+        WHERE registration_request_id = $1
+        RETURNING file_id)
+DELETE FROM files WHERE id IN (SELECT file_id from file_ids);
+DELETE FROM registration_requests
+    WHERE id = $1
+)",
+    )
+    .bind(registration_id)
+}
