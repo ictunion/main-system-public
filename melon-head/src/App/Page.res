@@ -30,3 +30,14 @@ module Title = {
   @react.component
   let make = (~children: React.element) => <h1 className={styles["title"]}> children </h1>
 }
+
+module BackButton = {
+  @react.component
+  let make = (~name: string, ~path: string) => {
+    let onClick = _ => {
+      RescriptReactRouter.push(path)
+    }
+
+    <a className={styles["backBtn"]} onClick> {React.string("🠔 Back to " ++ name)} </a>
+  }
+}

@@ -64,6 +64,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    transition: background .2s ease-in-out;
 
     &:hover {
         background: rgba(var(--rgb_color1), .1);

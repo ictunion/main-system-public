@@ -25,11 +25,15 @@
 }
 
 .normal {
-    @include with-color(var(--color1))
+    @include with-color(var(--color4))
+}
+
+.careful {
+    @include with-color(var(--warning-color))
 }
 
 .danger {
-    @include with-color(var(--color7))
+    @include with-color(var(--error-color))
 }
 
 .cta {

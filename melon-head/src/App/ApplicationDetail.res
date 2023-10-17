@@ -493,12 +493,12 @@ module Actions = {
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(verifyModal(~id, ~api, ~setDetail, ~modal))}
-          variant=Button.Danger>
+          variant=Button.Careful>
           {React.string("Mark as Verified")}
         </Button>
         <Button
           onClick={_ => modal->Modal.Interface.openModal(resendModal(~id, ~api, ~modal))}
-          variant=Button.Cta>
+          variant=Button.Normal>
           {React.string("Re-send Email")}
         </Button>
       </Button.Panel>
@@ -575,7 +575,7 @@ let viewMessage = (status, ~reject, ~resend) => {
           <ol>
             <li>
               {React.string("
-                    Review the the application to check it's not a spam. If it
+                    Review the application to check it's not a spam. If it
                 ")}
               <strong> {React.string("looks like a spam then you should report it")} </strong>
               {React.string(" and ")}
@@ -600,7 +600,9 @@ let viewMessage = (status, ~reject, ~resend) => {
             </li>
             <li>
               <strong> {React.string("Get in touch with the applicant")} </strong>
-              {React.string(" and try to sort thigs out over the phone.")}
+              {React.string(" and try to sort thigs out over the phone. You can also ")}
+              <a> {React.string("mark application as verified")} </a>
+              {React.string(" manually if necessary.")}
             </li>
             <li>
               {React.string("
@@ -638,17 +640,10 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
 
   let tabHandlers = Tabbed.make(Files)
 
-  let backToApplications = _ => {
-    RescriptReactRouter.push("/applications")
-  }
-
   let status = RemoteData.map(detail, ApplicationData.getStatus)
 
   <Page requireAnyRole=[ListApplications, ViewApplication]>
     <header className={styles["header"]}>
-      <a className={styles["backBtn"]} onClick=backToApplications>
-        {React.string("🠔 Back to applications")}
-      </a>
       <h1 className={styles["title"]}>
         {React.string("Application ")}
         <span className={styles["titleId"]}>
@@ -658,6 +653,7 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
           }}
         </span>
       </h1>
+      <Page.BackButton name="applications" path="/applications" />
       <h2 className={styles["status"]}>
         {React.string("Status:")}
         <Chip.ApplicationStatus value=status />

@@ -3,6 +3,7 @@
 type variant =
   | Normal
   | Cta
+  | Careful
   | Danger
 
 @react.component
@@ -19,6 +20,7 @@ let make = (
     switch variant {
     | Normal => styles["normal"]
     | Cta => styles["cta"]
+    | Careful => styles["careful"]
     | Danger => styles["danger"]
     }
 

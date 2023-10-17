@@ -144,6 +144,10 @@ a {
     cursor: pointer;
 }
 
+a:hover {
+    text-decoration: underline;
+}
+
 button, input {
     font-family: 'Merriweather Sans', Helvetica, Arial, sans-serif;
     color: inherit;
