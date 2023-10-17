@@ -2,6 +2,8 @@ name: "Administration Panel"
 
 on:
   push:
+    paths:
+      - administration-panel/**
 
 jobs:
   nix-build:
@@ -10,10 +12,9 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v3
 
-      - name: Install nix
-        uses: cachix/install-nix-action@v18
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
+      # Nix
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Build via nix
         working-directory: administration-panel

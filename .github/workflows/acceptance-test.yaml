@@ -3,7 +3,7 @@ name: "Acceptance Test"
 on:
   push:
     branches:
-      - main
+      - never
 
 jobs:
   run-acceptance-test:
@@ -36,8 +36,9 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v3
 
-      - name: Install nix
-        uses: cachix/install-nix-action@v18
+      # Nix
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Run migrations
         working-directory: gray-whale
