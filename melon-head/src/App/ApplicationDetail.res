@@ -448,6 +448,49 @@ module Actions = {
     }
   }
 
+  module HardDelete = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doHardDelete = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.deleteJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/hard",
+            ~decoder=Api.Decode.acceptedResponse,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(_) => {
+              Modal.Interface.closeModal(modal)
+              RescriptReactRouter.push("/applications")
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you sure you want to ")}
+          <strong> {React.string("permenently remove")} </strong>
+          {React.string(" this application?")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button variant=Button.Danger onClick=doHardDelete> {React.string("HARD DELETE")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
   let rejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
     title: "Reject Application",
     content: <Reject api id setDetail modal />,
@@ -471,6 +514,11 @@ module Actions = {
   let unRejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
     title: "Move Application Back to Processing",
     content: <UnReject api id setDetail modal />,
+  }
+
+  let hardDeleteModal = (~id, ~api, ~modal): Modal.modalContent => {
+    title: "Remove PERMANENTLY",
+    content: <HardDelete api id modal />,
   }
 
   @react.component
@@ -525,6 +573,13 @@ module Actions = {
           variant=Button.Danger>
           {React.string("Re-Evaluate")}
         </Button>
+        <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
+          <Button
+            onClick={_ => modal->Modal.Interface.openModal(hardDeleteModal(~id, ~api, ~modal))}
+            variant=Button.Danger>
+            {React.string("HARD DELETE")}
+          </Button>
+        </SessionContext.RequireRole>
       </Button.Panel>
     | ApplicationData.Accepted => React.null
     }
