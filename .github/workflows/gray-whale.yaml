@@ -32,11 +32,10 @@ jobs:
         uses: cachix/install-nix-action@v18
 
       - name: Build using nix
-        working-directory: gray-whale
-        run: nix build
+        run: nix build .#gray-whale
 
       - name: Run migrations
         working-directory: gray-whale
         run: |
           cp refinery.example.toml refinery.toml
-          ./result/bin/gray-whale-migrate migrate
+          nix run .#gray-whale -- migrate

@@ -2,18 +2,17 @@
 
 This is what we use to run ICT Union.
 
-System is a collection of sub systems (components) used to manage
-and run the system of the union organization.
+System is split into few components witch separated responsibilities.
 
 This helps us to have much finer grain control over permissions.
 For instance [Gray Whale](gray-whale) -- out database migration manager --
 expects super user level permissions to db
 while [Orca](orca) -- our registration and members management service --
-requires just permissions for reading and writing the data (no alterations of schema of db).
+requires just permissions necessary for its operation.
 
-## Services
+## Components
 
-Every sub-system has its own documentation within README.md file!
+Every component has its own documentation within README.md file!
 
 | name                                         | status                                                                                                               | role                                      | language   |
 |----------------------------------------------|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------|------------|
@@ -96,6 +95,24 @@ make clean
 
 ```
 make up
+```
+
+## Nix
+
+[flake.nix](https://nixos.wiki/wiki/Flakes) so don't forget to make sure that you have [support for flakes](https://nixos.wiki/wiki/Flakes) enabled in your config.
+
+Flake exports dev various components as packages and their corresponding dev shells. See examples bellow.
+
+```bash
+# Run migrations using nix
+$ nix run .#gray-whale -- migrate
+
+# Build orca using nix
+$ nix build .#orca
+
+# jump into dev shell for orca
+$ cd orca
+$ nix develop .#orca
 ```
 
 ## License
