@@ -6,11 +6,8 @@ pub mod cors;
 pub mod jwk;
 pub mod keycloak;
 
-cfg_if::cfg_if! {
-    if #[cfg(feature="proxy-support")] {
-        use std::str::FromStr;
-    }
-}
+#[cfg(feature = "proxy-support")]
+use std::str::FromStr;
 
 use rocket::request::{FromRequest, Outcome, Request};
 use serde::Serialize;

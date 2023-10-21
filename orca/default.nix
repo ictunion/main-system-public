@@ -44,6 +44,10 @@ in
 rec {
   orca = craneLib.buildPackage {
     inherit cargoArtifacts src;
+    cargoExtraArgs =
+      if buildFeatures == []
+      then ""
+      else ''--features "${lib.strings.concatStringsSep " " buildFeatures}"'';
     nativeBuildInputs = nativeBuildInputs ++ [ makeWrapper ];
     buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
       darwin.apple_sdk.frameworks.Security

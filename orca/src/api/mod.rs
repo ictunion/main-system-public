@@ -179,6 +179,7 @@ struct StatusResponse<'a> {
     http_message: &'a str,
     authorization_connected: bool,
     database_connected: bool,
+    proxy_support_enabled: bool,
 }
 
 #[get("/status")]
@@ -193,11 +194,21 @@ async fn status_api<'a>(
         .await;
     let database_connected = res.is_ok();
 
+    // inline bool for proxy support
+    cfg_if::cfg_if! {
+        if #[cfg(feature="proxy-support")] {
+            let proxy_support_enabled = true;
+        } else {
+            let proxy_support_enabled = false;
+        }
+    }
+
     Json(StatusResponse {
         http_status: 200,
         http_message: "ok",
         authorization_connected,
         database_connected,
+        proxy_support_enabled,
     })
 }
 
