@@ -208,7 +208,13 @@ let viewFile = (~api: Api.t, file) => {
 module Actions = {
   module Reject = {
     @react.component
-    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+    let make = (
+      ~api: Api.t,
+      ~id: Uuid.t,
+      ~setDetail,
+      ~modal: Modal.Interface.t,
+      ~openApplications,
+    ) => {
       let (error, setError) = React.useState(() => None)
 
       let doReject = (_: JsxEvent.Mouse.t) => {
@@ -225,8 +231,7 @@ module Actions = {
               setDetail(_ => RemoteData.Success(data))
               Modal.Interface.closeModal(modal)
 
-              // open list
-              RescriptReactRouter.push("/applications")
+              openApplications()
             }
           | Error(e) => setError(_ => Some(e))
           }
@@ -255,7 +260,13 @@ module Actions = {
 
   module Accept = {
     @react.component
-    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+    let make = (
+      ~api: Api.t,
+      ~id: Uuid.t,
+      ~setDetail,
+      ~modal: Modal.Interface.t,
+      ~openApplications,
+    ) => {
       let (memberNumber, setMemberNumber) = React.useState(_ => Some(""))
 
       // Api errors
@@ -279,7 +290,8 @@ module Actions = {
               // Technically, we probably don't need to be setting this date if we're going to route away anyway
               setDetail(_ => RemoteData.Success(data))
               Modal.Interface.closeModal(modal)
-              RescriptReactRouter.push("/applications")
+
+              openApplications()
             }
           | Error(e) => setError(_ => Some(e))
           }
@@ -357,7 +369,7 @@ module Actions = {
 
   module ReSend = {
     @react.component
-    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t) => {
+    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t, ~openApplications) => {
       let (error, setError) = React.useState(() => None)
 
       let doReSend = (_: JsxEvent.Mouse.t) => {
@@ -373,7 +385,7 @@ module Actions = {
           | Ok(_) => {
               Modal.Interface.closeModal(modal)
 
-              RescriptReactRouter.push("/applications")
+              openApplications()
             }
           | Error(e) => setError(_ => Some(e))
           }
@@ -450,7 +462,7 @@ module Actions = {
 
   module HardDelete = {
     @react.component
-    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t) => {
+    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t, ~openApplications) => {
       let (error, setError) = React.useState(() => None)
 
       let doHardDelete = (_: JsxEvent.Mouse.t) => {
@@ -464,7 +476,8 @@ module Actions = {
           switch res {
           | Ok(_) => {
               Modal.Interface.closeModal(modal)
-              RescriptReactRouter.push("/applications")
+
+              openApplications()
             }
           | Error(e) => setError(_ => Some(e))
           }
@@ -493,14 +506,14 @@ module Actions = {
     }
   }
 
-  let rejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+  let rejectModal = (~id, ~api, ~setDetail, ~modal, ~openApplications): Modal.modalContent => {
     title: "Reject Application",
-    content: <Reject api id setDetail modal />,
+    content: <Reject api id setDetail modal openApplications />,
   }
 
-  let acceptModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+  let acceptModal = (~id, ~api, ~setDetail, ~modal, ~openApplications): Modal.modalContent => {
     title: "Accept Application",
-    content: <Accept api id setDetail modal />,
+    content: <Accept api id setDetail modal openApplications />,
   }
 
   let verifyModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
@@ -508,9 +521,9 @@ module Actions = {
     content: <Verify api id setDetail modal />,
   }
 
-  let resendModal = (~id, ~api, ~modal): Modal.modalContent => {
+  let resendModal = (~id, ~api, ~modal, ~openApplications): Modal.modalContent => {
     title: "Re-Send Email Verification",
-    content: <ReSend api id modal />,
+    content: <ReSend api id modal openApplications />,
   }
 
   let unRejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
@@ -518,9 +531,9 @@ module Actions = {
     content: <UnReject api id setDetail modal />,
   }
 
-  let hardDeleteModal = (~id, ~api, ~modal): Modal.modalContent => {
+  let hardDeleteModal = (~id, ~api, ~modal, ~openApplications): Modal.modalContent => {
     title: "Remove PERMANENTLY",
-    content: <HardDelete api id modal />,
+    content: <HardDelete api id modal openApplications />,
   }
 
   @react.component
@@ -530,13 +543,16 @@ module Actions = {
     ~status: ApplicationData.status,
     ~modal: Modal.Interface.t,
     ~setDetail,
+    ~openApplications,
   ) => {
     switch status {
     | ApplicationData.Unverified =>
       <Button.Panel>
         <Button
           onClick={_ =>
-            modal->Modal.Interface.openModal(rejectModal(~id, ~api, ~setDetail, ~modal))}
+            modal->Modal.Interface.openModal(
+              rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+            )}
           variant=Button.Danger>
           {React.string("Reject")}
         </Button>
@@ -547,7 +563,8 @@ module Actions = {
           {React.string("Mark as Verified")}
         </Button>
         <Button
-          onClick={_ => modal->Modal.Interface.openModal(resendModal(~id, ~api, ~modal))}
+          onClick={_ =>
+            modal->Modal.Interface.openModal(resendModal(~id, ~api, ~modal, ~openApplications))}
           variant=Button.Normal>
           {React.string("Re-send Email")}
         </Button>
@@ -556,13 +573,17 @@ module Actions = {
       <Button.Panel>
         <Button
           onClick={_ =>
-            modal->Modal.Interface.openModal(rejectModal(~id, ~api, ~setDetail, ~modal))}
+            modal->Modal.Interface.openModal(
+              rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+            )}
           variant=Button.Danger>
           {React.string("Reject")}
         </Button>
         <Button
           onClick={_ =>
-            modal->Modal.Interface.openModal(acceptModal(~id, ~api, ~setDetail, ~modal))}
+            modal->Modal.Interface.openModal(
+              acceptModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+            )}
           variant=Button.Cta>
           {React.string("Accept")}
         </Button>
@@ -577,7 +598,10 @@ module Actions = {
         </Button>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
           <Button
-            onClick={_ => modal->Modal.Interface.openModal(hardDeleteModal(~id, ~api, ~modal))}
+            onClick={_ =>
+              modal->Modal.Interface.openModal(
+                hardDeleteModal(~id, ~api, ~modal, ~openApplications),
+              )}
             variant=Button.Danger>
             {React.string("HARD DELETE")}
           </Button>
@@ -699,7 +723,11 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
 
   let status = RemoteData.map(detail, ApplicationData.getStatus)
 
-  <Page requireAnyRole=[ListApplications, ViewApplication]>
+  let openApplications = () => {
+    RescriptReactRouter.push(status->RemoteData.toOption->Applications.tabToUrl)
+  }
+
+  <Page requireAnyRole=[ListApplications, ViewApplication] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Application ")}
@@ -711,8 +739,7 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
         </span>
       </h1>
       <Page.BackButton
-        name="applications"
-        path={status->RemoteData.toOption->Applications.tabToUrl}
+        name="applications" path={status->RemoteData.toOption->Applications.tabToUrl}
       />
       <h2 className={styles["status"]}>
         {React.string("Status:")}
@@ -722,8 +749,11 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
     {viewMessage(
       status,
       ~reject=_ =>
-        modal->Modal.Interface.openModal(Actions.rejectModal(~id, ~api, ~setDetail, ~modal)),
-      ~resend=_ => modal->Modal.Interface.openModal(Actions.resendModal(~id, ~api, ~modal)),
+        modal->Modal.Interface.openModal(
+          Actions.rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+        ),
+      ~resend=_ =>
+        modal->Modal.Interface.openModal(Actions.resendModal(~id, ~api, ~modal, ~openApplications)),
     )}
     <div className={styles["personalInfo"]}>
       <DataGrid layout data=detail />
@@ -777,7 +807,7 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
     </Tabbed.Content>
     <Tabbed.Content tab=Checklist handlers=tabHandlers> {React.string("TODO")} </Tabbed.Content>
     {switch RemoteData.map(detail, ApplicationData.getStatus) {
-    | Success(status) => <Actions id api modal setDetail status />
+    | Success(status) => <Actions id api modal setDetail status openApplications />
     | _ => React.null
     }}
   </Page>

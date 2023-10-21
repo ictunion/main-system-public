@@ -4,14 +4,19 @@ open Belt
 
 module Shared = {
   @react.component
-  let make = (~code: int, ~title: string, ~description: string, ~children: React.element) =>
+  let make = (
+    ~code: int,
+    ~title: string,
+    ~description: string,
+    ~children: option<React.element>=?,
+  ) =>
     <div className={styles["container"]}>
       <h1 className={styles["title"]}>
         <span className={styles["statusCode"]}> {React.string(code->Int.toString)} </span>
         {React.string(title)}
       </h1>
       <p className={styles["desc"]}> {React.string(description)} </p>
-      {children}
+      {Option.getWithDefault(children, React.null)}
     </div>
 }
 

@@ -3,25 +3,39 @@ open Belt
 @module external styles: {..} = "./Page/styles.module.scss"
 
 @react.component
-let make = (~children: React.element, ~requireAnyRole=[]) => {
+let make = (
+  ~children: React.element,
+  ~requireAnyRole=[],
+  ~mainResource: option<Api.webData<'a>>=?,
+) => {
+  open RemoteData
+  open Api
+
   let session = React.useContext(SessionContext.context)
 
   <main className={styles["root"]}>
-    {switch session {
-    | Idle => React.null
-    | Success(session) =>
-      if Array.length(requireAnyRole) == 0 {
-        children
-      } else if Array.some(requireAnyRole, role => session->Session.hasRole(~role)) {
-        children
+    {switch mainResource {
+    | Some(Failure(ApiError({code, description, reason}))) => if code == 404 {
+        <ErrorPage.NotFound />
       } else {
-        <ErrorPage.Forbidden roles={requireAnyRole} />
+        <ErrorPage.Shared code title=reason description />
       }
-    | Loading =>
-      <div className={styles["loading"]}>
-        <Icons.Loading variant=Icons.Dark />
-      </div>
-    | Failure(err) => <ErrorPage.Unauthorized error={Api.showError(err)} />
+    | _ => switch session {
+      | Idle => React.null
+      | Success(session) =>
+        if Array.length(requireAnyRole) == 0 {
+          children
+        } else if Array.some(requireAnyRole, role => session->Session.hasRole(~role)) {
+          children
+        } else {
+          <ErrorPage.Forbidden roles={requireAnyRole} />
+        }
+      | Loading =>
+        <div className={styles["loading"]}>
+          <Icons.Loading variant=Icons.Dark />
+        </div>
+      | Failure(err) => <ErrorPage.Unauthorized error={Api.showError(err)} />
+      }
     }}
   </main>
 }
