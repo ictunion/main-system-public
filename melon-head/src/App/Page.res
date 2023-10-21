@@ -8,19 +8,18 @@ let make = (
   ~requireAnyRole=[],
   ~mainResource: option<Api.webData<'a>>=?,
 ) => {
-  open RemoteData
-  open Api
-
   let session = React.useContext(SessionContext.context)
 
   <main className={styles["root"]}>
     {switch mainResource {
-    | Some(Failure(ApiError({code, description, reason}))) => if code == 404 {
+    | Some(Failure(ApiError({code, description, reason}))) =>
+      if code == 404 {
         <ErrorPage.NotFound />
       } else {
         <ErrorPage.Shared code title=reason description />
       }
-    | _ => switch session {
+    | _ =>
+      switch session {
       | Idle => React.null
       | Success(session) =>
         if Array.length(requireAnyRole) == 0 {
