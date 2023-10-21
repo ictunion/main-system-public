@@ -16,6 +16,7 @@ type status = {
   httpMessage: string,
   authorizationConnected: bool,
   databaseConnected: bool,
+  proxySupportEnabled: bool,
 }
 
 type acceptedResponse = {
@@ -31,6 +32,7 @@ module Decode = {
     httpMessage: field.required(. "http_message", string),
     authorizationConnected: field.required(. "authorization_connected", bool),
     databaseConnected: field.required(. "database_connected", bool),
+    proxySupportEnabled: field.required(. "proxy_support_enabled", bool),
   })
 
   let apiError = object(field => {

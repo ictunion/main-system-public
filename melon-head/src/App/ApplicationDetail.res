@@ -485,7 +485,9 @@ module Actions = {
           <Button onClick={_ => Modal.Interface.closeModal(modal)}>
             {React.string("Cancel")}
           </Button>
-          <Button variant=Button.Danger onClick=doHardDelete> {React.string("HARD DELETE")} </Button>
+          <Button variant=Button.Danger onClick=doHardDelete>
+            {React.string("HARD DELETE")}
+          </Button>
         </Button.Panel>
       </Modal.Content>
     }
@@ -708,7 +710,10 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
           }}
         </span>
       </h1>
-      <Page.BackButton name="applications" path="/applications" />
+      <Page.BackButton
+        name="applications"
+        path={status->RemoteData.toOption->Applications.tabToUrl}
+      />
       <h2 className={styles["status"]}>
         {React.string("Status:")}
         <Chip.ApplicationStatus value=status />

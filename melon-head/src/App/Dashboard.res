@@ -23,6 +23,7 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
     ({authorizationConnected}) => {<ViewBool value={authorizationConnected} />},
   ),
   ("Database Connected", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),
+  ("Proxy Support Enabled", ({proxySupportEnabled}) => {<ViewBool value={proxySupportEnabled} />}),
 ]
 
 @react.component

@@ -30,3 +30,10 @@ let unwrap = (t: t<'a, 'e>, ~default: 'b, f: 'a => 'b): 'b => {
   | _ => default
   }
 }
+
+let toOption = (t: t<'a, 'e>): option<'a> => {
+  switch t {
+  | Success(a) => Some(a)
+  | _ => None
+  }
+}

@@ -340,10 +340,49 @@ module All = {
   }
 }
 
+let urlToTab = (url: RescriptReactRouter.url): option<ApplicationData.status> => {
+  open ApplicationData
+
+  switch url.hash {
+  | "all" => None
+  | "unverified" => Some(Unverified)
+  | "accepted" => Some(Accepted)
+  | "rejected" => Some(Rejected)
+  | _ => Some(Processing)
+  }
+}
+
+let tabToUrl = (tab: option<ApplicationData.status>): string => {
+  open ApplicationData
+
+  let hash = switch tab {
+  | None => "all"
+  | Some(Unverified) => "unverified"
+  | Some(Accepted) => "accepted"
+  | Some(Rejected) => "rejected"
+  | Some(Processing) => "processing"
+  }
+
+  "/applications#" ++ hash
+}
+
 @react.component
 let make = (~api: Api.t) => {
-  let tabHandlers = Tabbed.make(Some(ApplicationData.Processing))
-  let (_, setActiveTab) = tabHandlers
+  let (activeTab, setActiveTab) = React.useState(_ =>
+    RescriptReactRouter.dangerouslyGetInitialUrl()->urlToTab
+  )
+
+  let tabHandlers = (
+    activeTab,
+    f => {
+      let newTab = f(activeTab)
+      RescriptReactRouter.push(tabToUrl(newTab))
+    },
+  )
+
+  let _ = RescriptReactRouter.watchUrl(url => {
+    setActiveTab(_ => urlToTab(url))
+  })
 
   let (basicStats, _, _) = api->Hook.getData(~path="/stats/basic", ~decoder=StatsData.Decode.basic)
 
