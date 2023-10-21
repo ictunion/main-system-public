@@ -530,8 +530,12 @@ async fn hard_delete<'r>(
         .to_status()
         .assert_rejected()?;
 
-    query::dangerous_hard_delete_application_data(id).execute(&mut tx).await?;
-    query::dangerous_hard_delete_application(id).execute(&mut tx).await?;
+    query::dangerous_hard_delete_application_data(id)
+        .execute(&mut tx)
+        .await?;
+    query::dangerous_hard_delete_application(id)
+        .execute(&mut tx)
+        .await?;
 
     tx.commit().await?;
 

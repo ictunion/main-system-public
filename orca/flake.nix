@@ -3,9 +3,11 @@
   inputs = {
     nixpkgs.url = github:NixOS/nixpkgs;
     flake-utils.url = github:numtide/flake-utils;
+    crane.url = "github:ipetkov/crane";
+    crane.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, crane }: flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs {
         inherit system;
@@ -18,9 +20,13 @@
         openssl
         pkg-config
       ];
-    in
+
+      orcaPkgs = pkgs.callPackage ./default.nix {
+        inherit crane;
+      };
+    in rec
     {
-      devShell = with pkgs;
+      devShells.default = with pkgs;
         mkShell {
           name = "ict-union-orca-dev-env";
           inherit buildInputs;
@@ -30,6 +36,11 @@
           '';
           OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
         };
-      defaultPackage = pkgs.callPackage ./default.nix {};
-  });
+
+      defaultPackage = orcaPkgs.orca;
+
+      checks = {
+        inherit (orcaPkgs) orca orca-clippy orca-fmt;
+      };
+    });
 }

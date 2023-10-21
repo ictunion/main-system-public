@@ -136,7 +136,7 @@ async fn process(
 
     match command {
         NewRegistrationRequest(reg_id, signature) => {
-            process_new_registration(reg_id, signature, config, db_pool).await
+            process_new_registration(reg_id, signature, config, db_pool).await?;
         }
         ResentRegistrationEmail(reg_id) => {
             let application_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
@@ -145,7 +145,7 @@ async fn process(
                 .fetch_one(db_pool)
                 .await?;
 
-            send_verification_email(config, db_pool, &application_details, pdf_data).await
+            send_verification_email(config, db_pool, &application_details, pdf_data).await?;
         }
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured
@@ -200,10 +200,10 @@ async fn process(
 
                 send_email(config, message).await?;
             }
-
-            Ok(())
         }
     }
+
+    Ok(())
 }
 
 async fn send_email(config: &Config, message: Message) -> Result<(), ProcessingError> {
@@ -231,8 +231,8 @@ async fn process_new_registration(
         .await?;
 
     // Query for detail information about member
-    // in theory we could also pass this in thee command
-    // but doing it this way means that all triggers, defaults etc are 100% applied to the data
+    // in theory we could also pass this in the command
+    // but doing it this way means that all triggers & defaults etc are 100% applied to the data
     let application_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
 
     // Generate PDF
@@ -256,6 +256,8 @@ async fn send_verification_email(
     application_details: &RegistrationDetails,
     pdf_data: Vec<u8>,
 ) -> Result<(), ProcessingError> {
+    info!("Send verification email to {}", application_details.email);
+
     let token = application_details
         .confirmation_token
         .as_ref()
@@ -395,6 +397,8 @@ async fn print_pdf(
     application_details: &RegistrationDetails,
     dir: &str,
 ) -> Result<String, ProcessingError> {
+    info!("Printing registration pdf at {dir}");
+
     // inline static files
     let form_tex = include_str!("../../latex/registration.tex");
     let logo_png = include_bytes!("../../latex/logo.png");
@@ -424,9 +428,12 @@ async fn print_pdf(
         .stdout(Stdio::null())
         .spawn()?;
 
-    // Await until the command completes
+    // Await until command completes
+    // There is a problem with tokio detecting the exist status of the process
+    // at least in cases where xelatex fails to find font in OSFONTDIR
+    // like similar to https://users.rust-lang.org/t/tokio-child-wait-never-returning/96657
     let status = child.wait().await?;
-    info!("tex command exited successfully: {status}");
+    info!("Tex command exited successfully: {status}");
 
     Ok(format!("{dir}/registration.pdf"))
 }

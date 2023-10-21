@@ -1,32 +1,58 @@
-{ rustPlatform
-, pkg-config
+{ pkg-config
 , openssl
 , stdenv
-, darwin
-, lib
+, callPackage
 , texlive
 , makeWrapper
 , nix-gitignore
-, ibm-plex
 , buildFeatures ? []
+, crane
+, system
+, lib
+, darwin
 }:
 let
   tex = import ./latex { inherit texlive; };
-in
-rustPlatform.buildRustPackage {
-  inherit buildFeatures;
-
-  pname = "ict-union-orca";
-  version = "0.1.0";
   src = nix-gitignore.gitignoreSource [] ./.;
-  cargoSha256 = "sha256-iW18bgQwXIT6jL+PW3UxELqUzDJLxldAwwJv2FudB4o=";
-
-  nativeBuildInputs = [ pkg-config makeWrapper ];
-
-  buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
-    darwin.apple_sdk.frameworks.Security
+  craneLib = crane.lib.${system};
+  nativeBuildInputs = [
+    openssl
+    pkg-config
   ];
-  postInstall = ''
-    wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
+
+  # Build *just* the cargo dependencies, so we can reuse
+  # all of that work (e.g. via cachix) when running in CI
+  cargoArtifacts = craneLib.buildDepsOnly {
+    inherit src nativeBuildInputs;
+  };
+
+  # Run clippy (and deny all warnings) on the crate source,
+  # resuing the dependency artifacts (e.g. from build scripts or
+  # proc-macros) from above.
+  #
+  # Note that this is done as a separate derivation so it
+  # does not impact building just the crate by itself.
+  orca-clippy = craneLib.cargoClippy {
+    inherit cargoArtifacts src nativeBuildInputs;
+    cargoClippyExtraArgs = "-- --deny warnings";
+  };
+
+  orca-fmt = craneLib.cargoFmt {
+    inherit src;
+  };
+in
+rec {
+  orca = craneLib.buildPackage {
+    inherit cargoArtifacts src;
+    nativeBuildInputs = nativeBuildInputs ++ [ makeWrapper ];
+    buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
+      darwin.apple_sdk.frameworks.Security
+    ];
+    postInstall = ''
+      wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
   '';
+  };
+
+  inherit orca-clippy;
+  inherit orca-fmt;
 }
