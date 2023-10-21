@@ -21,7 +21,6 @@ Every component has its own documentation within README.md file!
 | [Orca](orca)                                 | ![status](https://github.com/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)                 | Registration and onboarding processing    | Rust       |
 | [Melon Head](melon-head)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/melon-head.yaml/badge.svg?branch=main)           | Web UI client for orca                    | Rescript   |
 | [Member's Panel](members-panel)              | ![status](https://github.com/ictunion/main-system/actions/workflows/members-panel.yaml/badge.svg?branch=main)        | Entry dashboard for organization members  | TypeScript |
-| [Administration Panel](administration-panel) | ![status](https://github.com/ictunion/main-system/actions/workflows/administration-panel.yaml/badge.svg?branch=main) | Administration tool for member management | TypeScript |
 
 ## Goals
 
@@ -69,20 +68,6 @@ make migrate
 
 ```
 make psql
-```
-
-### Start HTTP API Service Using Postgrest
-
-```
-make postgrest
-```
-
-#### Miscellaneous Make Target
-
-Generate `keycloak-certs` file by fetching certs from keycloak instance:
-
-```
-make keycloak-certs
 ```
 
 Clean all outputs from make

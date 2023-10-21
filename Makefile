@@ -5,24 +5,14 @@ DB_PASSWORD:=superuser
 DB_HOST:=localhost
 KEYCLOAK_URL:="https://keycloak.ictunion.cz"
 KEYCLOAK_REALM:="testing-members"
-JWT_SECRET=`cat keycloak-certs`
-PGRST_JWT_ROLE_CLAIM_KEY:=".resource_access.postgrest.roles[0]"
-
-keycloak-certs:
-	curl $(KEYCLOAK_URL)/realms/$(KEYCLOAK_REALM)/protocol/openid-connect/certs > keycloak-certs
 
 .PHONY: postgres
 postgres:
 	DB_USER=$(DB_SUPERUSER) DB_NAME=$(DB_NAME) DB_PASSWORD=$(DB_PASSWORD) \
 		docker compose up postgres
 
-.PHONY: postgrest
-postgrest: keycloak-certs
-	DB_USER=$(DB_SUPERUSER) DB_NAME=$(DB_NAME) DB_PASSWORD=$(DB_PASSWORD) JWT_SECRET=$(JWT_SECRET) PGRST_JWT_ROLE_CLAIM_KEY=$(PGRST_JWT_ROLE_CLAIM_KEY) \
-		docker compose up postgres postgrest
-
 .PHONY: up
-up: keycloak-certs
+up:
 	DB_USER=$(DB_SUPERUSER) DB_NAME=$(DB_NAME) DB_PASSWORD=$(DB_PASSWORD) JWT_SECRET=$(JWT_SECRET) PGRST_JWT_ROLE_CLAIM_KEY=$(PGRST_JWT_ROLE_CLAIM_KEY) \
 		docker compose up
 

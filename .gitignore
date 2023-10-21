@@ -7,6 +7,3 @@
 
 # Nix
 result*
-
-# Make targets
-keycloak-certs
