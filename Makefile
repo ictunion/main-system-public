@@ -6,6 +6,9 @@ DB_HOST:=localhost
 KEYCLOAK_URL:="https://keycloak.ictunion.cz"
 KEYCLOAK_REALM:="testing-members"
 
+orca/result:
+	pushd orca && nix build
+
 .PHONY: postgres
 postgres:
 	DB_USER=$(DB_SUPERUSER) DB_NAME=$(DB_NAME) DB_PASSWORD=$(DB_PASSWORD) \
@@ -24,6 +27,11 @@ migrate:
 psql:
 	PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -U $(DB_SUPERUSER)
 
+.PHONY: orca
+orca: orca/result
+	pushd orca && ./result/bin/orca
+
 .PHONY: clean
 clean:
 	$(RM) keycloak-certs
+	$(RM) orca/result

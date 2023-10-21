@@ -2,8 +2,8 @@ name: "Acceptance Test"
 
 on:
   push:
-    branches:
-      - never
+    # branches:
+    #   - never
 
 jobs:
   run-acceptance-test:
@@ -43,17 +43,15 @@ jobs:
       - name: Run migrations
         working-directory: gray-whale
         run: |
-          nix build
           cp refinery.example.toml refinery.toml
-          ./result/bin/gray-whale-migrate migrate
+          nix run .#gray-whale -- migrate
 
-      - name: Build and configure and run orca
+      - name: Build, configure and run orca
         working-directory: orca
         run: |
-          nix build
           cp Rocket.example.toml Rocket.toml
-          ./result/bin/orca &
-          sleep 5
+          nix run .#orca &
+          sleep 3
         env:
           ROCKET_SMTP_HOST: "localhost"
           ROCKET_SMTP_USER: ""
@@ -61,6 +59,7 @@ jobs:
           ROCKET_KEYCLOAK_HOST: "https://keycloak.ictunion.cz"
           ROCKET_KEYCLOAK_REALM: "testing-members"
 
-      - name: Check status of orca
+      - name: Build and run acceptance test
         run: |
-          curl localhost:8000/status
+          nix-build acceptance-test/release.nix
+          ./result/bin/test
