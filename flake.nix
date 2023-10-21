@@ -17,6 +17,7 @@
     orca-stuff =
       let
         tex = with pkgs; import ./orca/latex { inherit texlive; };
+        craneLib = crane.mkLib pkgs;
         buildInputs = with pkgs; [
           tex
           rustup
@@ -25,7 +26,7 @@
         ];
 
         orcaPkgs = pkgs.callPackage ./orca {
-          inherit crane;
+          inherit craneLib;
         };
       in {
         devShell = with pkgs;

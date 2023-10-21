@@ -6,7 +6,7 @@
 , makeWrapper
 , nix-gitignore
 , buildFeatures ? []
-, crane
+, craneLib
 , system
 , lib
 , darwin
@@ -14,7 +14,6 @@
 let
   tex = import ./latex { inherit texlive; };
   src = nix-gitignore.gitignoreSource [] ./.;
-  craneLib = crane.lib.${system};
   nativeBuildInputs = [
     openssl
     pkg-config
