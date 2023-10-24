@@ -33,7 +33,8 @@ let make = (
   ~api: Api.t,
   ~modal: Modal.Interface.t,
 ) => {
-  let (basicStats, _, _) = api->Hook.getData(~path="/stats/applications/basic", ~decoder=StatsData.Decode.basic)
+  let (basicStats, _, _) =
+    api->Hook.getData(~path="/stats/applications/basic", ~decoder=StatsData.Decode.basic)
   let (status, _, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
 
   let permissionsRows = [

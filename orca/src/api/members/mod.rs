@@ -37,6 +37,48 @@ async fn list_all<'r>(
     Ok(Json(summaries))
 }
 
+#[get("/past")]
+async fn list_past<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<Summary>>> {
+    keycloak.require_role(token, Role::ListMembers)?;
+
+    let summaries = query::list_past_summaries()
+        .fetch_all(db_pool.inner())
+        .await?;
+    Ok(Json(summaries))
+}
+
+#[get("/new")]
+async fn list_new<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<Summary>>> {
+    keycloak.require_role(token, Role::ListMembers)?;
+
+    let summaries = query::list_new_summaries()
+        .fetch_all(db_pool.inner())
+        .await?;
+    Ok(Json(summaries))
+}
+
+#[get("/current")]
+async fn list_current<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<Summary>>> {
+    keycloak.require_role(token, Role::ListMembers)?;
+
+    let summaries = query::list_current_summaries()
+        .fetch_all(db_pool.inner())
+        .await?;
+    Ok(Json(summaries))
+}
+
 #[derive(Deserialize, Validate)]
 pub struct NewMember {
     member_number: Option<MemberNumber>,
@@ -84,5 +126,5 @@ async fn create_member<'r>(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![list_all, create_member]
+    routes![list_all, list_past, list_new, list_current, create_member,]
 }

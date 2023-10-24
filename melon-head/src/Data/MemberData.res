@@ -28,6 +28,11 @@ type newMember = {
   language: string,
 }
 
+type status =
+  | NewMember
+  | CurrentMember
+  | PastMember
+
 module Decode = {
   open Json.Decode
   let summary = object(field => {

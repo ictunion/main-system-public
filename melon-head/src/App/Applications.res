@@ -384,7 +384,8 @@ let make = (~api: Api.t) => {
     setActiveTab(_ => urlToTab(url))
   })
 
-  let (basicStats, _, _) = api->Hook.getData(~path="/stats/applications/basic", ~decoder=StatsData.Decode.basic)
+  let (basicStats, _, _) =
+    api->Hook.getData(~path="/stats/applications/basic", ~decoder=StatsData.Decode.basic)
 
   <Page requireAnyRole=[ListApplications]>
     <Page.Title> {React.string("Applications")} </Page.Title>

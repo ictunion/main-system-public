@@ -20,6 +20,60 @@ ORDER BY member_number DESC
     )
 }
 
+pub fn list_past_summaries() -> QueryAs<'static, Summary> {
+    sqlx::query_as(
+        "
+SELECT id
+    , member_number
+    , first_name
+    , last_name
+    , email
+    , phone_number
+    , city
+    , left_at
+    , created_at
+FROM members_past
+ORDER BY member_number DESC
+",
+    )
+}
+
+pub fn list_new_summaries() -> QueryAs<'static, Summary> {
+    sqlx::query_as(
+        "
+SELECT id
+    , member_number
+    , first_name
+    , last_name
+    , email
+    , phone_number
+    , city
+    , left_at
+    , created_at
+FROM members_new
+ORDER BY member_number DESC
+",
+    )
+}
+
+pub fn list_current_summaries() -> QueryAs<'static, Summary> {
+    sqlx::query_as(
+        "
+SELECT id
+    , member_number
+    , first_name
+    , last_name
+    , email
+    , phone_number
+    , city
+    , left_at
+    , created_at
+FROM members_current
+ORDER BY member_number DESC
+",
+    )
+}
+
 pub fn create_member(member_number: MemberNumber, new_member: &NewMember) -> QueryAs<'_, Summary> {
     sqlx::query_as(
         "

@@ -146,81 +146,224 @@ let viewPaddedNumber = (n: int): React.element => {
   </span>
 }
 
-@react.component
-let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
-  let (members, _, refreshMembers) =
-    api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+let urlToTab = (url: RescriptReactRouter.url): option<MemberData.status> => {
+  open MemberData
 
-  let openNewMemberModal = _ =>
-    Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))
+  switch url.hash {
+  | "all" => None
+  | "current" => Some(CurrentMember)
+  | "past" => Some(PastMember)
+  | _ => Some(NewMember)
+  }
+}
 
-  <Page requireAnyRole=[ListMembers]>
-    <Page.Title> {React.string("Members")} </Page.Title>
-    <Button.Panel>
-      <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
-    </Button.Panel>
-    <DataTable
-      data=members
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-        },
-        {
-          name: "Member Number",
-          minMax: ("200px", "1fr"),
-          view: r => viewPaddedNumber(r.memberNumber),
-        },
-        {
-          name: "Left On",
-          minMax: ("150px", "1fr"),
-          view: r =>
-            React.string(r.leftAt->Option.mapWithDefault("--", Js.Date.toLocaleDateString)),
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "2fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
-        },
-        {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
-          view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
-        },
-        {
-          name: "City",
-          minMax: ("250px", "1fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
-        },
-        {
-          name: "Created On",
-          minMax: ("150px", "1fr"),
-          view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-        },
-      ]>
-      <p> {React.string("There are no members yet.")} </p>
+let tabToUrl = (tab: option<MemberData.status>): string => {
+  open MemberData
+
+  switch tab {
+  | None => "/members#all"
+  | Some(NewMember) => "/members#new"
+  | Some(CurrentMember) => "/members#current"
+  | Some(PastMember) => "members#past"
+  }
+}
+
+let columns: array<DataTable.column<MemberData.summary>> = [
+  {
+    name: "ID",
+    minMax: ("100px", "1fr"),
+    view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+  },
+  {
+    name: "Member Number",
+    minMax: ("200px", "1fr"),
+    view: r => viewPaddedNumber(r.memberNumber),
+  },
+  {
+    name: "Left On",
+    minMax: ("150px", "1fr"),
+    view: r => React.string(r.leftAt->Option.mapWithDefault("--", Js.Date.toLocaleDateString)),
+  },
+  {
+    name: "First Name",
+    minMax: ("150px", "2fr"),
+    view: r => React.string(r.firstName->Option.getWithDefault("--")),
+  },
+  {
+    name: "Last Name",
+    minMax: ("150px", "2fr"),
+    view: r => React.string(r.lastName->Option.getWithDefault("--")),
+  },
+  {
+    name: "Email",
+    minMax: ("250px", "2fr"),
+    view: r => r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+  },
+  {
+    name: "Phone",
+    minMax: ("220px", "2fr"),
+    view: r =>
+      r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
+        <Link.Tel phoneNumber />
+      ),
+  },
+  {
+    name: "City",
+    minMax: ("250px", "1fr"),
+    view: r => React.string(r.city->Option.getWithDefault("--")),
+  },
+  {
+    name: "Created On",
+    minMax: ("150px", "1fr"),
+    view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+  },
+]
+
+// We could use Functor module to generate these but would probably make it harder for people to understand what is going on
+
+module All = {
+  @react.component
+  let make = (~api) => {
+    let (members, _, _) =
+      api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+
+    let openNewMembersTab = _ => {
+      RescriptReactRouter.push(Some(MemberData.NewMember)->tabToUrl)
+    }
+
+    <DataTable data=members columns>
+      <p> {React.string("Currently there are no member.")} </p>
       <p>
         <small>
-          {React.string("Maybe you want to ")}
-          <a onClick=openNewMemberModal> {React.string("create a first one")} </a>
-          {React.string("?")}
+          {React.string(
+            "To create a member you'll need confirm (and generate account) for some of ",
+          )}
+          <a onClick=openNewMembersTab> {React.string("new members")} </a>
+          {React.string(".")}
         </small>
       </p>
     </DataTable>
+  }
+}
+
+module New = {
+  @react.component
+  let make = (~api, ~modal) => {
+    let (members, _, refreshMembers) =
+      api->Hook.getData(~path="/members/new", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+
+    let openNewMemberModal = _ =>
+      Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))
+
+    <div className={styles["membersTab"]}>
+      <Button.Panel>
+        <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
+      </Button.Panel>
+      <DataTable data=members columns>
+        <p> {React.string("There are no members yet.")} </p>
+        <p>
+          <small>
+            {React.string("Maybe you want to ")}
+            <a onClick=openNewMemberModal> {React.string("create a first one")} </a>
+            {React.string("?")}
+          </small>
+        </p>
+      </DataTable>
+    </div>
+  }
+}
+
+module Current = {
+  @react.component
+  let make = (~api) => {
+    let (members, _, _) =
+      api->Hook.getData(
+        ~path="/members/current",
+        ~decoder=Json.Decode.array(MemberData.Decode.summary),
+      )
+
+    let openNewMembersTab = _ => {
+      RescriptReactRouter.push(Some(MemberData.NewMember)->tabToUrl)
+    }
+
+    <DataTable data=members columns>
+      <p> {React.string("Currently there are no member.")} </p>
+      <p>
+        <small>
+          {React.string(
+            "To create a member you'll need confirm (and generate account) for some of ",
+          )}
+          <a onClick=openNewMembersTab> {React.string("new members")} </a>
+          {React.string(".")}
+        </small>
+      </p>
+    </DataTable>
+  }
+}
+
+module Past = {
+  @react.component
+  let make = (~api) => {
+    let (members, _, _) =
+      api->Hook.getData(
+        ~path="/members/past",
+        ~decoder=Json.Decode.array(MemberData.Decode.summary),
+      )
+
+    <DataTable data=members columns>
+      <p> {React.string("There are no ex-members.")} </p>
+    </DataTable>
+  }
+}
+
+@react.component
+let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let (activeTab, setActiveTab) = React.useState(_ =>
+    RescriptReactRouter.dangerouslyGetInitialUrl()->urlToTab
+  )
+
+  let _ = RescriptReactRouter.watchUrl(url => {
+    setActiveTab(_ => urlToTab(url))
+  })
+
+  let tabHandlers = (
+    activeTab,
+    f => {
+      let newTab = f(activeTab)
+      RescriptReactRouter.push(tabToUrl(newTab))
+    },
+  )
+
+  <Page requireAnyRole=[ListMembers]>
+    <Page.Title> {React.string("Members")} </Page.Title>
+    <Tabbed.Tabs>
+      <Tabbed.Tab value=Some(MemberData.NewMember) handlers=tabHandlers>
+        <span> {React.string("New")} </span>
+      </Tabbed.Tab>
+      <Tabbed.Tab
+        value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
+        <span> {React.string("Current")} </span>
+      </Tabbed.Tab>
+      <Tabbed.Tab
+        value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
+        <span> {React.string("Past")} </span>
+      </Tabbed.Tab>
+      <Tabbed.TabSpacer />
+      <Tabbed.Tab value=None handlers=tabHandlers color=Some("var(--color1)")>
+        <span> {React.string("All")} </span>
+      </Tabbed.Tab>
+    </Tabbed.Tabs>
+    <Tabbed.Content tab=Some(MemberData.NewMember) handlers={tabHandlers}>
+      <New api modal />
+    </Tabbed.Content>
+    <Tabbed.Content tab=Some(MemberData.CurrentMember) handlers={tabHandlers}>
+      <Current api />
+    </Tabbed.Content>
+    <Tabbed.Content tab=Some(MemberData.PastMember) handlers={tabHandlers}>
+      <Past api />
+    </Tabbed.Content>
+    <Tabbed.Content tab=None handlers={tabHandlers}>
+      <All api />
+    </Tabbed.Content>
   </Page>
 }
