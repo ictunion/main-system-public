@@ -15,8 +15,8 @@ struct BasicStats {
     processing: i64,
 }
 
-#[get("/basic")]
-async fn basic_stats<'r>(
+#[get("/applications/basic")]
+async fn applications_basic_stats<'r>(
     db_pool: &State<DbPool>,
     keycloak: &State<Keycloak>,
     token: JwtToken<'r>,
@@ -41,5 +41,5 @@ async fn basic_stats<'r>(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![basic_stats]
+    routes![applications_basic_stats]
 }
