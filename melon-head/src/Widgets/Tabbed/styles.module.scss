@@ -10,6 +10,7 @@
     display: flex;
     border-bottom: 1px solid var(--border-color);
     gap: 6px;
+    height: 44px;
 }
 
 @mixin tab {
@@ -36,7 +37,7 @@
 
     &:hover {
         border-top: 6px solid var(--active-color, var(--color4));
-        margin-top: 1px;
+        margin-top: 2px;
     }
 }
 

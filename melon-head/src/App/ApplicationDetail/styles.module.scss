@@ -33,7 +33,8 @@
 
 .metadata {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    max-width: 1574px;
     gap: 12px;
 
     @media screen and (max-width: 900px) {

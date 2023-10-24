@@ -637,7 +637,6 @@ let viewMessage = (status, ~reject, ~resend) => {
 
 type tabs =
   | Metadata
-  | Checklist
   | Files
 
 @react.component
@@ -696,7 +695,6 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
     <Tabbed.Tabs>
       <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
       <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
-      <Tabbed.Tab value=Checklist handlers=tabHandlers> {React.string("Checklist")} </Tabbed.Tab>
     </Tabbed.Tabs>
     <Tabbed.Content tab=Files handlers=tabHandlers>
       <DataGrid
@@ -740,7 +738,6 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
         <RowBasedTable rows=metadataRows data=detail title=Some("Metadata") />
       </div>
     </Tabbed.Content>
-    <Tabbed.Content tab=Checklist handlers=tabHandlers> {React.string("TODO")} </Tabbed.Content>
     {switch RemoteData.map(detail, ApplicationData.getStatus) {
     | Success(status) => <Actions id api modal setDetail status openApplications />
     | _ => React.null

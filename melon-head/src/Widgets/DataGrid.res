@@ -15,6 +15,13 @@ module Cell = {
   }
 }
 
+module Loading = {
+  @react.component
+  let make = () => {
+    <div className={styles["loading"]} />
+  }
+}
+
 type cell<'a> = {
   label: string,
   view: 'a => React.element,
@@ -49,7 +56,9 @@ let viewRow = (rowI, row: row<'a>, ~data: Api.webData<'a>) => {
         <Cell key={Int.toString(i)} label={c.label}>
           {switch data {
           | Success(d) => c.view(d)
-          | _ => React.null
+          | Idle => <Loading />
+          | Loading => <Loading />
+          | Failure(_) => React.string("[error]")
           }}
         </Cell>
       )
@@ -62,4 +71,8 @@ let viewRow = (rowI, row: row<'a>, ~data: Api.webData<'a>) => {
 let make = (~layout: t<'a>, ~data: Api.webData<'a>) =>
   <div className={styles["dataGrid"]}>
     {layout->Array.mapWithIndex(viewRow(~data))->React.array}
+    {switch data {
+    | Failure(err) => <div className={styles["error"]}> {React.string(err->Api.showError)} </div>
+    | _ => React.null
+    }}
   </div>

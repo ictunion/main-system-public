@@ -1,3 +1,10 @@
+.data-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+}
+
 .cell {
     padding: 6px 12px;
     display: flex;
@@ -37,12 +44,6 @@
     }
 }
 
-.data-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
 .row-wrap {
     display: flex;
     flex-direction: column;
@@ -53,4 +54,43 @@
     font-size: 16px;
     font-weight: 700;
     border-bottom: 1px solid var(--border-color);
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: -135% 0;
+  }
+}
+
+@mixin loading-background {
+  $from: var(--mutted-overlay);
+  $to: var(--emphasis-dark-overlay);
+
+  background: linear-gradient(-90deg, $from 0%, $to 50%, $from 100%);
+  background-size: 400% 100%;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.loading {
+    @include loading-background;
+    height: 24px;
+}
+
+.error {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--emphasis-dark-overlay);
+    color: var(--error-color);
+    font-size: 18px;
+    font-weight: 600;
 }
