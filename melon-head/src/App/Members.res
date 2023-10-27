@@ -334,23 +334,30 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
     },
   )
 
+  let (basicStats, _, _) =
+    api->Hook.getData(~path="/stats/members/basic", ~decoder=StatsData.Members.Decode.basic)
+
   <Page requireAnyRole=[ListMembers]>
     <Page.Title> {React.string("Members")} </Page.Title>
     <Tabbed.Tabs>
       <Tabbed.Tab value=Some(MemberData.NewMember) handlers=tabHandlers>
         <span> {React.string("New")} </span>
+        <Chip.Count value={basicStats->RemoteData.map(r => r.new)} />
       </Tabbed.Tab>
       <Tabbed.Tab
         value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
         <span> {React.string("Current")} </span>
+        <Chip.Count value={basicStats->RemoteData.map(r => r.current)} />
       </Tabbed.Tab>
       <Tabbed.Tab
         value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
         <span> {React.string("Past")} </span>
+        <Chip.Count value={basicStats->RemoteData.map(r => r.past)} />
       </Tabbed.Tab>
       <Tabbed.TabSpacer />
       <Tabbed.Tab value=None handlers=tabHandlers color=Some("var(--color1)")>
         <span> {React.string("All")} </span>
+        <Chip.Count value={basicStats->RemoteData.map(StatsData.Members.all)} />
       </Tabbed.Tab>
     </Tabbed.Tabs>
     <Tabbed.Content tab=Some(MemberData.NewMember) handlers={tabHandlers}>

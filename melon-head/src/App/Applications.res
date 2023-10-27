@@ -372,6 +372,10 @@ let make = (~api: Api.t) => {
     RescriptReactRouter.dangerouslyGetInitialUrl()->urlToTab
   )
 
+  let _ = RescriptReactRouter.watchUrl(url => {
+    setActiveTab(_ => urlToTab(url))
+  })
+
   let tabHandlers = (
     activeTab,
     f => {
@@ -380,12 +384,11 @@ let make = (~api: Api.t) => {
     },
   )
 
-  let _ = RescriptReactRouter.watchUrl(url => {
-    setActiveTab(_ => urlToTab(url))
-  })
-
   let (basicStats, _, _) =
-    api->Hook.getData(~path="/stats/applications/basic", ~decoder=StatsData.Decode.basic)
+    api->Hook.getData(
+      ~path="/stats/applications/basic",
+      ~decoder=StatsData.Applications.Decode.basic,
+    )
 
   <Page requireAnyRole=[ListApplications]>
     <Page.Title> {React.string("Applications")} </Page.Title>
@@ -439,7 +442,7 @@ let make = (~api: Api.t) => {
         <Tabbed.TabSpacer />
         <Tabbed.Tab value={None} handlers={tabHandlers} color=Some("var(--color1)")>
           {React.string("All")}
-          <Chip.Count value={basicStats->RemoteData.map(StatsData.all)} />
+          <Chip.Count value={basicStats->RemoteData.map(StatsData.Applications.all)} />
         </Tabbed.Tab>
       </Tabbed.Tabs>
       <Tabbed.Content tab={Some(ApplicationData.Processing)} handlers={tabHandlers}>

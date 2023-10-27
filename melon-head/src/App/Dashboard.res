@@ -7,23 +7,19 @@ module ViewBool = {
   let make = (~value: bool) => {value ? React.string("👍 yes") : React.string("👎 no")}
 }
 
-let applicationsRows: array<RowBasedTable.row<StatsData.basic>> = [
+let applicationsRows: array<RowBasedTable.row<StatsData.Applications.basic>> = [
   ("Processing", s => React.string(s.processing->Int.toString)),
   ("Pending Verification", s => React.string(s.unverified->Int.toString)),
   ("Accepted", s => React.string(s.accepted->Int.toString)),
   ("Rejected", s => React.string(s.rejected->Int.toString)),
-  ("All", s => React.string(StatsData.all(s)->Int.toString)),
+  ("All", s => React.string(StatsData.Applications.all(s)->Int.toString)),
 ]
 
-let statusRows: array<RowBasedTable.row<Api.status>> = [
-  ("Http Status", s => React.string(s.httpStatus->Int.toString)),
-  ("Http Message", s => React.string(s.httpMessage)),
-  (
-    "Keycloak Connected",
-    ({authorizationConnected}) => {<ViewBool value={authorizationConnected} />},
-  ),
-  ("Database Connected", ({databaseConnected}) => {<ViewBool value={databaseConnected} />}),
-  ("Proxy Support Enabled", ({proxySupportEnabled}) => {<ViewBool value={proxySupportEnabled} />}),
+let membersRows: array<RowBasedTable.row<StatsData.Members.basic>> = [
+  ("New", s => React.string(s.new->Int.toString)),
+  ("Current", s => React.string(s.current->Int.toString)),
+  ("Past", s => React.string(s.past->Int.toString)),
+  ("All", s => React.string(StatsData.Members.all(s)->Int.toString)),
 ]
 
 @react.component
@@ -33,40 +29,14 @@ let make = (
   ~api: Api.t,
   ~modal: Modal.Interface.t,
 ) => {
-  let (basicStats, _, _) =
-    api->Hook.getData(~path="/stats/applications/basic", ~decoder=StatsData.Decode.basic)
-  let (status, _, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
+  let (applicationsBasicStats, _, _) =
+    api->Hook.getData(
+      ~path="/stats/applications/basic",
+      ~decoder=StatsData.Applications.Decode.basic,
+    )
 
-  let permissionsRows = [
-    (
-      "Recognized as member",
-      (session: Session.t) => {<ViewBool value={session.memberId->Option.isSome} />},
-    ),
-    (
-      "List all applications",
-      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListApplications)} />},
-    ),
-    (
-      "View application detail",
-      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ViewApplication)} />},
-    ),
-    (
-      "Resolve (Approve or Reject) applications",
-      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ResolveApplications)} />},
-    ),
-    (
-      "List all members",
-      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListMembers)} />},
-    ),
-    (
-      "Manage members",
-      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
-    ),
-    (
-      "Super-Powers (be careful!)",
-      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
-    ),
-  ]
+  let (membersBasicStats, _, _) =
+    api->Hook.getData(~path="/stats/members/basic", ~decoder=StatsData.Members.Decode.basic)
 
   let openLink = (path: string, _) => {
     RescriptReactRouter.push(path)
@@ -164,18 +134,19 @@ let make = (
     <div className={styles["statsGrid"]}>
       <div className={styles["gridItem"]}>
         <h2 className={styles["itemTitle"]}> {React.string("Applications")} </h2>
-        <RowBasedTable rows=applicationsRows data=basicStats title=Some("Applications Stats") />
+        <RowBasedTable
+          rows=applicationsRows data=applicationsBasicStats title=Some("Applications Stats")
+        />
         <a onClick={openLink("/applications")} className={styles["pageLink"]}>
           {React.string("See Applications")}
         </a>
       </div>
       <div className={styles["gridItem"]}>
-        <h2 className={styles["itemTitle"]}> {React.string("Permissions")} </h2>
-        <RowBasedTable rows=permissionsRows data=session title=Some("Your Permissions/Roles") />
-      </div>
-      <div className={styles["gridItem"]}>
-        <h2 className={styles["itemTitle"]}> {React.string("System")} </h2>
-        <RowBasedTable rows=statusRows data=status title=Some("Api Status") />
+        <h2 className={styles["itemTitle"]}> {React.string("Members")} </h2>
+        <RowBasedTable rows=membersRows data=membersBasicStats title=Some("Members Stats") />
+        <a onClick={openLink("/members")} className={styles["pageLink"]}>
+          {React.string("See Members")}
+        </a>
       </div>
     </div>
   </Page>

@@ -77,14 +77,14 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
           /* session */
           /* requiredRole=Some(Session.ListApplications) */
           /* /> */
-          /* <NavSeprator key="9" /> */
-          /* <NavItem */
-          /* key="10" */
-          /* path="/settings" */
-          /* text="Settings" */
-          /* session */
-          /* requiredRole=Some(Session.ListApplications) */
-          /* /> */
+          <NavSeprator key="9" />
+          <NavItem
+            key="10"
+            path="/settings"
+            text="Settings"
+            session
+            requiredRole=Some(Session.ListApplications)
+          />
         </ul>
       | Loading =>
         <div className={styles["loading"]}>
