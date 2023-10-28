@@ -82,7 +82,8 @@ fn set_pairing_by_email(claims: &JwtClaims) -> QueryAs<'_, (Id<Member>,)> {
     sqlx::query_as(
         "
 UPDATE members
-SET sub = $1
+SET   sub = $1
+    , onboarding_finished_at = NOW()
 WHERE email = $2
     AND left_at IS NULL
 RETURNING id
