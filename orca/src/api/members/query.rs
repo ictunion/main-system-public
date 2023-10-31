@@ -1,5 +1,5 @@
-use super::{NewMember, Summary};
-use crate::data::MemberNumber;
+use super::{Detail, NewMember, Summary};
+use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
 
 pub fn list_summaries() -> QueryAs<'static, Summary> {
@@ -112,6 +112,31 @@ RETURNING id
     .bind(&new_member.city)
     .bind(&new_member.postal_code)
     .bind(&new_member.phone_number)
+}
+
+pub fn detail<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+SELECT id
+    , member_number
+    , first_name
+    , last_name
+    , date_of_birth
+    , email
+    , phone_number
+    , address
+    , city
+    , postal_code
+    , language
+    , registration_request_id as application_id
+    , left_at
+    , onboarding_finished_at
+    , created_at
+FROM members
+WHERE id = $1
+",
+    )
+    .bind(id)
 }
 
 // Returns highest existing member_number + 1 or 1

@@ -28,13 +28,43 @@ type newMember = {
   language: string,
 }
 
+type detail = {
+  id: Uuid.t,
+  memberNumber: int,
+  firstName: option<string>,
+  lastName: option<string>,
+  dateOfBirth: option<Js.Date.t>,
+  email: option<Email.t>,
+  phoneNumber: option<PhoneNumber.t>,
+  address: option<string>,
+  city: option<string>,
+  postalCode: option<string>,
+  language: option<string>,
+  applicationId: option<Uuid.t>,
+  leftAt: option<Js.Date.t>,
+  onboardingFinishAt: option<Js.Date.t>,
+  createdAt: Js.Date.t,
+}
+
 type status =
   | NewMember
   | CurrentMember
   | PastMember
 
+let getStatus = detail => {
+  switch detail.leftAt {
+  | Some(_) => PastMember
+  | None =>
+    switch detail.onboardingFinishAt {
+    | Some(_) => CurrentMember
+    | None => NewMember
+    }
+  }
+}
+
 module Decode = {
   open Json.Decode
+
   let summary = object(field => {
     id: field.required(. "id", Uuid.decode),
     memberNumber: field.required(. "member_number", int),
@@ -44,6 +74,24 @@ module Decode = {
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
     city: field.required(. "city", option(string)),
     leftAt: field.required(. "left_at", option(date)),
+    createdAt: field.required(. "created_at", date),
+  })
+
+  let detail = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    memberNumber: field.required(. "member_number", int),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
+    dateOfBirth: field.required(. "date_of_birth", option(date)),
+    email: field.required(. "email", option(Email.decode)),
+    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    address: field.required(. "address", option(string)),
+    city: field.required(. "city", option(string)),
+    postalCode: field.required(. "postal_code", option(string)),
+    language: field.required(. "language", option(string)),
+    applicationId: field.required(. "application_id", option(Uuid.decode)),
+    leftAt: field.required(. "left_at", option(date)),
+    onboardingFinishAt: field.required(. "onboarding_finished_at", option(date)),
     createdAt: field.required(. "created_at", date),
   })
 }
@@ -59,7 +107,7 @@ module Encode = {
     }
   }
 
-  let newMember = newMember =>
+  let newMember = (newMember: newMember) =>
     object([
       ("member_number", option(int, newMember.memberNumber->Option.flatMap(Int.fromString))),
       ("first_name", strOption(newMember.firstName)),

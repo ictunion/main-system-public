@@ -2,11 +2,6 @@
 
 open Belt
 
-module ViewBool = {
-  @react.component
-  let make = (~value: bool) => {value ? React.string("👍 yes") : React.string("👎 no")}
-}
-
 let applicationsRows: array<RowBasedTable.row<StatsData.Applications.basic>> = [
   ("Processing", s => React.string(s.processing->Int.toString)),
   ("Pending Verification", s => React.string(s.unverified->Int.toString)),

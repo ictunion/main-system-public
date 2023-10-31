@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use time::Date;
 
 use crate::api::Response;
-use crate::data::{Id, Member, MemberNumber};
+use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::DbPool;
 use crate::server::keycloak::{JwtToken, Keycloak, Role};
 
@@ -125,6 +125,46 @@ async fn create_member<'r>(
     Ok(Json(summary))
 }
 
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct Detail {
+    id: Id<Member>,
+    member_number: MemberNumber,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    date_of_birth: Option<Date>,
+    email: Option<String>,
+    phone_number: Option<String>,
+    address: Option<String>,
+    city: Option<String>,
+    postal_code: Option<String>,
+    language: Option<String>,
+    application_id: Option<Id<RegistrationRequest>>,
+    left_at: Option<DateTime<Utc>>,
+    onboarding_finished_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+}
+
+#[get("/<id>")]
+async fn detail<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+) -> Response<Json<Detail>> {
+    keycloak.require_role(token, Role::ListMembers)?;
+
+    let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+
+    Ok(Json(detail))
+}
+
 pub fn routes() -> Vec<Route> {
-    routes![list_all, list_past, list_new, list_current, create_member,]
+    routes![
+        list_all,
+        list_past,
+        list_new,
+        list_current,
+        create_member,
+        detail
+    ]
 }

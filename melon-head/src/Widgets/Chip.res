@@ -35,3 +35,23 @@ module ApplicationStatus = {
     </span>
   }
 }
+
+module MemberStatus = {
+  @react.component
+  let make = (~value: RemoteData.t<MemberData.status, 'e>) => {
+    <span className={styles["appStatus"]}>
+      {switch value {
+      | Success(status) =>
+        React.string(
+          switch status {
+          | NewMember => "New Member"
+          | CurrentMember => "Current Member"
+          | PastMember => "Past Member"
+          },
+        )
+      | Loading => React.string("..")
+      | _ => React.null
+      }}
+    </span>
+  }
+}
