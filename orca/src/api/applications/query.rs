@@ -4,8 +4,8 @@ use crate::{
 };
 
 use super::{
-    AcceptedSummary, ApplicationStatusData, Detail, File, ProcessingSummary, RejectedSummary,
-    Summary, UnverifiedSummary,
+    AcceptedSummary, ApplicationStatusData, Detail, File, InvalidSummary, ProcessingSummary,
+    RejectedSummary, Summary, UnverifiedSummary,
 };
 use crate::data::{Id, RegistrationRequest};
 
@@ -105,6 +105,25 @@ ORDER BY created_at DESC
     )
 }
 
+pub fn list_invalid_summaries<'a>() -> QueryAs<'a, InvalidSummary> {
+    sqlx::query_as(
+        "
+SELECT id
+, email
+, first_name
+, last_name
+, phone_number
+, city
+, company_name
+, registration_local
+, created_at
+, invalidated_at
+FROM registration_requests_invalid
+ORDER BY created_at DESC
+",
+    )
+}
+
 pub fn get_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
     sqlx::query_as(
         "
@@ -126,6 +145,7 @@ SELECT rr.id
 , rr.registration_user_agent
 , rr.registration_source
 , rr.rejected_at
+, rr.invalidated_at
 , rr.created_at
 , m.created_at AS accepted_at
 FROM registration_requests AS rr
@@ -177,6 +197,40 @@ RETURNING id
 , registration_user_agent
 , registration_source
 , rejected_at
+, invalidated_at
+, created_at
+, NULL AS accepted_at
+",
+    )
+    .bind(id)
+}
+
+pub fn invalidate_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+    // We can hardcode null because we know rejected application can't belong to user
+    sqlx::query_as(
+        "
+UPDATE registration_requests
+SET invalidated_at = NOW()
+WHERE id = $1
+RETURNING id
+, email
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, city
+, address
+, postal_code
+, occupation
+, company_name
+, verification_sent_at
+, confirmed_at
+, registration_ip
+, registration_local
+, registration_user_agent
+, registration_source
+, rejected_at
+, invalidated_at
 , created_at
 , NULL AS accepted_at
 ",
@@ -208,6 +262,39 @@ RETURNING id
 , registration_user_agent
 , registration_source
 , rejected_at
+, invalidated_at
+, created_at
+, NULL AS accepted_at
+",
+    )
+    .bind(id)
+}
+
+pub fn uninvalidate_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+UPDATE registration_requests
+SET invalidated_at = NULL
+WHERE id = $1
+RETURNING id
+, email
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, city
+, address
+, postal_code
+, occupation
+, company_name
+, verification_sent_at
+, confirmed_at
+, registration_ip
+, registration_local
+, registration_user_agent
+, registration_source
+, rejected_at
+, invalidated_at
 , created_at
 , NULL AS accepted_at
 ",
@@ -240,6 +327,7 @@ RETURNING id
 , registration_user_agent
 , registration_source
 , rejected_at
+, invalidated_at
 , created_at
 , NULL AS accepted_at
 ",
@@ -256,6 +344,7 @@ SELECT rr.id
 , rr.created_at
 , rr.confirmed_at
 , rr.rejected_at
+, rr.invalidated_at
 , m.created_at AS accepted_at
 , m.id AS member_id
 FROM registration_requests AS rr

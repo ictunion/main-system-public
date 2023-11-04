@@ -91,6 +91,7 @@ let timeRows: array<RowBasedTable.row<ApplicationData.detail>> = [
   ),
   ("Email Verified", d => View.option(d.verifiedAt, a => a->Js.Date.toLocaleString->React.string)),
   ("Rejected", d => View.option(d.rejectedAt, a => a->Js.Date.toLocaleString->React.string)),
+  ("Invalidated", d => View.option(d.invalidatedAt, a => a->Js.Date.toLocaleString->React.string)),
   ("Accepted", d => View.option(d.acceptedAt, a => a->Js.Date.toLocaleString->React.string)),
 ]
 
@@ -181,6 +182,59 @@ module Actions = {
             {React.string("Cancel")}
           </Button>
           <Button variant=Button.Danger onClick=doReject> {React.string("Reject")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  module Invalidate = {
+    @react.component
+    let make = (
+      ~api: Api.t,
+      ~id: Uuid.t,
+      ~setDetail,
+      ~modal: Modal.Interface.t,
+      ~openApplications,
+    ) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doReject = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.patchJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/invalidate",
+            ~decoder=ApplicationData.Decode.detail,
+            ~body=Js.Json.null,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              // Technically, we probably don't need to be setting this date if we're going to route away anyway
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+
+              openApplications()
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you shure you want to ")}
+          <strong> {React.string("invalidate the application")} </strong>
+          {React.string("?")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button variant=Button.Careful onClick=doReject> {React.string("Invalidate")} </Button>
         </Button.Panel>
       </Modal.Content>
     }
@@ -388,6 +442,54 @@ module Actions = {
     }
   }
 
+  module UnInvalidate = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~setDetail, ~modal: Modal.Interface.t) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doUnReject = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.patchJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/uninvalidate",
+            ~decoder=ApplicationData.Decode.detail,
+            ~body=Js.Json.null,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Are you shure you want to ")}
+          <strong>
+            {React.string("move this application back to processing to be re-evaluated")}
+          </strong>
+          {React.string(" again?")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button variant=Button.Danger onClick=doUnReject>
+            {React.string("Move Back to Processing")}
+          </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
   module HardDelete = {
     @react.component
     let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t, ~openApplications) => {
@@ -439,6 +541,11 @@ module Actions = {
     content: <Reject api id setDetail modal openApplications />,
   }
 
+  let invalidateModal = (~id, ~api, ~setDetail, ~modal, ~openApplications): Modal.modalContent => {
+    title: "Invalidate Application",
+    content: <Invalidate api id setDetail modal openApplications />,
+  }
+
   let acceptModal = (~id, ~api, ~setDetail, ~modal, ~openApplications): Modal.modalContent => {
     title: "Accept Application",
     content: <Accept api id setDetail modal openApplications />,
@@ -457,6 +564,11 @@ module Actions = {
   let unRejectModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
     title: "Move Application Back to Processing",
     content: <UnReject api id setDetail modal />,
+  }
+
+  let unInvalidateModal = (~id, ~api, ~setDetail, ~modal): Modal.modalContent => {
+    title: "Move Application Back to Processing",
+    content: <UnInvalidate api id setDetail modal />,
   }
 
   let hardDeleteModal = (~id, ~api, ~modal, ~openApplications): Modal.modalContent => {
@@ -479,16 +591,24 @@ module Actions = {
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(
-              rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+              invalidateModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
             )}
-          variant=Button.Danger>
-          {React.string("Reject")}
+          variant=Button.Careful>
+          {React.string("Invalidate")}
         </Button>
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(verifyModal(~id, ~api, ~setDetail, ~modal))}
           variant=Button.Careful>
           {React.string("Mark as Verified")}
+        </Button>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(
+              rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+            )}
+          variant=Button.Danger>
+          {React.string("Reject")}
         </Button>
         <Button
           onClick={_ =>
@@ -499,6 +619,14 @@ module Actions = {
       </Button.Panel>
     | ApplicationData.Processing =>
       <Button.Panel>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(
+              invalidateModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+            )}
+          variant=Button.Careful>
+          {React.string("Invalidate")}
+        </Button>
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(
@@ -524,6 +652,16 @@ module Actions = {
           variant=Button.Danger>
           {React.string("Re-Evaluate")}
         </Button>
+      </Button.Panel>
+    | ApplicationData.Accepted => React.null
+    | ApplicationData.Invalid =>
+      <Button.Panel>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(unInvalidateModal(~id, ~api, ~setDetail, ~modal))}
+          variant=Button.Danger>
+          {React.string("Re-Evaluate")}
+        </Button>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
           <Button
             onClick={_ =>
@@ -535,7 +673,6 @@ module Actions = {
           </Button>
         </SessionContext.RequireRole>
       </Button.Panel>
-    | ApplicationData.Accepted => React.null
     }
   }
 }
@@ -588,7 +725,7 @@ let viewMessage = (status, ~reject, ~resend) => {
                 ")}
               <strong> {React.string("looks like a spam then you should report it")} </strong>
               {React.string(" and ")}
-              <a onClick=reject> {React.string("reject")} </a>
+              <a onClick=reject> {React.string("invalidate")} </a>
               {React.string(" since it's ilegitimate.")}
             </li>
             <li>
@@ -597,7 +734,7 @@ let viewMessage = (status, ~reject, ~resend) => {
                     Applicant might had just found a mistake in this application and decided to create a new one.
                     If that's the case you should just
                 ")}
-              <a onClick=reject> {React.string("reject this version of application")} </a>
+              <a onClick=reject> {React.string("invalidate this version of application")} </a>
               {React.string(".")}
             </li>
             <li>
@@ -617,7 +754,7 @@ let viewMessage = (status, ~reject, ~resend) => {
               {React.string("
                     If nothing worked then there is nothing we can do but to
                 ")}
-              <a onClick=reject> {React.string("reject the application")} </a>
+              <a onClick=reject> {React.string("invalidate the application")} </a>
               {React.string(".")}
             </li>
           </ol>

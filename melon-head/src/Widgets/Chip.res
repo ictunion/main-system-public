@@ -27,6 +27,7 @@ module ApplicationStatus = {
           | Processing => "Processing"
           | Accepted => "Accepted"
           | Rejected => "Rejected"
+          | Invalid => "Invalid"
           },
         )
       | Loading => React.string("..")

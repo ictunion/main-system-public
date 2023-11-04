@@ -5,6 +5,7 @@ type status =
   | Unverified
   | Accepted
   | Rejected
+  | Invalid
 
 type detail = {
   id: Uuid.t,
@@ -26,6 +27,7 @@ type detail = {
   registrationSource: option<string>,
   rejectedAt: option<Js.Date.t>,
   acceptedAt: option<Js.Date.t>,
+  invalidatedAt: option<Js.Date.t>,
   createdAt: Js.Date.t,
 }
 
@@ -36,9 +38,13 @@ let getStatus = (detail: detail): status => {
     switch detail.rejectedAt {
     | Some(_) => Rejected
     | None =>
-      switch detail.verifiedAt {
-      | Some(_) => Processing
-      | None => Unverified
+      switch detail.invalidatedAt {
+      | Some(_) => Invalid
+      | None =>
+        switch detail.verifiedAt {
+        | Some(_) => Processing
+        | None => Unverified
+        }
       }
     }
   }
@@ -81,6 +87,19 @@ type rejectedSummary = {
   registrationLocal: Local.t,
   createdAt: Js.Date.t,
   rejectedAt: Js.Date.t,
+}
+
+type invalidSummary = {
+  id: Uuid.t,
+  email: option<Email.t>,
+  firstName: option<string>,
+  lastName: option<string>,
+  phoneNumber: option<PhoneNumber.t>,
+  city: option<string>,
+  companyName: option<string>,
+  registrationLocal: Local.t,
+  createdAt: Js.Date.t,
+  invalidatedAt: Js.Date.t,
 }
 
 type processingSummary = {
@@ -131,6 +150,7 @@ module Decode = {
     registrationUserAgent: field.required(. "registration_user_agent", option(string)),
     registrationSource: field.required(. "registration_source", option(string)),
     rejectedAt: field.required(. "rejected_at", option(date)),
+    invalidatedAt: field.required(. "invalidated_at", option(date)),
     acceptedAt: field.required(. "accepted_at", option(date)),
     createdAt: field.required(. "created_at", date),
   })
@@ -172,6 +192,19 @@ module Decode = {
     registrationLocal: field.required(. "registration_local", Local.decode),
     createdAt: field.required(. "created_at", date),
     rejectedAt: field.required(. "rejected_at", date),
+  })
+
+  let invalidSummary = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    email: field.required(. "email", option(Email.decode)),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
+    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    city: field.required(. "city", option(string)),
+    companyName: field.required(. "company_name", option(string)),
+    registrationLocal: field.required(. "registration_local", Local.decode),
+    createdAt: field.required(. "created_at", date),
+    invalidatedAt: field.required(. "invalidated_at", date),
   })
 
   let processingSummary = object(field => {

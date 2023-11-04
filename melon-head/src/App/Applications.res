@@ -278,6 +278,73 @@ module Rejected = {
   }
 }
 
+module Invalid = {
+  @react.component
+  let make = (~api: Api.t) => {
+    let (all, _, _) =
+      api->Hook.getData(
+        ~path="/applications/invalid",
+        ~decoder=Json.Decode.array(ApplicationData.Decode.invalidSummary),
+      )
+
+    <DataTable
+      data=all
+      columns=[
+        {
+          name: "ID",
+          minMax: ("100px", "1fr"),
+          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+        },
+        {
+          name: "First Name",
+          minMax: ("150px", "1fr"),
+          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+        },
+        {
+          name: "Last Name",
+          minMax: ("150px", "2fr"),
+          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+        },
+        {
+          name: "Email",
+          minMax: ("250px", "2fr"),
+          view: r =>
+            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+        },
+        {
+          name: "Phone",
+          minMax: ("220px", "2fr"),
+          view: r =>
+            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
+              <Link.Tel phoneNumber />
+            ),
+        },
+        {
+          name: "City",
+          minMax: ("250px", "2fr"),
+          view: r => React.string(r.city->Option.getWithDefault("--")),
+        },
+        {
+          name: "Company Name",
+          minMax: ("250px", "1fr"),
+          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+        },
+        {
+          name: "Language",
+          minMax: ("125px", "1fr"),
+          view: r => React.string(r.registrationLocal->Local.toString),
+        },
+        {
+          name: "Invalidated On",
+          minMax: ("170px", "1fr"),
+          view: r => React.string(r.invalidatedAt->Js.Date.toLocaleDateString),
+        },
+      ]>
+      {React.string("There are no invalidated applications so far.")}
+    </DataTable>
+  }
+}
+
 module All = {
   @react.component
   let make = (~api: Api.t) => {
@@ -348,6 +415,7 @@ let urlToTab = (url: RescriptReactRouter.url): option<ApplicationData.status> =>
   | "unverified" => Some(Unverified)
   | "accepted" => Some(Accepted)
   | "rejected" => Some(Rejected)
+  | "invalid" => Some(Invalid)
   | _ => Some(Processing)
   }
 }
@@ -361,6 +429,7 @@ let tabToUrl = (tab: option<ApplicationData.status>): string => {
   | Some(Accepted) => "accepted"
   | Some(Rejected) => "rejected"
   | Some(Processing) => "processing"
+  | Some(Invalid) => "invalid"
   }
 
   "/applications#" ++ hash
@@ -439,6 +508,11 @@ let make = (~api: Api.t) => {
           {React.string("Rejected")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.rejected)} />
         </Tabbed.Tab>
+        <Tabbed.Tab
+          value={Some(ApplicationData.Invalid)} handlers={tabHandlers} color=Some("var(--color8)")>
+          {React.string("Invalid")}
+          <Chip.Count value={basicStats->RemoteData.map(r => r.invalid)} />
+        </Tabbed.Tab>
         <Tabbed.TabSpacer />
         <Tabbed.Tab value={None} handlers={tabHandlers} color=Some("var(--color1)")>
           {React.string("All")}
@@ -456,6 +530,9 @@ let make = (~api: Api.t) => {
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Rejected)} handlers={tabHandlers}>
         <Rejected api />
+      </Tabbed.Content>
+      <Tabbed.Content tab={Some(ApplicationData.Invalid)} handlers={tabHandlers}>
+        <Invalid api />
       </Tabbed.Content>
       <Tabbed.Content tab={None} handlers={tabHandlers}>
         <All api />

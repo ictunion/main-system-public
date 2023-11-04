@@ -160,6 +160,35 @@ async fn list_processing<'r>(
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct InvalidSummary {
+    id: Id<RegistrationRequest>,
+    email: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    phone_number: Option<String>,
+    city: Option<String>,
+    company_name: Option<String>,
+    registration_local: String,
+    created_at: DateTime<Utc>,
+    invalidated_at: DateTime<Utc>,
+}
+
+#[get("/invalid")]
+async fn list_invalid<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+) -> Response<Json<Vec<InvalidSummary>>> {
+    keycloak.require_role(token, Role::ListApplications)?;
+
+    let summaries = query::list_invalid_summaries()
+        .fetch_all(db_pool.inner())
+        .await?;
+
+    Ok(Json(summaries))
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Detail {
     id: Id<RegistrationRequest>,
     email: Option<String>,
@@ -179,6 +208,7 @@ pub struct Detail {
     registration_user_agent: Option<String>,
     registration_source: Option<String>,
     rejected_at: Option<DateTime<Utc>>,
+    invalidated_at: Option<DateTime<Utc>>,
     accepted_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
 }
@@ -215,6 +245,7 @@ pub struct ApplicationStatusData {
     created_at: DateTime<Utc>,
     confirmed_at: Option<DateTime<Utc>>,
     rejected_at: Option<DateTime<Utc>>,
+    invalidated_at: Option<DateTime<Utc>>,
     accepted_at: Option<DateTime<Utc>>,
     member_id: Option<Id<Member>>,
 }
@@ -236,6 +267,10 @@ impl ApplicationStatusData {
             return ApplicationStatus::Rejected(rejected_at);
         }
 
+        if let Some(invalidated_at) = self.invalidated_at {
+            return ApplicationStatus::Invalid(invalidated_at);
+        }
+
         if self.confirmed_at.is_some() {
             return ApplicationStatus::InProcessing;
         }
@@ -250,6 +285,7 @@ pub enum ApplicationStatus {
     InProcessing,
     Rejected(DateTime<Utc>),
     Accepted(Id<Member>, DateTime<Utc>),
+    Invalid(DateTime<Utc>),
 }
 
 impl ApplicationStatus {
@@ -311,6 +347,17 @@ impl ApplicationStatus {
             }
         }
     }
+
+    pub fn assert_invalidated(&self) -> Result<(), ApiError> {
+        match self {
+            Self::Invalid(_) => Ok(()),
+            _ => {
+                let message = format!("Application status must be `Invalid` but is `{:?}`.", self);
+
+                Err(ApiError::data_conflict(message))
+            }
+        }
+    }
 }
 
 #[delete("/<id>")]
@@ -340,6 +387,30 @@ async fn reject<'r>(
     Ok(Json(detail))
 }
 
+#[patch("/<id>/invalidate")]
+async fn invalidate<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<RegistrationRequest>,
+) -> Response<Json<Detail>> {
+    keycloak.require_role(token, Role::ResolveApplications)?;
+
+    let mut tx = db_pool.inner().begin().await?;
+
+    query::get_application_status_data(id)
+        .fetch_one(&mut tx)
+        .await?
+        .to_status()
+        .assert_waiting_or_in_processing_or()?;
+
+    let detail = query::invalidate_application(id).fetch_one(&mut tx).await?;
+
+    tx.commit().await?;
+
+    Ok(Json(detail))
+}
+
 #[patch("/<id>/unreject")]
 async fn unreject<'r>(
     db_pool: &State<DbPool>,
@@ -361,6 +432,33 @@ async fn unreject<'r>(
         .assert_rejected()?;
 
     let detail = query::unreject_application(id).fetch_one(&mut tx).await?;
+
+    tx.commit().await?;
+
+    Ok(Json(detail))
+}
+
+#[patch("/<id>/uninvalidate")]
+async fn uninvalidate<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<RegistrationRequest>,
+) -> Response<Json<Detail>> {
+    keycloak.require_role(token, Role::ResolveApplications)?;
+
+    let mut tx = db_pool.inner().begin().await?;
+
+    // check that the application status is rejected
+    query::get_application_status_data(id)
+        .fetch_one(&mut tx)
+        .await?
+        .to_status()
+        .assert_invalidated()?;
+
+    let detail = query::uninvalidate_application(id)
+        .fetch_one(&mut tx)
+        .await?;
 
     tx.commit().await?;
 
@@ -528,7 +626,7 @@ async fn hard_delete<'r>(
         .fetch_one(&mut tx)
         .await?
         .to_status()
-        .assert_rejected()?;
+        .assert_invalidated()?;
 
     query::dangerous_hard_delete_application_data(id)
         .execute(&mut tx)
@@ -548,12 +646,15 @@ pub fn routes() -> Vec<Route> {
         list_unverified,
         list_processing,
         list_accepted,
+        list_invalid,
         resend_email,
         list_rejected,
         detail,
         list_files,
         reject,
+        invalidate,
         unreject,
+        uninvalidate,
         verify,
         accept,
         hard_delete,

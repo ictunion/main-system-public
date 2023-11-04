@@ -4,10 +4,11 @@ module Applications = {
     accepted: int,
     rejected: int,
     processing: int,
+    invalid: int,
   }
 
   let all = (b: basic): int => {
-    b.unverified + b.accepted + b.rejected + b.processing
+    b.unverified + b.accepted + b.rejected + b.processing + b.invalid
   }
 
   module Decode = {
@@ -18,6 +19,7 @@ module Applications = {
       accepted: field.required(. "accepted", int),
       rejected: field.required(. "rejected", int),
       processing: field.required(. "processing", int),
+      invalid: field.required(. "invalid", int),
     })
   }
 }

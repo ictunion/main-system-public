@@ -13,6 +13,7 @@ struct ApplicationsBasicStats {
     accepted: i64,
     rejected: i64,
     processing: i64,
+    invalid: i64,
 }
 
 #[get("/applications/basic")]
@@ -40,11 +41,16 @@ async fn applications_basic_stats<'r>(
         .fetch_one(db_pool.inner())
         .await?;
 
+    let (invalid,) = query::count_invalid_applications()
+        .fetch_one(db_pool.inner())
+        .await?;
+
     Ok(Json(ApplicationsBasicStats {
         unverified,
         accepted,
         rejected,
         processing,
+        invalid,
     }))
 }
 

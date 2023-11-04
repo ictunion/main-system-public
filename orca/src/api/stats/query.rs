@@ -32,6 +32,14 @@ SELECT COUNT(*) FROM registration_requests_processing
     )
 }
 
+pub fn count_invalid_applications<'a>() -> QueryAs<'a, (i64,)> {
+    sqlx::query_as(
+        "
+SELECT COUNT(*) FROM registration_requests_invalid
+",
+    )
+}
+
 pub fn count_new_members<'a>() -> QueryAs<'a, (i64,)> {
     sqlx::query_as(
         "
