@@ -7,30 +7,23 @@ open Belt
 open RemoteData
 open Data
 
-let viewOption = (o: option<'a>, view: 'a => React.element) => {
-  switch o {
-  | Some(v) => view(v)
-  | None => React.null
-  }
-}
-
 let layout: DataGrid.t<ApplicationData.detail> = [
   {
     label: "Personal Information",
     cells: [
       {
         label: "First Name",
-        view: d => viewOption(d.firstName, React.string),
+        view: d => View.option(d.firstName, React.string),
         minmax: ("300px", "900px"),
       },
       {
         label: "Last Name",
-        view: d => viewOption(d.lastName, React.string),
+        view: d => View.option(d.lastName, React.string),
         minmax: ("225px", "665px"),
       },
       {
         label: "Date of Birth",
-        view: d => viewOption(d.dateOfBirth, a => a->Js.Date.toLocaleDateString->React.string),
+        view: d => View.option(d.dateOfBirth, a => a->Js.Date.toLocaleDateString->React.string),
         minmax: ("250px", "250px"),
       },
     ],
@@ -40,12 +33,12 @@ let layout: DataGrid.t<ApplicationData.detail> = [
     cells: [
       {
         label: "Email",
-        view: d => viewOption(d.email, email => <Link.Email email />),
+        view: d => View.option(d.email, email => <Link.Email email />),
         minmax: ("300px", "900px"),
       },
       {
         label: "Phone Number",
-        view: d => viewOption(d.phoneNumber, phoneNumber => <Link.Tel phoneNumber />),
+        view: d => View.option(d.phoneNumber, phoneNumber => <Link.Tel phoneNumber />),
         minmax: ("150px", "500px"),
       },
     ],
@@ -55,13 +48,13 @@ let layout: DataGrid.t<ApplicationData.detail> = [
     cells: [
       {
         label: "Address",
-        view: d => viewOption(d.address, React.string),
+        view: d => View.option(d.address, React.string),
         minmax: ("450px", "900px"),
       },
-      {label: "City", view: d => viewOption(d.city, React.string), minmax: ("150px", "500px")},
+      {label: "City", view: d => View.option(d.city, React.string), minmax: ("150px", "500px")},
       {
         label: "Postal Code",
-        view: d => viewOption(d.postalCode, React.string),
+        view: d => View.option(d.postalCode, React.string),
         minmax: ("150px", "150px"),
       },
     ],
@@ -71,12 +64,12 @@ let layout: DataGrid.t<ApplicationData.detail> = [
     cells: [
       {
         label: "Company",
-        view: d => viewOption(d.companyName, React.string),
+        view: d => View.option(d.companyName, React.string),
         minmax: ("150px", "900px"),
       },
       {
         label: "Occupation",
-        view: d => viewOption(d.occupation, React.string),
+        view: d => View.option(d.occupation, React.string),
         minmax: ("150px", "665px"),
       },
     ],
@@ -85,20 +78,20 @@ let layout: DataGrid.t<ApplicationData.detail> = [
 
 let metadataRows: array<RowBasedTable.row<ApplicationData.detail>> = [
   ("Localization", d => d.registrationLocal->Data.Local.toString->React.string),
-  ("Source", d => viewOption(d.registrationSource, str => <code> {React.string(str)} </code>)),
-  ("IP Address", d => viewOption(d.registrationIp, React.string)),
-  ("User Agent", d => viewOption(d.registrationUserAgent, React.string)),
+  ("Source", d => View.option(d.registrationSource, str => <code> {React.string(str)} </code>)),
+  ("IP Address", d => View.option(d.registrationIp, React.string)),
+  ("User Agent", d => View.option(d.registrationUserAgent, React.string)),
 ]
 
 let timeRows: array<RowBasedTable.row<ApplicationData.detail>> = [
   ("Created", d => d.createdAt->Js.Date.toLocaleString->React.string),
   (
     "Verification Sent",
-    d => viewOption(d.verificationSentAt, a => a->Js.Date.toLocaleString->React.string),
+    d => View.option(d.verificationSentAt, a => a->Js.Date.toLocaleString->React.string),
   ),
-  ("Email Verified", d => viewOption(d.verifiedAt, a => a->Js.Date.toLocaleString->React.string)),
-  ("Rejected", d => viewOption(d.rejectedAt, a => a->Js.Date.toLocaleString->React.string)),
-  ("Accepted", d => viewOption(d.acceptedAt, a => a->Js.Date.toLocaleString->React.string)),
+  ("Email Verified", d => View.option(d.verifiedAt, a => a->Js.Date.toLocaleString->React.string)),
+  ("Rejected", d => View.option(d.rejectedAt, a => a->Js.Date.toLocaleString->React.string)),
+  ("Accepted", d => View.option(d.acceptedAt, a => a->Js.Date.toLocaleString->React.string)),
 ]
 
 let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
