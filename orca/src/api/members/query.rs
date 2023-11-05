@@ -164,6 +164,7 @@ SELECT f.id
 , f.created_at
 FROM members_files AS mf
 INNER JOIN files AS f ON f.id = mf.file_id
+WHERE mf.member_id = $1
 ORDER BY f.created_at DESC
 ",
     )
