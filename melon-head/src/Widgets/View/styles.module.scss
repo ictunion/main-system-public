@@ -8,9 +8,16 @@
     thead {
         font-weight: 600;
 
-        td {
+        th {
             background: var(--color4);
             color: var(--color2);
+            text-align: left;
+            line-height: 2em;
+            padding: 2px 6px;
+
+            &:last-child {
+                text-align: right;
+            }
         }
     }
 
@@ -21,15 +28,15 @@
     td {
         line-height: 2em;
         padding: 2px 6px;
+
+        &:last-child {
+            text-align: right;
+        }
     }
 
     tbody {
         tr:nth-child(even) td {
             background: var(--color2);
         }
-    }
-
-    td:last-child {
-        text-align: right;
     }
 }

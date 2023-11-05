@@ -38,8 +38,8 @@ let filesTable = (~api: Api.t, ~files: array<Data.file>): React.element => {
   <table className={styles["filesTable"]}>
     <thead>
       <tr>
-        <td> {React.string("File Name")} </td>
-        <td> {React.string("Created at")} </td>
+        <th> {React.string("File Name")} </th>
+        <th> {React.string("Created at")} </th>
       </tr>
     </thead>
     <tbody> {files->Array.map(fileRow(~api))->React.array} </tbody>

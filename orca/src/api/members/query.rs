@@ -1,4 +1,4 @@
-use super::{Detail, NewMember, Summary};
+use super::{Detail, NewMember, Occupation, Summary};
 use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
@@ -165,6 +165,21 @@ SELECT f.id
 FROM members_files AS mf
 INNER JOIN files AS f ON f.id = mf.file_id
 ORDER BY f.created_at DESC
+",
+    )
+    .bind(id)
+}
+
+pub fn list_occupations<'a>(id: Id<Member>) -> QueryAs<'a, Occupation> {
+    sqlx::query_as(
+        "
+SELECT id
+, company_name
+, position
+, created_at
+FROM occupations
+WHERE member_id = $1
+ORDER BY created_at DESC
 ",
     )
     .bind(id)

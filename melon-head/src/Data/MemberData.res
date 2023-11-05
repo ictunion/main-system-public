@@ -46,6 +46,13 @@ type detail = {
   createdAt: Js.Date.t,
 }
 
+type occupation = {
+  id: Uuid.t,
+  companyName: option<string>,
+  position: option<string>,
+  createdAt: Js.Date.t,
+}
+
 type status =
   | NewMember
   | CurrentMember
@@ -92,6 +99,13 @@ module Decode = {
     applicationId: field.required(. "application_id", option(Uuid.decode)),
     leftAt: field.required(. "left_at", option(date)),
     onboardingFinishAt: field.required(. "onboarding_finished_at", option(date)),
+    createdAt: field.required(. "created_at", date),
+  })
+
+  let occupation = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    companyName: field.required(. "company_name", option(string)),
+    position: field.required(. "position", option(string)),
     createdAt: field.required(. "created_at", date),
   })
 }

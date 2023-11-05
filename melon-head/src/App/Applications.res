@@ -437,20 +437,22 @@ let tabToUrl = (tab: option<ApplicationData.status>): string => {
 
 @react.component
 let make = (~api: Api.t) => {
-  let (activeTab, setActiveTab) = React.useState(_ =>
+  let (activeTab, setActiveTab_) = React.useState(_ =>
     RescriptReactRouter.dangerouslyGetInitialUrl()->urlToTab
   )
 
   let _ = RescriptReactRouter.watchUrl(url => {
-    setActiveTab(_ => urlToTab(url))
+    setActiveTab_(_ => urlToTab(url))
   })
+
+  let setActiveTab = f => {
+    let newTab = f(activeTab)
+    RescriptReactRouter.push(tabToUrl(newTab))
+  }
 
   let tabHandlers = (
     activeTab,
-    f => {
-      let newTab = f(activeTab)
-      RescriptReactRouter.push(tabToUrl(newTab))
-    },
+    setActiveTab
   )
 
   let (basicStats, _, _) =

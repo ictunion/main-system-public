@@ -30,3 +30,51 @@
     font-weight: 600;
     font-size: 16px;
 }
+
+.occupations {
+    background: var(--background-color);
+    max-width: 1580px;
+
+    table {
+        width: 100%;
+        font-size: 14px;
+        font-weight: 400;
+        border-collapse: collapse;
+        margin: 12px 0;
+    }
+
+    thead {
+        font-weight: 600;
+
+        th {
+            background: var(--color4);
+            color: var(--color2);
+            text-align: left;
+            line-height: 2em;
+            padding: 2px 6px;
+
+            &:last-child {
+                text-align: right;
+            }
+        }
+    }
+
+    a {
+        font-weight: 600;
+    }
+
+    td {
+        line-height: 2em;
+        padding: 2px 6px;
+
+        &:last-child {
+            text-align: right;
+        }
+    }
+
+    tbody {
+        tr:nth-child(even) td {
+            background: var(--color2);
+        }
+    }
+}

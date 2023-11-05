@@ -1,6 +1,7 @@
 @module external styles: {..} = "./MemberDetail/styles.module.scss"
 
 open Data
+open Belt
 
 let layout: DataGrid.t<MemberData.detail> = [
   {
@@ -93,6 +94,15 @@ let timeRows: array<RowBasedTable.row<MemberData.detail>> = [
 type tabs =
   | Metadata
   | Files
+  | Occupations
+
+let viewOccupation = (occupation: MemberData.occupation) => {
+  <tr key={occupation.id->Uuid.toString}>
+    <td> {occupation.companyName->View.option(React.string)} </td>
+    <td> {occupation.position->View.option(React.string)} </td>
+    <td> {occupation.createdAt->Js.Date.toLocaleDateString->React.string} </td>
+  </tr>
+}
 
 @react.component
 let make = (~api, ~id) => {
@@ -101,13 +111,21 @@ let make = (~api, ~id) => {
 
   let status = RemoteData.map(detail, MemberData.getStatus)
 
-  let tabHandlers = Tabbed.make(Metadata)
+  let tabHandlers = Tabbed.make(Occupations)
 
   let (filesData, _, _) =
     api->Hook.getData(
       ~path="/members/" ++ Uuid.toString(id) ++ "/files",
       ~decoder=Json.Decode.array(Data.Decode.file),
     )
+
+  let (occupationsData, _, _) =
+    api->Hook.getData(
+      ~path="/members/" ++ Uuid.toString(id) ++ "/occupations",
+      ~decoder=Json.Decode.array(MemberData.Decode.occupation),
+    )
+
+  let mainOccupation = occupationsData->RemoteData.map(xs => xs->Array.get(0))
 
   <Page requireAnyRole=[ListMembers] mainResource=detail>
     <header className={styles["header"]}>
@@ -127,10 +145,55 @@ let make = (~api, ~id) => {
       </h2>
     </header>
     <DataGrid layout data=detail />
+    <DataGrid
+      data=mainOccupation
+      layout={[
+        {
+          label: "Last Occupation",
+          cells: [
+            {
+              label: "Company",
+              view: d =>
+                d
+                ->Option.flatMap((a: MemberData.occupation) => a.companyName)
+                ->View.option(React.string),
+              minmax: ("150px", "900px"),
+            },
+            {
+              label: "Position",
+              view: d => d->Option.flatMap(a => a.position)->View.option(React.string),
+              minmax: ("150px", "665px"),
+            },
+          ],
+        },
+      ]}
+    />
     <Tabbed.Tabs>
+      <Tabbed.Tab value=Occupations handlers=tabHandlers>
+        {React.string("Occupations")}
+      </Tabbed.Tab>
       <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
       <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
     </Tabbed.Tabs>
+    <Tabbed.Content tab=Occupations handlers=tabHandlers>
+      <div className={styles["occupations"]}>
+        <table>
+          <thead>
+            <tr>
+              <th> {React.string("Company")} </th>
+              <th> {React.string("Position")} </th>
+              <th> {React.string("Created at")} </th>
+            </tr>
+          </thead>
+          <tbody>
+            {switch occupationsData {
+            | Success(occupations) => occupations->Array.map(viewOccupation)->React.array
+            | _ => React.null
+            }}
+          </tbody>
+        </table>
+      </div>
+    </Tabbed.Content>
     <Tabbed.Content tab=Metadata handlers=tabHandlers>
       <div className={styles["metadata"]}>
         <RowBasedTable rows=timeRows data=detail title=Some("Updates") />

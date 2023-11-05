@@ -175,6 +175,30 @@ async fn list_files<'r>(
     Ok(Json(files))
 }
 
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct Occupation {
+    id: Id<Occupation>,
+    company_name: Option<String>,
+    position: Option<String>,
+    created_at: DateTime<Utc>,
+}
+
+#[get("/<id>/occupations")]
+async fn list_occupations<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+) -> Response<Json<Vec<Occupation>>> {
+    keycloak.require_role(token, Role::ListMembers)?;
+
+    let occupations = query::list_occupations(id)
+        .fetch_all(db_pool.inner())
+        .await?;
+
+    Ok(Json(occupations))
+}
+
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
@@ -183,6 +207,7 @@ pub fn routes() -> Vec<Route> {
         list_current,
         create_member,
         list_files,
+        list_occupations,
         detail
     ]
 }
