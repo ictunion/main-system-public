@@ -1,7 +1,10 @@
+use chrono::{DateTime, Utc};
 use rocket::response::Responder;
+use rocket::serde::Serialize;
 use rocket::{Route, State};
 
 use crate::api::Response;
+
 use crate::data::Id;
 use crate::db::DbPool;
 use crate::server::keycloak::{JwtToken, Keycloak, Role};
@@ -12,6 +15,14 @@ pub struct File {
     // This is read only and using Rc<[u8]> rather than Vec<u8> removes some overhead
     data: Vec<u8>,
     file_type: String,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct FileInfo {
+    id: Id<File>,
+    name: String,
+    file_type: String,
+    created_at: DateTime<Utc>,
 }
 
 impl<'r> Responder<'r, 'static> for File {

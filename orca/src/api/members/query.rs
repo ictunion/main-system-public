@@ -1,4 +1,5 @@
 use super::{Detail, NewMember, Summary};
+use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
 
@@ -152,4 +153,19 @@ SELECT COALESCE
     , 1);
 ",
     )
+}
+
+pub fn list_member_files<'a>(id: Id<Member>) -> QueryAs<'a, FileInfo> {
+    sqlx::query_as(
+        "
+SELECT f.id
+, f.name
+, f.file_type
+, f.created_at
+FROM members_files AS mf
+INNER JOIN files AS f ON f.id = mf.file_id
+ORDER BY f.created_at DESC
+",
+    )
+    .bind(id)
 }

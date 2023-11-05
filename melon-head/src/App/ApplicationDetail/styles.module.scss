@@ -59,39 +59,3 @@
     border-radius: 6px;
     border: 2px solid var(--color4);
 }
-
-.files-table {
-    width: 100%;
-    font-size: 14px;
-    font-weight: 400;
-    border-collapse: collapse;
-    margin: 12px 0;
-
-    thead {
-        font-weight: 600;
-
-        td {
-            background: var(--color4);
-            color: var(--color2);
-        }
-    }
-
-    a {
-        font-weight: 600;
-    }
-
-    td {
-        line-height: 2em;
-        padding: 2px 6px;
-    }
-
-    tbody {
-        tr:nth-child(even) td {
-            background: var(--color2);
-        }
-    }
-
-    td:last-child {
-        text-align: right;
-    }
-}

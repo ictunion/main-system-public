@@ -4,7 +4,7 @@ use crate::{
 };
 
 use super::{
-    AcceptedSummary, ApplicationStatusData, Detail, File, InvalidSummary, ProcessingSummary,
+    AcceptedSummary, ApplicationStatusData, Detail, FileInfo, InvalidSummary, ProcessingSummary,
     RejectedSummary, Summary, UnverifiedSummary,
 };
 use crate::data::{Id, RegistrationRequest};
@@ -156,7 +156,7 @@ WHERE rr.id = $1
     .bind(id)
 }
 
-pub fn list_application_files<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, File> {
+pub fn list_application_files<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, FileInfo> {
     sqlx::query_as(
         "
 SELECT f.id

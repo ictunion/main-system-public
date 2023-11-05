@@ -5,6 +5,7 @@ use rocket_validation::{Validate, Validated};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
+use crate::api::files::FileInfo;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::DbPool;
@@ -158,6 +159,22 @@ async fn detail<'r>(
     Ok(Json(detail))
 }
 
+#[get("/<id>/files")]
+async fn list_files<'r>(
+    db_pool: &State<DbPool>,
+    keycloak: &State<Keycloak>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+) -> Response<Json<Vec<FileInfo>>> {
+    keycloak.require_role(token, Role::ListMembers)?;
+
+    let files = query::list_member_files(id)
+        .fetch_all(db_pool.inner())
+        .await?;
+
+    Ok(Json(files))
+}
+
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
@@ -165,6 +182,7 @@ pub fn routes() -> Vec<Route> {
         list_new,
         list_current,
         create_member,
+        list_files,
         detail
     ]
 }

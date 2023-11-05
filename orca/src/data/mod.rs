@@ -1,12 +1,11 @@
 use rocket::serde::Deserializer;
 use rocket::{request::FromParam, serde::Serialize};
 use serde::Deserialize;
+use sqlx::{database::HasValueRef, Decode, Encode, Postgres, Type};
 use std::error::Error;
 use std::fmt::Display;
 use std::marker::PhantomData;
 use uuid::Uuid;
-
-use sqlx::{database::HasValueRef, Decode, Encode, Postgres, Type};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Id<T>(Uuid, PhantomData<T>);

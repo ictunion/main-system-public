@@ -4,6 +4,7 @@ use rocket::{Route, State};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
+use crate::api::files::FileInfo;
 use crate::api::members;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
@@ -210,14 +211,6 @@ pub struct Detail {
     rejected_at: Option<DateTime<Utc>>,
     invalidated_at: Option<DateTime<Utc>>,
     accepted_at: Option<DateTime<Utc>>,
-    created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct File {
-    id: Id<crate::api::files::File>,
-    name: String,
-    file_type: String,
     created_at: DateTime<Utc>,
 }
 
@@ -543,7 +536,7 @@ async fn list_files<'r>(
     keycloak: &State<Keycloak>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Vec<File>>> {
+) -> Response<Json<Vec<FileInfo>>> {
     keycloak.require_role(token, Role::ViewApplication)?;
 
     let files = query::list_application_files(id)

@@ -103,6 +103,12 @@ let make = (~api, ~id) => {
 
   let tabHandlers = Tabbed.make(Metadata)
 
+  let (filesData, _, _) =
+    api->Hook.getData(
+      ~path="/members/" ++ Uuid.toString(id) ++ "/files",
+      ~decoder=Json.Decode.array(Data.Decode.file),
+    )
+
   <Page requireAnyRole=[ListMembers] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
@@ -123,11 +129,29 @@ let make = (~api, ~id) => {
     <DataGrid layout data=detail />
     <Tabbed.Tabs>
       <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
+      <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
     </Tabbed.Tabs>
     <Tabbed.Content tab=Metadata handlers=tabHandlers>
       <div className={styles["metadata"]}>
         <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
       </div>
+    </Tabbed.Content>
+    <Tabbed.Content tab=Files handlers=tabHandlers>
+      <DataGrid
+        data=filesData
+        layout={[
+          {
+            label: "",
+            cells: [
+              {
+                label: "Files",
+                minmax: ("150px,", "600px"),
+                view: files => View.filesTable(~api, ~files),
+              },
+            ],
+          },
+        ]}
+      />
     </Tabbed.Content>
   </Page>
 }

@@ -1,7 +1,6 @@
 @module external styles: {..} = "./ApplicationDetail/styles.module.scss"
 
 @send external focus: Dom.element => unit = "focus"
-@scope("window") @val external window_open: (string, string) => unit = "open"
 
 open Belt
 open RemoteData
@@ -110,28 +109,6 @@ let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
     | None => React.string("Not Found")
     }}
   </div>
-}
-
-let viewFile = (~api: Api.t, file) => {
-  let fileName = file.name ++ "." ++ file.fileType
-
-  let openFile = _ => {
-    let fileUrl =
-      api.host ++
-      "/files/" ++
-      file.id->Uuid.toString ++
-      "?token=" ++
-      api.keycloak->Keycloak.getToken
-
-    window_open(fileUrl, "_blank")
-  }
-
-  <tr key={Uuid.toString(file.id)}>
-    <td>
-      <a onClick=openFile> {React.string(fileName)} </a>
-    </td>
-    <td> {file.createdAt->Js.Date.toLocaleString->React.string} </td>
-  </tr>
 }
 
 module Actions = {
@@ -846,16 +823,7 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
               {
                 label: "All Files",
                 minmax: ("150px", "965px"),
-                view: files =>
-                  <table className={styles["filesTable"]}>
-                    <thead>
-                      <tr>
-                        <td> {React.string("File Name")} </td>
-                        <td> {React.string("Created at")} </td>
-                      </tr>
-                    </thead>
-                    <tbody> {files->Array.map(viewFile(~api))->React.array} </tbody>
-                  </table>,
+                view: files => View.filesTable(~api, ~files),
               },
             ],
           },
