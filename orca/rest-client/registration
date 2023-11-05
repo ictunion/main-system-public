@@ -37,6 +37,29 @@ X-Real-IP: 0.0.0.0
     "local": "cs"
 }
 
+# Register new user
+# This request should succeeed with minimal data
+POST :host/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+X-Real-IP: 0.0.0.0
+
+{
+    "email": :email,
+    "first_name": "Tester",
+    "last_name": "Testovic",
+    "date_of_birth": "1979-01-31",
+    "address": null,
+    "city": "Of Lost Heaven",
+    "postal_code": null,
+    "phone_number": "+420777888999",
+    "company_name": "The Corporate Overlords",
+    "occupation": "bussy man",
+    "signature": ":signature",
+    "local": "cs"
+}
+
 # Confirm registration from link
 :token=J0piF4t3J6lEHt56NgQWYzPwlgVk31zxAweY06WKYIArYP41uuTsTEVtlfR4Q88d
 User-Agent: Emacs

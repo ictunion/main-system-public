@@ -34,14 +34,10 @@ pub struct RegistrationRequest<'r> {
     /// through the parser into validator
     #[validate(required)]
     date_of_birth: Option<Date>,
-    #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
     address: Option<&'r str>,
     #[validate(required)]
     #[validate(custom = "validate_non_empty")]
     city: Option<&'r str>,
-    #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
     postal_code: Option<&'r str>,
     #[validate(required)]
     #[validate(custom = "validate_non_empty")]

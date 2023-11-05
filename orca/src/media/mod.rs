@@ -202,7 +202,7 @@ where
     fn escape_tex(&self) -> String {
         match self {
             Some(a) => a.escape_tex(),
-            None => String::new(),
+            None => "---".to_string(),
         }
     }
 }
