@@ -182,29 +182,29 @@ let columns: array<DataTable.column<MemberData.summary>> = [
   {
     name: "Left On",
     minMax: ("150px", "1fr"),
-    view: r => React.string(r.leftAt->Option.mapWithDefault("--", Js.Date.toLocaleDateString)),
+    view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
   },
   {
     name: "First Name",
     minMax: ("150px", "2fr"),
-    view: r => React.string(r.firstName->Option.getWithDefault("--")),
+    view: r => r.firstName->View.option(React.string),
   },
   {
     name: "Last Name",
     minMax: ("150px", "2fr"),
-    view: r => React.string(r.lastName->Option.getWithDefault("--")),
+    view: r => r.lastName->View.option(React.string),
   },
   {
     name: "Email",
     minMax: ("250px", "2fr"),
-    view: r => r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+    view: r => r.email->View.option(email => <Link.Email email />),
   },
   {
     name: "Phone",
     minMax: ("220px", "2fr"),
     view: r =>
-      r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-        <Link.Tel phoneNumber />
+      r.phoneNumber->View.option(phoneNumber =>
+          <Link.Tel phoneNumber />
       ),
   },
   {
@@ -215,7 +215,7 @@ let columns: array<DataTable.column<MemberData.summary>> = [
   {
     name: "City",
     minMax: ("250px", "1fr"),
-    view: r => React.string(r.city->Option.getWithDefault("--")),
+    view: r => r.city->View.option(React.string),
   },
   {
     name: "Created On",

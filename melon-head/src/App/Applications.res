@@ -27,36 +27,32 @@ module Processing = {
         {
           name: "First Name",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+          view: r => r.firstName->View.option(React.string),
         },
         {
           name: "Last Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+          view: r => r.lastName->View.option(React.string),
         },
         {
           name: "Email",
           minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+          view: r => r.email->View.option(email => <Link.Email email />),
         },
         {
           name: "Phone",
           minMax: ("220px", "2fr"),
-          view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
+          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
         },
         {
           name: "City",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
+          view: r => r.city->View.option(React.string),
         },
         {
           name: "Company Name",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+          view: r => r.companyName->View.option(React.string),
         },
         {
           name: "Language",
@@ -94,36 +90,32 @@ module Unverified = {
         {
           name: "First Name",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+          view: r => r.firstName->View.option(React.string),
         },
         {
           name: "Last Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+          view: r => r.lastName->View.option(React.string),
         },
         {
           name: "Email",
           minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+          view: r => r.email->View.option(email => <Link.Email email />),
         },
         {
           name: "Phone",
           minMax: ("220px", "2fr"),
-          view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
+          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
         },
         {
           name: "City",
           minMax: ("250px", "2fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
+          view: r => r.city->View.option(React.string),
         },
         {
           name: "Company Name",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+          view: r => r.companyName->View.option(React.string),
         },
         {
           name: "Language",
@@ -164,18 +156,17 @@ module Accepted = {
         {
           name: "First Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+          view: r => r.firstName->View.option(React.string),
         },
         {
           name: "Last Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+          view: r => r.lastName->View.option(React.string),
         },
         {
           name: "Email",
           minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+          view: r => r.email->View.option(email => <Link.Email email />),
         },
         {
           name: "Phone",
@@ -188,12 +179,12 @@ module Accepted = {
         {
           name: "City",
           minMax: ("250px", "2fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
+          view: r => r.city->View.option(React.string),
         },
         {
           name: "Company Name",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+          view: r => r.companyName->View.option(React.string),
         },
         {
           name: "Language",
@@ -231,36 +222,32 @@ module Rejected = {
         {
           name: "First Name",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+          view: r => r.firstName->View.option(React.string),
         },
         {
           name: "Last Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+          view: r => r.lastName->View.option(React.string),
         },
         {
           name: "Email",
           minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+          view: r => r.email->View.option(email => <Link.Email email />),
         },
         {
           name: "Phone",
           minMax: ("220px", "2fr"),
-          view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
+          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
         },
         {
           name: "City",
           minMax: ("250px", "2fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
+          view: r => r.city->View.option(React.string),
         },
         {
           name: "Company Name",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+          view: r => r.companyName->View.option(React.string),
         },
         {
           name: "Language",
@@ -298,36 +285,32 @@ module Invalid = {
         {
           name: "First Name",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+          view: r => r.firstName->View.option(React.string),
         },
         {
           name: "Last Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+          view: r => r.lastName->View.option(React.string),
         },
         {
           name: "Email",
           minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+          view: r => r.email->View.option(email => <Link.Email email />),
         },
         {
           name: "Phone",
           minMax: ("220px", "2fr"),
-          view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
+          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
         },
         {
           name: "City",
           minMax: ("250px", "2fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
+          view: r => r.city->View.option(React.string),
         },
         {
           name: "Company Name",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+          view: r => r.companyName->View.option(React.string),
         },
         {
           name: "Language",
@@ -365,36 +348,32 @@ module All = {
         {
           name: "First Name",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.firstName->Option.getWithDefault("--")),
+          view: r => r.firstName->View.option(React.string),
         },
         {
           name: "Last Name",
           minMax: ("150px", "2fr"),
-          view: r => React.string(r.lastName->Option.getWithDefault("--")),
+          view: r => r.lastName->View.option(React.string),
         },
         {
           name: "Email",
           minMax: ("250px", "2fr"),
-          view: r =>
-            r.email->Option.mapWithDefault(React.string("--"), email => <Link.Email email />),
+          view: r => r.email->View.option(email => <Link.Email email />),
         },
         {
           name: "Phone",
           minMax: ("220px", "2fr"),
-          view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
+          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
         },
         {
           name: "City",
           minMax: ("250px", "2fr"),
-          view: r => React.string(r.city->Option.getWithDefault("--")),
+          view: r => r.city->View.option(React.string),
         },
         {
           name: "Company Name",
           minMax: ("250px", "1fr"),
-          view: r => React.string(r.companyName->Option.getWithDefault("--")),
+          view: r => r.companyName->View.option(React.string),
         },
         {
           name: "Language",
@@ -450,10 +429,7 @@ let make = (~api: Api.t) => {
     RescriptReactRouter.push(tabToUrl(newTab))
   }
 
-  let tabHandlers = (
-    activeTab,
-    setActiveTab
-  )
+  let tabHandlers = (activeTab, setActiveTab)
 
   let (basicStats, _, _) =
     api->Hook.getData(
