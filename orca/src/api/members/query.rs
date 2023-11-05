@@ -6,17 +6,28 @@ use crate::db::QueryAs;
 pub fn list_summaries() -> QueryAs<'static, Summary> {
     sqlx::query_as(
         "
-SELECT id
-    , member_number
-    , first_name
-    , last_name
-    , email
-    , phone_number
-    , city
-    , left_at
-    , created_at
-FROM members
-ORDER BY member_number DESC
+SELECT m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
+    , m.created_at
+FROM members AS m
+LEFT JOIN occupations o ON o.member_id = m.id
+GROUP BY m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , m.created_at
+ORDER BY m.member_number DESC
 ",
     )
 }
@@ -24,17 +35,28 @@ ORDER BY member_number DESC
 pub fn list_past_summaries() -> QueryAs<'static, Summary> {
     sqlx::query_as(
         "
-SELECT id
-    , member_number
-    , first_name
-    , last_name
-    , email
-    , phone_number
-    , city
-    , left_at
-    , created_at
-FROM members_past
-ORDER BY member_number DESC
+SELECT m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
+    , m.created_at
+FROM members_past AS m
+LEFT JOIN occupations o ON o.member_id = m.id
+GROUP BY m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , m.created_at
+ORDER BY m.member_number DESC
 ",
     )
 }
@@ -42,17 +64,28 @@ ORDER BY member_number DESC
 pub fn list_new_summaries() -> QueryAs<'static, Summary> {
     sqlx::query_as(
         "
-SELECT id
-    , member_number
-    , first_name
-    , last_name
-    , email
-    , phone_number
-    , city
-    , left_at
-    , created_at
-FROM members_new
-ORDER BY member_number DESC
+SELECT m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
+    , m.created_at
+FROM members_new AS m
+LEFT JOIN occupations o ON o.member_id = m.id
+GROUP BY m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , m.created_at
+ORDER BY m.member_number DESC
 ",
     )
 }
@@ -60,17 +93,28 @@ ORDER BY member_number DESC
 pub fn list_current_summaries() -> QueryAs<'static, Summary> {
     sqlx::query_as(
         "
-SELECT id
-    , member_number
-    , first_name
-    , last_name
-    , email
-    , phone_number
-    , city
-    , left_at
-    , created_at
-FROM members_current
-ORDER BY member_number DESC
+SELECT m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
+    , m.created_at
+FROM members_current AS m
+LEFT JOIN occupations o ON o.member_id = m.id
+GROUP BY m.id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.city
+    , m.left_at
+    , m.created_at
+ORDER BY m.member_number DESC
 ",
     )
 }

@@ -23,6 +23,7 @@ pub struct Summary {
     phone_number: Option<String>,
     city: Option<String>,
     left_at: Option<DateTime<Utc>>,
+    company_names: Vec<Option<String>>,
     created_at: DateTime<Utc>,
 }
 

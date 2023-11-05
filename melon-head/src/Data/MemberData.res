@@ -10,6 +10,7 @@ type summary = {
   phoneNumber: option<PhoneNumber.t>,
   city: option<string>,
   leftAt: option<Js.Date.t>,
+  companyNames: array<option<string>>,
   createdAt: Js.Date.t,
 }
 
@@ -81,6 +82,7 @@ module Decode = {
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
     city: field.required(. "city", option(string)),
     leftAt: field.required(. "left_at", option(date)),
+    companyNames: field.required(. "company_names", array(option(string))),
     createdAt: field.required(. "created_at", date),
   })
 

@@ -208,6 +208,11 @@ let columns: array<DataTable.column<MemberData.summary>> = [
       ),
   },
   {
+    name: "Last Company",
+    minMax: ("220px", "2fr"),
+    view: r => r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+  },
+  {
     name: "City",
     minMax: ("250px", "1fr"),
     view: r => React.string(r.city->Option.getWithDefault("--")),
