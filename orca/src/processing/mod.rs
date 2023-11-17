@@ -150,10 +150,6 @@ async fn process(
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured
             if let Some(notification_email) = &config.notification_email {
-                let (pdf_data,) = query::fetch_registration_pdf(reg_id)
-                    .fetch_one(db_pool)
-                    .await?;
-
                 let sender_info: Mailbox = format!(
                     "{} <{}>",
                     config.email_sender_name.clone().unwrap_or("".to_string()),
@@ -161,23 +157,26 @@ async fn process(
                 )
                 .parse()?;
 
-                let renderer = config
+                let mut renderer = config
                     .templates
                     .renderer(&templates::NEW_APPLICATION_NOTICE, "default");
-                let message_html = config.templates.render(&renderer)?;
 
                 // We need member details because we want to customize email subject/pdf name
                 let application_details =
                     query::query_registration(reg_id).fetch_one(db_pool).await?;
 
-                let email_subject = format!(
-                    "New Application - {} {}",
-                    application_details.first_name.as_deref().unwrap_or(""),
-                    application_details.last_name.as_deref().unwrap_or("")
+                let application_detail_url = format!(
+                    "{}/applications/{}",
+                    config.admin_host.as_deref().unwrap_or(""),
+                    application_details.id
                 );
 
-                let pdf_name = format!(
-                    "{}_{}.pdf",
+                renderer.bind("application_detail_url", &application_detail_url);
+
+                let message_html = config.templates.render(&renderer)?;
+
+                let email_subject = format!(
+                    "New Application - {} {}",
                     application_details.first_name.as_deref().unwrap_or(""),
                     application_details.last_name.as_deref().unwrap_or("")
                 );
@@ -187,16 +186,7 @@ async fn process(
                     .reply_to(sender_info)
                     .to(format!("Notifications <{}>", notification_email).parse()?)
                     .subject(email_subject)
-                    .multipart(
-                        MultiPart::related()
-                            .singlepart(SinglePart::html(message_html))
-                            .singlepart(
-                                Attachment::new(pdf_name)
-                                    // This should never fail
-                                    // we generate the pdf ourselves so we know it will be valid
-                                    .body(pdf_data, "application/pdf".parse().unwrap()),
-                            ),
-                    )?;
+                    .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
 
                 send_email(config, message).await?;
             }

@@ -5,6 +5,7 @@ json = 2_097_152
 # Bind to and host
 address = "127.0.0.1"
 host = "http://localhost:8000"
+admin_host = "http://localhost:1234"
 
 # Logging
 log_level = "debug"

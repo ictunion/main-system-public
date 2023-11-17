@@ -15,7 +15,7 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Check orca
-        run: nix flake check --log-format raw
+        run: nix flake check --log-format raw --option log-lines 100
 
       - name: Build via nix
         run: nix build .#orca --log-format raw

@@ -13,6 +13,7 @@ pub struct Config {
     pub email_sender_email: String,
     pub email_sender_name: Option<String>,
     pub host: String,
+    pub admin_host: Option<String>,
     pub postgres: String,
     pub web_db_pool: u32,
     pub processing_db_pool: u32,
@@ -48,6 +49,8 @@ impl Config {
         let host = figment
             .extract_inner("host")
             .unwrap_or("http://localhost".to_string());
+
+        let admin_host = figment.extract_inner("admin_host").ok();
 
         let postgres = figment
             .extract_inner("postgres")
@@ -103,6 +106,7 @@ impl Config {
             email_sender_email,
             email_sender_name,
             host,
+            admin_host,
             postgres,
             web_db_pool,
             processing_db_pool,
