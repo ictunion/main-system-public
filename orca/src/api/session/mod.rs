@@ -3,7 +3,7 @@ use rocket::{Route, State};
 use super::{ApiError, Response};
 use crate::data::{Id, Member};
 use crate::db::{DbPool, QueryAs};
-use crate::server::keycloak::{JwtClaims, JwtToken, Keycloak};
+use crate::server::oid::{JwtClaims, JwtToken, Provider};
 use rocket::serde::{json::Json, Serialize};
 
 #[derive(Debug, Serialize)]
@@ -15,10 +15,10 @@ struct SessionInfo {
 #[get("/current", format = "json")]
 async fn current<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<SessionInfo>> {
-    let token_data = keycloak.inner().decode_jwt(token)?;
+    let token_data = oid_provider.inner().decode_jwt(token)?;
 
     let member_id = get_user_id(&token_data.claims)
         .fetch_optional(db_pool.inner())
@@ -36,13 +36,13 @@ async fn current<'r>(
 #[post("/current/pair-by-email", format = "json")]
 async fn pair_by_email<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<SessionInfo>> {
     // TODO: shouw we require some role for this action?
     // in a way we're already trusting token so maybe we can also just
     // let any member assing themselves.
-    let token_data = keycloak.inner().decode_jwt(token)?;
+    let token_data = oid_provider.inner().decode_jwt(token)?;
 
     let member_id = get_user_id(&token_data.claims)
         .fetch_optional(db_pool.inner())

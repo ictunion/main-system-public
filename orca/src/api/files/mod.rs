@@ -7,7 +7,7 @@ use crate::api::Response;
 
 use crate::data::Id;
 use crate::db::DbPool;
-use crate::server::keycloak::{JwtToken, Keycloak, Role};
+use crate::server::oid::{JwtToken, Provider, Role};
 use rocket::http::ContentType;
 
 #[derive(Debug, sqlx::FromRow)]
@@ -44,11 +44,11 @@ impl<'r> Responder<'r, 'static> for File {
 #[get("/<id>?<token..>")]
 async fn get<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<File>,
 ) -> Response<File> {
-    keycloak.require_role(token, Role::ViewApplication)?;
+    oid_provider.require_role(token, Role::ViewApplication)?;
 
     let file: File = read_file(id).fetch_one(db_pool.inner()).await?;
     Ok(file)

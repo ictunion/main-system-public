@@ -14,7 +14,7 @@ mod stats;
 
 use crate::db::{self, DbPool};
 use crate::processing::SenderError;
-use crate::server::keycloak::{self, Keycloak};
+use crate::server::oid::{self, Provider};
 
 #[derive(Debug)]
 pub struct SqlError(sqlx::Error);
@@ -69,9 +69,9 @@ impl<'r> Responder<'r, 'static> for SenderError {
     }
 }
 
-impl<'r> Responder<'r, 'static> for keycloak::Error {
+impl<'r> Responder<'r, 'static> for oid::Error {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        use keycloak::Error::*;
+        use oid::Error::*;
         use rocket::http::Status;
 
         warn!("JWT verification failed with {:?}", self);
@@ -117,7 +117,7 @@ pub enum ApiError {
     #[response(status = 500)]
     QueueSender(Box<SenderError>),
     #[response(status = 401)]
-    InvalidToken(Box<keycloak::Error>),
+    InvalidToken(Box<oid::Error>),
     Custom(CustomError),
 }
 
@@ -167,8 +167,8 @@ impl From<SenderError> for ApiError {
     }
 }
 
-impl From<keycloak::Error> for ApiError {
-    fn from(err: keycloak::Error) -> Self {
+impl From<oid::Error> for ApiError {
+    fn from(err: oid::Error) -> Self {
         Self::InvalidToken(Box::new(err))
     }
 }
@@ -185,9 +185,9 @@ struct StatusResponse<'a> {
 #[get("/status")]
 async fn status_api<'a>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
 ) -> Json<StatusResponse<'a>> {
-    let authorization_connected = keycloak.is_connected();
+    let authorization_connected = oid_provider.is_connected();
 
     let res: Result<(bool,), sqlx::Error> = sqlx::query_as("SELECT true")
         .fetch_one(db_pool.inner())

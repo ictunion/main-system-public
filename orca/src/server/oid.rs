@@ -14,7 +14,7 @@ pub struct JwtToken<'a> {
     string: &'a str,
 }
 
-struct ConnectedKeycloak {
+struct ConnectedProvider {
     key: DecodingKey,
     validation: Validation,
     client_id: String,
@@ -49,7 +49,7 @@ impl ToString for Role {
     }
 }
 
-impl ConnectedKeycloak {
+impl ConnectedProvider {
     pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Self, Error> {
         let key = jwk::fetch_jwk(&format!(
             "{}/protocol/openid-connect/certs",
@@ -116,38 +116,38 @@ impl ConnectedKeycloak {
     }
 }
 
-enum KeycloakState {
-    Connected(Box<ConnectedKeycloak>),
+enum ProviderState {
+    Connected(Box<ConnectedProvider>),
     Disconnected,
 }
 
-pub struct Keycloak(KeycloakState);
+pub struct Provider(ProviderState);
 
-impl Keycloak {
-    pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Keycloak, Error> {
-        let k = ConnectedKeycloak::fetch(host, realm, client_id).await?;
-        Ok(Keycloak(KeycloakState::Connected(Box::new(k))))
+impl Provider {
+    pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Provider, Error> {
+        let k = ConnectedProvider::fetch(host, realm, client_id).await?;
+        Ok(Provider(ProviderState::Connected(Box::new(k))))
     }
 
     pub fn disable() -> Self {
         warn!("Keycloak authorization not configured. Authorization disabled");
-        Keycloak(KeycloakState::Disconnected)
+        Provider(ProviderState::Disconnected)
     }
 
     pub fn decode_jwt(&self, token: JwtToken) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            KeycloakState::Connected(k) => {
+            ProviderState::Connected(k) => {
                 let res = k.decode_jwt(token)?;
                 Ok(res)
             }
-            KeycloakState::Disconnected => Err(Error::Disabled),
+            ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub fn require_role(&self, token: JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            KeycloakState::Connected(k) => k.require_role(token, role),
-            KeycloakState::Disconnected => Err(Error::Disabled),
+            ProviderState::Connected(k) => k.require_role(token, role),
+            ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
@@ -157,15 +157,15 @@ impl Keycloak {
         role: &[Role],
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            KeycloakState::Connected(k) => k.require_any_role(token, role),
-            KeycloakState::Disconnected => Err(Error::Disabled),
+            ProviderState::Connected(k) => k.require_any_role(token, role),
+            ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub fn is_connected(&self) -> bool {
         match self.0 {
-            KeycloakState::Connected(_) => true,
-            KeycloakState::Disconnected => false,
+            ProviderState::Connected(_) => true,
+            ProviderState::Disconnected => false,
         }
     }
 }
@@ -217,7 +217,7 @@ impl<'r> FromRequest<'r> for JwtToken<'r> {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match req.headers().get_one("authorization") {
-            None => Outcome::Failure((
+            None => Outcome::Error((
                 Status::Unauthorized,
                 NetworkResponse::Unauthorized("Expects authorization header".to_string()),
             )),

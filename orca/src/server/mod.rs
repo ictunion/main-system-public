@@ -4,7 +4,7 @@ use std::net::IpAddr;
 
 pub mod cors;
 pub mod jwk;
-pub mod keycloak;
+pub mod oid;
 
 #[cfg(feature = "proxy-support")]
 use std::str::FromStr;

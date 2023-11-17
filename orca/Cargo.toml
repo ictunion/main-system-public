@@ -10,7 +10,7 @@ proxy-support = []
 rand = "0.8.5"
 rocket = { version = "0.5.0-rc.2", features = [ "json" ] }
 serde = { version = "1.0.147", features = ["derive"] }
-rocket-validation = "0.1.3"
+rocket-validation = { git = "https://github.com/somehowchris/rocket-validation.git", rev = "4c81187be2144fefceade0d20e2f2f9ddd244970" }
 validator = "0.16.0"
 sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "macros", "all-types", "uuid", "chrono" ] }
 time = { version = "0.3.19", features = [ "serde-human-readable" ] }

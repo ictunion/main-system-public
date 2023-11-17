@@ -10,7 +10,7 @@ use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::{self, DbPool};
 use crate::processing::{Command, QueueSender};
-use crate::server::keycloak::{JwtToken, Keycloak, Role};
+use crate::server::oid::{JwtToken, Provider, Role};
 use crate::server::IpAddress;
 
 use super::{ApiError, SuccessResponse};
@@ -33,10 +33,10 @@ pub struct Summary {
 #[get("/")]
 async fn list<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    keycloak.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(token, Role::ListApplications)?;
 
     let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
 
@@ -60,10 +60,10 @@ pub struct UnverifiedSummary {
 #[get("/unverified")]
 async fn list_unverified<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<UnverifiedSummary>>> {
-    keycloak.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(token, Role::ListApplications)?;
 
     let summaries = query::list_unverified_summaries()
         .fetch_all(db_pool.inner())
@@ -90,10 +90,10 @@ pub struct AcceptedSummary {
 #[get("/accepted")]
 async fn list_accepted<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<AcceptedSummary>>> {
-    keycloak.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(token, Role::ListApplications)?;
 
     let summaries = query::list_accepted_summaries()
         .fetch_all(db_pool.inner())
@@ -119,10 +119,10 @@ pub struct RejectedSummary {
 #[get("/rejected")]
 async fn list_rejected<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<RejectedSummary>>> {
-    keycloak.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(token, Role::ListApplications)?;
 
     let summaries = query::list_rejected_summaries()
         .fetch_all(db_pool.inner())
@@ -148,10 +148,10 @@ pub struct ProcessingSummary {
 #[get("/processing")]
 async fn list_processing<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<ProcessingSummary>>> {
-    keycloak.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(token, Role::ListApplications)?;
 
     let summaries = query::list_processing_summaries()
         .fetch_all(db_pool.inner())
@@ -177,10 +177,10 @@ pub struct InvalidSummary {
 #[get("/invalid")]
 async fn list_invalid<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<InvalidSummary>>> {
-    keycloak.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(token, Role::ListApplications)?;
 
     let summaries = query::list_invalid_summaries()
         .fetch_all(db_pool.inner())
@@ -217,11 +217,11 @@ pub struct Detail {
 #[get("/<id>")]
 async fn detail<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_any_role(token, &[Role::ViewApplication])?;
+    oid_provider.require_any_role(token, &[Role::ViewApplication])?;
 
     let detail = query::get_application(id)
         .fetch_one(db_pool.inner())
@@ -356,11 +356,11 @@ impl ApplicationStatus {
 #[delete("/<id>")]
 async fn reject<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -383,11 +383,11 @@ async fn reject<'r>(
 #[patch("/<id>/invalidate")]
 async fn invalidate<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     let mut tx = db_pool.inner().begin().await?;
 
@@ -407,11 +407,11 @@ async fn invalidate<'r>(
 #[patch("/<id>/unreject")]
 async fn unreject<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -434,11 +434,11 @@ async fn unreject<'r>(
 #[patch("/<id>/uninvalidate")]
 async fn uninvalidate<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     let mut tx = db_pool.inner().begin().await?;
 
@@ -467,12 +467,12 @@ struct NewMember {
 #[post("/<id>/accept", format = "json", data = "<new_member>")]
 async fn accept<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
     new_member: Json<NewMember>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -533,11 +533,11 @@ async fn accept<'r>(
 #[get("/<id>/files")]
 async fn list_files<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Vec<FileInfo>>> {
-    keycloak.require_role(token, Role::ViewApplication)?;
+    oid_provider.require_role(token, Role::ViewApplication)?;
 
     let files = query::list_application_files(id)
         .fetch_all(db_pool.inner())
@@ -548,12 +548,12 @@ async fn list_files<'r>(
 #[patch("/<id>/verify")]
 async fn verify<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -582,12 +582,12 @@ async fn verify<'r>(
 #[post("/<id>/resend-email")]
 async fn resend_email<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<SuccessResponse> {
-    keycloak.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(token, Role::ResolveApplications)?;
 
     query::get_application_status_data(id)
         .fetch_one(db_pool.inner())
@@ -606,11 +606,11 @@ async fn resend_email<'r>(
 #[delete("/<id>/hard")]
 async fn hard_delete<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<SuccessResponse> {
-    keycloak.require_role(token, Role::SuperPowers)?;
+    oid_provider.require_role(token, Role::SuperPowers)?;
 
     let mut tx = db_pool.inner().begin().await?;
 

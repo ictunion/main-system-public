@@ -3,7 +3,7 @@ use rocket::{serde::Serialize, Route, State};
 
 use super::Response;
 use crate::db::DbPool;
-use crate::server::keycloak::{JwtToken, Keycloak};
+use crate::server::oid::{JwtToken, Provider};
 
 mod query;
 
@@ -19,11 +19,11 @@ struct ApplicationsBasicStats {
 #[get("/applications/basic")]
 async fn applications_basic_stats<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<ApplicationsBasicStats>> {
     // Every authenticated user is able to see stats
-    keycloak.inner().decode_jwt(token)?;
+    oid_provider.inner().decode_jwt(token)?;
 
     let (unverified,) = query::count_unverified_applications()
         .fetch_one(db_pool.inner())
@@ -64,11 +64,11 @@ struct MembersBasicStats {
 #[get("/members/basic")]
 async fn members_basic_stats<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<MembersBasicStats>> {
     // Every authenticated user is able to see stats
-    keycloak.inner().decode_jwt(token)?;
+    oid_provider.inner().decode_jwt(token)?;
 
     let (new,) = query::count_new_members()
         .fetch_one(db_pool.inner())

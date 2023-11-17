@@ -9,7 +9,7 @@ use crate::api::files::FileInfo;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::DbPool;
-use crate::server::keycloak::{JwtToken, Keycloak, Role};
+use crate::server::oid::{JwtToken, Provider, Role};
 
 pub mod query;
 
@@ -30,10 +30,10 @@ pub struct Summary {
 #[get("/")]
 async fn list_all<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
     Ok(Json(summaries))
@@ -42,10 +42,10 @@ async fn list_all<'r>(
 #[get("/past")]
 async fn list_past<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let summaries = query::list_past_summaries()
         .fetch_all(db_pool.inner())
@@ -56,10 +56,10 @@ async fn list_past<'r>(
 #[get("/new")]
 async fn list_new<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let summaries = query::list_new_summaries()
         .fetch_all(db_pool.inner())
@@ -70,10 +70,10 @@ async fn list_new<'r>(
 #[get("/current")]
 async fn list_current<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let summaries = query::list_current_summaries()
         .fetch_all(db_pool.inner())
@@ -100,11 +100,11 @@ pub struct NewMember {
 #[post("/", format = "json", data = "<new_member>")]
 async fn create_member<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     new_member: Validated<Json<NewMember>>,
 ) -> Response<Json<Summary>> {
-    keycloak.require_role(token, Role::ManageMembers)?;
+    oid_provider.require_role(token, Role::ManageMembers)?;
 
     let mut tx = db_pool.begin().await?;
 
@@ -149,11 +149,11 @@ pub struct Detail {
 #[get("/<id>")]
 async fn detail<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
 
@@ -163,11 +163,11 @@ async fn detail<'r>(
 #[get("/<id>/files")]
 async fn list_files<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Vec<FileInfo>>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let files = query::list_member_files(id)
         .fetch_all(db_pool.inner())
@@ -187,11 +187,11 @@ pub struct Occupation {
 #[get("/<id>/occupations")]
 async fn list_occupations<'r>(
     db_pool: &State<DbPool>,
-    keycloak: &State<Keycloak>,
+    oid_provider: &State<Provider>,
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Vec<Occupation>>> {
-    keycloak.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(token, Role::ListMembers)?;
 
     let occupations = query::list_occupations(id)
         .fetch_all(db_pool.inner())

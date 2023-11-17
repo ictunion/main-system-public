@@ -265,11 +265,11 @@ module New = {
         <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
       </Button.Panel>
       <DataTable data=members columns>
-        <p> {React.string("There are no members yet.")} </p>
+        <p> {React.string("There are members who need to be onboarded.")} </p>
         <p>
           <small>
             {React.string("Maybe you want to ")}
-            <a onClick=openNewMemberModal> {React.string("create a first one")} </a>
+            <a onClick=openNewMemberModal> {React.string("create a new one")} </a>
             {React.string("?")}
           </small>
         </p>
@@ -292,7 +292,7 @@ module Current = {
     }
 
     <DataTable data=members columns>
-      <p> {React.string("Currently there are no member.")} </p>
+      <p> {React.string("There are no members yet.")} </p>
       <p>
         <small>
           {React.string(
