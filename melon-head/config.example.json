@@ -1,6 +1,6 @@
 {
-  "keycloak_url": "https://keycloak.ictunion.cz",
-  "keycloak_realm": "testing-members",
+  "keycloak_url": "http://localhost:8180",
+  "keycloak_realm": "members",
   "keycloak_client_id": "orca",
   "api_url": "/api",
   "profile_url": "https://member.ictunion.cz"

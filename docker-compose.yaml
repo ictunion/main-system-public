@@ -2,9 +2,10 @@ version: "3.0"
 
 services:
   postgres:
-    image: postgres:15.2-alpine
+    build: docker/postgres
     command: ["-c", "log_statement=all"]
     environment:
+      POSTGRES_MULTIPLE_DATABASES: keycloak
       POSTGRES_USER: ${DB_USER}
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -12,3 +13,22 @@ services:
       POSTGRES_HOST_AUTH_METHOD: "trust"
     ports:
       - "5432:5432"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_USER}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD}
+    command: |
+      start-dev \
+        --http-port=8180 \
+        --db=postgres \
+        --features=token-exchange \
+        --db-url=jdbc:postgresql://postgres:5432/keycloak \
+        --db-username=${DB_USER} \
+        --db-password=${DB_PASSWORD} \
+        --import-realm
+    volumes:
+      - "./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json"
+    ports:
+      - "8180:8180"

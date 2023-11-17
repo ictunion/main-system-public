@@ -32,6 +32,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     steps:
       - name: Clone repository
         uses: actions/checkout@v3

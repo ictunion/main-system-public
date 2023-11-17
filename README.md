@@ -82,6 +82,24 @@ make clean
 make up
 ```
 
+### Local Keycloak
+
+Run all docker-compose services locally
+
+```
+make up
+```
+
+Then visit http://localhost:8180 to access keycloak console.
+Default permissions:
+
+| field     | value   |
+|-----------|---------|
+| user name | `admin` |
+| password  | `admin` |
+
+This resource, unlike official documentation, has some useful examples https://www.mastertheboss.com/keycloak/keycloak-with-docker/
+
 ## Nix
 
 [flake.nix](https://nixos.wiki/wiki/Flakes) so don't forget to make sure that you have [support for flakes](https://nixos.wiki/wiki/Flakes) enabled in your config.

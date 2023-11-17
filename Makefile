@@ -3,8 +3,8 @@ DB_SUPERUSER:=postgres
 DB_PORT:=5432
 DB_PASSWORD:=superuser
 DB_HOST:=localhost
-KEYCLOAK_URL:="https://keycloak.ictunion.cz"
-KEYCLOAK_REALM:="testing-members"
+KEYACLOAK_USER:=admin
+KEYCLOAK_PASSWORD:=admin
 
 orca/result:
 	pushd orca && nix build
@@ -17,6 +17,7 @@ postgres:
 .PHONY: up
 up:
 	DB_USER=$(DB_SUPERUSER) DB_NAME=$(DB_NAME) DB_PASSWORD=$(DB_PASSWORD) JWT_SECRET=$(JWT_SECRET) PGRST_JWT_ROLE_CLAIM_KEY=$(PGRST_JWT_ROLE_CLAIM_KEY) \
+    KEYCLOAK_USER=$(KEYCLOAK_USER) KEYCLOAK_PASSWORD=$(KEYCLOAK_PASSWORD) \
 		docker compose up
 
 .PHONY: migrate

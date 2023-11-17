@@ -145,6 +145,7 @@ RETURNING id
     , city
     , left_at
     , created_at
+    , ARRAY[]::text[] AS company_names
 ",
     )
     .bind(member_number)
