@@ -48,7 +48,7 @@ async fn get<'r>(
     token: JwtToken<'r>,
     id: Id<File>,
 ) -> Response<File> {
-    oid_provider.require_role(token, Role::ViewApplication)?;
+    oid_provider.require_role(&token, Role::ViewApplication)?;
 
     let file: File = read_file(id).fetch_one(db_pool.inner()).await?;
     Ok(file)

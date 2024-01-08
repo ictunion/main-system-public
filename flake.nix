@@ -5,19 +5,21 @@
     flake-utils.url = github:numtide/flake-utils;
     crane.url = "github:ipetkov/crane";
     crane.inputs.nixpkgs.follows = "nixpkgs";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils, crane }: flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, crane, rust-overlay }: flake-utils.lib.eachDefaultSystem (system:
   let
     pkgs = import nixpkgs {
       inherit system;
-      overlays = [];
+      overlays = [ rust-overlay.overlays.default ];
     };
 
     orca-stuff =
       let
         tex = with pkgs; import ./orca/latex { inherit texlive; };
-        craneLib = crane.mkLib pkgs;
+        craneLib = (crane.mkLib pkgs).overrideToolchain pkgs.rust-bin.stable.latest.default;
+
         buildInputs = with pkgs; [
           tex
           rustup

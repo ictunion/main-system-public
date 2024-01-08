@@ -23,7 +23,7 @@ async fn applications_basic_stats<'r>(
     token: JwtToken<'r>,
 ) -> Response<Json<ApplicationsBasicStats>> {
     // Every authenticated user is able to see stats
-    oid_provider.inner().decode_jwt(token)?;
+    oid_provider.inner().decode_jwt(&token)?;
 
     let (unverified,) = query::count_unverified_applications()
         .fetch_one(db_pool.inner())
@@ -68,7 +68,7 @@ async fn members_basic_stats<'r>(
     token: JwtToken<'r>,
 ) -> Response<Json<MembersBasicStats>> {
     // Every authenticated user is able to see stats
-    oid_provider.inner().decode_jwt(token)?;
+    oid_provider.inner().decode_jwt(&token)?;
 
     let (new,) = query::count_new_members()
         .fetch_one(db_pool.inner())

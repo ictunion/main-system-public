@@ -91,6 +91,53 @@ let timeRows: array<RowBasedTable.row<MemberData.detail>> = [
   ("Left at", d => View.option(d.leftAt, a => a->Js.Date.toLocaleString->React.string)),
 ]
 
+module Actions = {
+  open MemberData
+
+  module Accept = {
+    @react.component
+    let make = (~modal, ~api, ~id) => {
+      let doAccept = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.patchJson(
+            ~path="/members/" ++ Uuid.toString(id) ++ "/accept",
+            ~decoder=Json.Decode.string,
+            ~body=Js.Json.null,
+          )
+      }
+
+      <Modal.Content>
+        <p> {React.string("Approve user and give allow them to access internal resources")} </p>
+        <Button.Panel>
+          <Button onClick={_ => modal->Modal.Interface.closeModal}>
+            {React.string("Cancel")}
+          </Button>
+          <Button variant=Button.Cta onClick=doAccept> {React.string("Accept member")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  let acceptModal = (~modal, ~api, ~id): Modal.modalContent => {
+    title: "Accept User",
+    content: <Accept modal api id />,
+  }
+
+  @react.component
+  let make = (~status, ~modal, ~api, ~id) => {
+    switch status {
+    | NewMember =>
+      <Button.Panel>
+        <Button onClick={_ => modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id))}>
+          {React.string("Accept member")}
+        </Button>
+      </Button.Panel>
+    | CurrentMember => React.null
+    | PastMember => React.null
+    }
+  }
+}
+
 type tabs =
   | Metadata
   | Files
@@ -105,7 +152,7 @@ let viewOccupation = (occupation: MemberData.occupation) => {
 }
 
 @react.component
-let make = (~api, ~id) => {
+let make = (~api, ~id, ~modal) => {
   let (detail: Api.webData<MemberData.detail>, _setDetail, _) =
     api->Hook.getData(~path="/members/" ++ Uuid.toString(id), ~decoder=MemberData.Decode.detail)
 
@@ -216,5 +263,9 @@ let make = (~api, ~id) => {
         ]}
       />
     </Tabbed.Content>
+    {switch status {
+    | Success(s) => <Actions status=s modal api id />
+    | _ => React.null
+    }}
   </Page>
 }

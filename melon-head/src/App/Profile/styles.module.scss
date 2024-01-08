@@ -114,6 +114,12 @@ li.nav-divider {
     justify-content: center;
 }
 
+.realm-roles {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
 .roles {
     display: flex;
     gap: 6px;

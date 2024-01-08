@@ -40,7 +40,7 @@ module ConfiguredApp = {
           | list{"applications", id} =>
             <ApplicationDetail id={Data.Uuid.unsafeFromString(id)} api modal />
           | list{"members"} => <Members api modal />
-          | list{"members", id} => <MemberDetail api id={Data.Uuid.unsafeFromString(id)} />
+          | list{"members", id} => <MemberDetail api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"settings"} => <Settings api session=sessionState />
           | _ =>
             <Page>

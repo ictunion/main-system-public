@@ -1,8 +1,8 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -i bash -p curl jq
 
-HOST=https://keycloak.ictunion.cz
-REALM=testing-members
+HOST=http://localhost:8180
+REALM=members
 
 >&2 echo " This script will return acess token to testing-members instance"
 read -p "Enter client-id of your app: " CLIENTID

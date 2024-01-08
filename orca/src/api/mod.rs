@@ -80,8 +80,11 @@ impl<'r> Responder<'r, 'static> for oid::Error {
             Disabled => Err(Status::NotFound),
             BadKey(_) => Err(Status::InternalServerError),
             MissingRole(_) => Err(Status::Forbidden),
+            MissingRealmRole(_) => Err(Status::Forbidden),
             MissingOneOfRoles(_) => Err(Status::Forbidden),
             BadToken(_) => Err(Status::Unauthorized),
+            Http(_) => Err(Status::BadGateway),
+            Parsing(_) => Err(Status::InternalServerError),
         }
     }
 }

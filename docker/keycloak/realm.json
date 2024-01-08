@@ -29,11 +29,11 @@
   "sslRequired": "external",
   "registrationAllowed": false,
   "registrationEmailAsUsername": false,
-  "rememberMe": false,
+  "rememberMe": true,
   "verifyEmail": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "resetPasswordAllowed": false,
+  "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
   "bruteForceProtected": false,
   "permanentLockout": false,
@@ -234,17 +234,17 @@
                 "manage-realm",
                 "view-authorization",
                 "create-client",
-                "view-realm",
                 "manage-users",
+                "view-realm",
                 "manage-events",
-                "view-identity-providers",
                 "manage-clients",
+                "view-identity-providers",
                 "query-groups",
                 "view-events",
                 "manage-identity-providers",
                 "query-users",
-                "query-clients",
-                "impersonation"
+                "impersonation",
+                "query-clients"
               ]
             }
           },
@@ -463,9 +463,10 @@
       "id": "298357c7-12c4-4837-82b0-850523be779f",
       "name": "orca-admin",
       "path": "/orca-admin",
-      "attributes": {},
-      "realmRoles": [],
       "clientRoles": {
+        "realm-management": [
+          "manage-users"
+        ],
         "orca": [
           "super-powers",
           "view-application",
@@ -474,8 +475,7 @@
           "manage-members",
           "list-applications"
         ]
-      },
-      "subGroups": []
+      }
     }
   ],
   "defaultRole": {
@@ -498,9 +498,10 @@
   "otpPolicyCodeReusable": false,
   "otpSupportedApplications": [
     "totpAppFreeOTPName",
-    "totpAppMicrosoftAuthenticatorName",
-    "totpAppGoogleName"
+    "totpAppGoogleName",
+    "totpAppMicrosoftAuthenticatorName"
   ],
+  "localizationTexts": {},
   "webAuthnPolicyRpEntityName": "keycloak",
   "webAuthnPolicySignatureAlgorithms": [
     "ES256"
@@ -513,6 +514,7 @@
   "webAuthnPolicyCreateTimeout": 0,
   "webAuthnPolicyAvoidSameAuthenticatorRegister": false,
   "webAuthnPolicyAcceptableAaguids": [],
+  "webAuthnPolicyExtraOrigins": [],
   "webAuthnPolicyPasswordlessRpEntityName": "keycloak",
   "webAuthnPolicyPasswordlessSignatureAlgorithms": [
     "ES256"
@@ -525,6 +527,7 @@
   "webAuthnPolicyPasswordlessCreateTimeout": 0,
   "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
   "webAuthnPolicyPasswordlessAcceptableAaguids": [],
+  "webAuthnPolicyPasswordlessExtraOrigins": [],
   "scopeMappings": [
     {
       "clientScope": "offline_access",
@@ -664,7 +667,9 @@
       "publicClient": true,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
-      "attributes": {},
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": 0,
@@ -702,7 +707,9 @@
       "publicClient": false,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
-      "attributes": {},
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": 0,
@@ -793,7 +800,9 @@
       "publicClient": false,
       "frontchannelLogout": false,
       "protocol": "openid-connect",
-      "attributes": {},
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": false,
       "nodeReRegistrationTimeout": 0,
@@ -1067,7 +1076,8 @@
           "consentRequired": false,
           "config": {
             "id.token.claim": "true",
-            "access.token.claim": "true"
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
           }
         }
       ]
@@ -1154,6 +1164,7 @@
           "consentRequired": false,
           "config": {
             "multivalued": "true",
+            "userinfo.token.claim": "true",
             "user.attribute": "foo",
             "id.token.claim": "true",
             "access.token.claim": "true",
@@ -1429,12 +1440,12 @@
         "config": {
           "allowed-protocol-mapper-types": [
             "saml-role-list-mapper",
-            "oidc-full-name-mapper",
-            "oidc-usermodel-property-mapper",
             "oidc-sha256-pairwise-sub-mapper",
             "saml-user-property-mapper",
-            "oidc-usermodel-attribute-mapper",
+            "oidc-full-name-mapper",
+            "oidc-usermodel-property-mapper",
             "saml-user-attribute-mapper",
+            "oidc-usermodel-attribute-mapper",
             "oidc-address-mapper"
           ]
         }
@@ -1502,12 +1513,12 @@
         "subComponents": {},
         "config": {
           "allowed-protocol-mapper-types": [
-            "oidc-usermodel-attribute-mapper",
             "saml-user-property-mapper",
+            "oidc-sha256-pairwise-sub-mapper",
+            "oidc-usermodel-attribute-mapper",
+            "oidc-full-name-mapper",
             "saml-role-list-mapper",
             "oidc-usermodel-property-mapper",
-            "oidc-full-name-mapper",
-            "oidc-sha256-pairwise-sub-mapper",
             "oidc-address-mapper",
             "saml-user-attribute-mapper"
           ]
@@ -2016,14 +2027,6 @@
           "userSetupAllowed": false
         },
         {
-          "authenticator": "registration-profile-action",
-          "authenticatorFlow": false,
-          "requirement": "REQUIRED",
-          "priority": 40,
-          "autheticatorFlow": false,
-          "userSetupAllowed": false
-        },
-        {
           "authenticator": "registration-password-action",
           "authenticatorFlow": false,
           "requirement": "REQUIRED",
@@ -2212,12 +2215,16 @@
     "cibaExpiresIn": "120",
     "cibaAuthRequestedUserHint": "login_hint",
     "oauth2DeviceCodeLifespan": "600",
+    "clientOfflineSessionMaxLifespan": "0",
     "oauth2DevicePollingInterval": "5",
+    "clientSessionIdleTimeout": "0",
     "parRequestUriLifespan": "60",
+    "clientSessionMaxLifespan": "0",
+    "clientOfflineSessionIdleTimeout": "0",
     "cibaInterval": "5",
     "realmReusableOtpCode": "false"
   },
-  "keycloakVersion": "22.0.5",
+  "keycloakVersion": "23.0.3",
   "userManagedAccessAllowed": false,
   "clientProfiles": {
     "profiles": []

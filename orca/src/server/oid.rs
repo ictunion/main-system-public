@@ -1,23 +1,30 @@
-use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
 use std::collections::HashMap;
 
+use jsonwebtoken::{self, TokenData};
+use reqwest;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::Deserialize;
 use rocket::serde::Serialize;
+use uuid::Uuid;
 
 use super::jwk;
+use crate::config;
 
-#[derive(FromForm)]
+mod keycloak;
+use self::keycloak::KeycloakProvider;
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct User {
+    first_name: String,
+    last_name: String,
+    email: String,
+}
+
+#[derive(Debug, Clone, FromForm)]
 pub struct JwtToken<'a> {
     #[field(name = "token")]
     string: &'a str,
-}
-
-struct ConnectedProvider {
-    key: DecodingKey,
-    validation: Validation,
-    client_id: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -49,94 +56,67 @@ impl ToString for Role {
     }
 }
 
-impl ConnectedProvider {
-    pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Self, Error> {
-        let key = jwk::fetch_jwk(&format!(
-            "{}/protocol/openid-connect/certs",
-            keycloak_url(host, realm)
-        ))
-        .await?;
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RealmManagementRole {
+    ManageUsers,
+}
 
-        // Configure validations
-        let mut validation = Validation::new(Algorithm::RS256);
-        validation.set_issuer(&[keycloak_url(host, realm)]);
-
-        Ok(Self {
-            key,
-            validation,
-            client_id,
-        })
-    }
-
-    pub fn decode_jwt(
-        &self,
-        token: JwtToken,
-    ) -> Result<TokenData<JwtClaims>, jsonwebtoken::errors::Error> {
-        let res = jsonwebtoken::decode::<JwtClaims>(token.string, &self.key, &self.validation);
-        if let Err(err) = &res {
-            warn!("Faild to decode JWT token {}", token.string);
-            warn!("Error: {:?}", err);
-        }
-
-        res
-    }
-
-    pub fn require_role(&self, token: JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error> {
-        let token_data = self.decode_jwt(token)?;
-        if self.has_role(&token_data.claims, role.to_json_val()) {
-            Ok(token_data)
-        } else {
-            Err(Error::MissingRole(role))
-        }
-    }
-
-    pub fn require_any_role(
-        &self,
-        token: JwtToken,
-        roles: &[Role],
-    ) -> Result<TokenData<JwtClaims>, Error> {
-        let token_data = self.decode_jwt(token)?;
-
-        for role in roles {
-            if self.has_role(&token_data.claims, role.to_json_val()) {
-                return Ok(token_data);
-            } else {
-                continue;
-            }
-        }
-
-        Err(Error::MissingOneOfRoles(roles.to_vec()))
-    }
-
-    fn has_role(&self, claims: &JwtClaims, role: &str) -> bool {
-        match claims.resource_access.get(&self.client_id) {
-            Some(r) => r.roles.iter().any(|x| *x == role),
-            None => false,
+impl RealmManagementRole {
+    fn to_json_val(self) -> &'static str {
+        match self {
+            Self::ManageUsers => "manage-users",
         }
     }
 }
 
 enum ProviderState {
-    Connected(Box<ConnectedProvider>),
+    Keyclaok(Box<keycloak::KeycloakProvider>),
     Disconnected,
+}
+
+trait OidProvider {
+    fn decode_jwt(
+        &self,
+        token: &JwtToken,
+    ) -> Result<TokenData<JwtClaims>, jsonwebtoken::errors::Error>;
+
+    fn require_role(&self, token: &JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error>;
+
+    fn require_realm_role(
+        &self,
+        token: &JwtToken,
+        role: RealmManagementRole,
+    ) -> Result<TokenData<JwtClaims>, Error>;
+
+    fn require_any_role(
+        &self,
+        token: &JwtToken,
+        roles: &[Role],
+    ) -> Result<TokenData<JwtClaims>, Error>;
+
+    async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error>;
 }
 
 pub struct Provider(ProviderState);
 
 impl Provider {
-    pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Provider, Error> {
-        let k = ConnectedProvider::fetch(host, realm, client_id).await?;
-        Ok(Provider(ProviderState::Connected(Box::new(k))))
-    }
+    pub async fn init(config: &config::Config) -> Result<Provider, Error> {
+        if let (Some(host), Some(realm), Some(client_id)) = (
+            &config.keycloak_host,
+            &config.keycloak_realm,
+            &config.keycloak_client_id,
+        ) {
+            let k = KeycloakProvider::fetch(host, realm, client_id.clone()).await?;
+            return Ok(Provider(ProviderState::Keyclaok(Box::new(k))));
+        }
 
-    pub fn disable() -> Self {
         warn!("Keycloak authorization not configured. Authorization disabled");
-        Provider(ProviderState::Disconnected)
+        Ok(Provider(ProviderState::Disconnected))
     }
 
-    pub fn decode_jwt(&self, token: JwtToken) -> Result<TokenData<JwtClaims>, Error> {
+    pub fn decode_jwt(&self, token: &JwtToken) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Connected(k) => {
+            ProviderState::Keyclaok(k) => {
                 let res = k.decode_jwt(token)?;
                 Ok(res)
             }
@@ -144,28 +124,50 @@ impl Provider {
         }
     }
 
-    pub fn require_role(&self, token: JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error> {
+    pub fn require_role(
+        &self,
+        token: &JwtToken,
+        role: Role,
+    ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Connected(k) => k.require_role(token, role),
+            ProviderState::Keyclaok(k) => k.require_role(token, role),
+            ProviderState::Disconnected => Err(Error::Disabled),
+        }
+    }
+
+    pub fn require_realm_role(
+        &self,
+        token: &JwtToken,
+        role: RealmManagementRole,
+    ) -> Result<TokenData<JwtClaims>, Error> {
+        match &self.0 {
+            ProviderState::Keyclaok(k) => k.require_realm_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub fn require_any_role(
         &self,
-        token: JwtToken,
+        token: &JwtToken,
         role: &[Role],
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Connected(k) => k.require_any_role(token, role),
+            ProviderState::Keyclaok(k) => k.require_any_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub fn is_connected(&self) -> bool {
         match self.0 {
-            ProviderState::Connected(_) => true,
+            ProviderState::Keyclaok(_) => true,
             ProviderState::Disconnected => false,
+        }
+    }
+
+    pub async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error> {
+        match &self.0 {
+            ProviderState::Keyclaok(k) => k.create_user(token, user).await,
+            ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 }
@@ -175,8 +177,11 @@ pub enum Error {
     BadKey(jwk::Error),
     BadToken(jsonwebtoken::errors::Error),
     MissingRole(Role),
+    MissingRealmRole(RealmManagementRole),
     MissingOneOfRoles(Vec<Role>),
     Disabled,
+    Http(reqwest::Error),
+    Parsing(String),
 }
 
 impl From<jwk::Error> for Error {
@@ -191,6 +196,12 @@ impl From<jsonwebtoken::errors::Error> for Error {
     }
 }
 
+impl From<reqwest::Error> for Error {
+    fn from(value: reqwest::Error) -> Self {
+        Self::Http(value)
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 struct Roles {
     roles: Vec<String>,
@@ -199,7 +210,6 @@ struct Roles {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JwtClaims {
     pub sub: uuid::Uuid,
-    realm_access: Roles,
     resource_access: HashMap<String, Roles>,
     pub email: String,
     name: String,
@@ -227,8 +237,4 @@ impl<'r> FromRequest<'r> for JwtToken<'r> {
             }
         }
     }
-}
-
-fn keycloak_url(host: &str, realm: &str) -> String {
-    format!("{host}/realms/{realm}")
 }

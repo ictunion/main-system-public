@@ -59,20 +59,20 @@ impl<'a> RawBase64<'a> {
 pub enum Error {
     NotImage,
     Malformed,
-    IoError(io::Error),
-    DecodingError(FromBase64Error),
+    Io(io::Error),
+    Decoding(FromBase64Error),
     Image(image::ImageError),
 }
 
 impl From<io::Error> for Error {
     fn from(value: io::Error) -> Self {
-        Self::IoError(value)
+        Self::Io(value)
     }
 }
 
 impl From<FromBase64Error> for Error {
     fn from(value: FromBase64Error) -> Self {
-        Self::DecodingError(value)
+        Self::Decoding(value)
     }
 }
 

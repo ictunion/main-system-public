@@ -18,7 +18,7 @@ async fn current<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<SessionInfo>> {
-    let token_data = oid_provider.inner().decode_jwt(token)?;
+    let token_data = oid_provider.inner().decode_jwt(&token)?;
 
     let member_id = get_user_id(&token_data.claims)
         .fetch_optional(db_pool.inner())
@@ -42,7 +42,7 @@ async fn pair_by_email<'r>(
     // TODO: shouw we require some role for this action?
     // in a way we're already trusting token so maybe we can also just
     // let any member assing themselves.
-    let token_data = oid_provider.inner().decode_jwt(token)?;
+    let token_data = oid_provider.inner().decode_jwt(&token)?;
 
     let member_id = get_user_id(&token_data.claims)
         .fetch_optional(db_pool.inner())

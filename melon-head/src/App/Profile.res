@@ -2,8 +2,8 @@
 
 module ShowRole = {
   @react.component
-  let make = (~role: Session.orcaRole) => {
-    <span className={styles["role"]}> {React.string(Session.showOrcaRole(role))} </span>
+  let make = (~role: string) => {
+    <span className={styles["role"]}> {React.string(role)} </span>
   }
 }
 
@@ -53,15 +53,16 @@ let make = (
                 </td>
               </tr>
               <tr>
+                <td> {React.string("realm")} </td>
+                <td className={styles["realm-roles"]}> {React.array(Array.map(r => {
+                      <ShowRole role={Session.showRealmRole(r)} key={Session.showRealmRole(r)} />
+                    }, ses.tokenClaims.realmRoles))} </td>
+              </tr>
+              <tr>
                 <td> {React.string("roles")} </td>
-                <td className={styles["roles"]}>
-                  {React.array(
-                    Array.map(
-                      r => {<ShowRole role={r} key={Session.showOrcaRole(r)} />},
-                      ses.tokenClaims.orcaRoles,
-                    ),
-                  )}
-                </td>
+                <td className={styles["roles"]}> {React.array(Array.map(r => {
+                      <ShowRole role={Session.showOrcaRole(r)} key={Session.showOrcaRole(r)} />
+                    }, ses.tokenClaims.orcaRoles))} </td>
               </tr>
             </tbody>
           </table>

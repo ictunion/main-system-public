@@ -4,12 +4,15 @@ use rocket::{Route, State};
 use rocket_validation::{Validate, Validated};
 use serde::{Deserialize, Serialize};
 use time::Date;
+use uuid::Uuid;
 
 use crate::api::files::FileInfo;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::DbPool;
-use crate::server::oid::{JwtToken, Provider, Role};
+use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role};
+
+use super::ApiError;
 
 pub mod query;
 
@@ -33,7 +36,7 @@ async fn list_all<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
     Ok(Json(summaries))
@@ -45,7 +48,7 @@ async fn list_past<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let summaries = query::list_past_summaries()
         .fetch_all(db_pool.inner())
@@ -59,7 +62,7 @@ async fn list_new<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let summaries = query::list_new_summaries()
         .fetch_all(db_pool.inner())
@@ -73,7 +76,7 @@ async fn list_current<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let summaries = query::list_current_summaries()
         .fetch_all(db_pool.inner())
@@ -104,7 +107,7 @@ async fn create_member<'r>(
     token: JwtToken<'r>,
     new_member: Validated<Json<NewMember>>,
 ) -> Response<Json<Summary>> {
-    oid_provider.require_role(token, Role::ManageMembers)?;
+    oid_provider.require_role(&token, Role::ManageMembers)?;
 
     let mut tx = db_pool.begin().await?;
 
@@ -153,9 +156,54 @@ async fn detail<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+
+    Ok(Json(detail))
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct MemberStatusData {
+    sub: Option<Uuid>,
+    left_at: Option<DateTime<Utc>>,
+}
+
+#[patch("/<id>/accept")]
+async fn accept<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+) -> Response<Json<Detail>> {
+    // TODO: this method shoudl probably use reference
+    oid_provider.require_realm_role(&token, RealmManagementRole::ManageUsers)?;
+
+    let status = query::get_status_data(id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    if status.sub.is_some() {
+        return Err(ApiError::data_conflict(
+            "Member is accepted already".to_string(),
+        ));
+    }
+
+    if status.left_at.is_some() {
+        return Err(ApiError::data_conflict(
+            "Past members can't be activated".to_string(),
+        ));
+    }
+
+    let user = query::get_new_oid_user(id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    let uuid = oid_provider.create_user(&token, &user).await?;
+
+    let detail = query::assing_member_oid_sub(id, uuid)
+        .fetch_one(db_pool.inner())
+        .await?;
 
     Ok(Json(detail))
 }
@@ -167,7 +215,7 @@ async fn list_files<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Vec<FileInfo>>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let files = query::list_member_files(id)
         .fetch_all(db_pool.inner())
@@ -191,7 +239,7 @@ async fn list_occupations<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Vec<Occupation>>> {
-    oid_provider.require_role(token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let occupations = query::list_occupations(id)
         .fetch_all(db_pool.inner())
@@ -209,6 +257,7 @@ pub fn routes() -> Vec<Route> {
         create_member,
         list_files,
         list_occupations,
-        detail
+        detail,
+        accept,
     ]
 }

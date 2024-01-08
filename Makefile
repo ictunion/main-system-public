@@ -3,7 +3,7 @@ DB_SUPERUSER:=postgres
 DB_PORT:=5432
 DB_PASSWORD:=superuser
 DB_HOST:=localhost
-KEYACLOAK_USER:=admin
+KEYCLOAK_USER:=admin
 KEYCLOAK_PASSWORD:=admin
 
 orca/result:

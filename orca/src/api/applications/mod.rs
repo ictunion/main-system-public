@@ -36,7 +36,7 @@ async fn list<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<Summary>>> {
-    oid_provider.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(&token, Role::ListApplications)?;
 
     let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
 
@@ -63,7 +63,7 @@ async fn list_unverified<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<UnverifiedSummary>>> {
-    oid_provider.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(&token, Role::ListApplications)?;
 
     let summaries = query::list_unverified_summaries()
         .fetch_all(db_pool.inner())
@@ -93,7 +93,7 @@ async fn list_accepted<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<AcceptedSummary>>> {
-    oid_provider.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(&token, Role::ListApplications)?;
 
     let summaries = query::list_accepted_summaries()
         .fetch_all(db_pool.inner())
@@ -122,7 +122,7 @@ async fn list_rejected<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<RejectedSummary>>> {
-    oid_provider.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(&token, Role::ListApplications)?;
 
     let summaries = query::list_rejected_summaries()
         .fetch_all(db_pool.inner())
@@ -151,7 +151,7 @@ async fn list_processing<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<ProcessingSummary>>> {
-    oid_provider.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(&token, Role::ListApplications)?;
 
     let summaries = query::list_processing_summaries()
         .fetch_all(db_pool.inner())
@@ -180,7 +180,7 @@ async fn list_invalid<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<InvalidSummary>>> {
-    oid_provider.require_role(token, Role::ListApplications)?;
+    oid_provider.require_role(&token, Role::ListApplications)?;
 
     let summaries = query::list_invalid_summaries()
         .fetch_all(db_pool.inner())
@@ -221,7 +221,7 @@ async fn detail<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_any_role(token, &[Role::ViewApplication])?;
+    oid_provider.require_any_role(&token, &[Role::ViewApplication])?;
 
     let detail = query::get_application(id)
         .fetch_one(db_pool.inner())
@@ -360,7 +360,7 @@ async fn reject<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -387,7 +387,7 @@ async fn invalidate<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     let mut tx = db_pool.inner().begin().await?;
 
@@ -411,7 +411,7 @@ async fn unreject<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -438,7 +438,7 @@ async fn uninvalidate<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     let mut tx = db_pool.inner().begin().await?;
 
@@ -472,7 +472,7 @@ async fn accept<'r>(
     id: Id<RegistrationRequest>,
     new_member: Json<NewMember>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -537,7 +537,7 @@ async fn list_files<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Vec<FileInfo>>> {
-    oid_provider.require_role(token, Role::ViewApplication)?;
+    oid_provider.require_role(&token, Role::ViewApplication)?;
 
     let files = query::list_application_files(id)
         .fetch_all(db_pool.inner())
@@ -553,7 +553,7 @@ async fn verify<'r>(
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -587,7 +587,7 @@ async fn resend_email<'r>(
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<SuccessResponse> {
-    oid_provider.require_role(token, Role::ResolveApplications)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     query::get_application_status_data(id)
         .fetch_one(db_pool.inner())
@@ -610,7 +610,7 @@ async fn hard_delete<'r>(
     token: JwtToken<'r>,
     id: Id<RegistrationRequest>,
 ) -> Response<SuccessResponse> {
-    oid_provider.require_role(token, Role::SuperPowers)?;
+    oid_provider.require_role(&token, Role::SuperPowers)?;
 
     let mut tx = db_pool.inner().begin().await?;
 

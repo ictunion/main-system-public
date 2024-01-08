@@ -20,12 +20,22 @@ let showOrcaRole = (r: orcaRole): string =>
   | SuperPowers => "super-powers"
   }
 
+type realmRole =
+  | UnknownRealmRole(string)
+  | ManageUsers
+
+let showRealmRole = (r: realmRole): string =>
+  switch r {
+  | UnknownRealmRole(str) => str
+  | ManageUsers => "manage-users"
+  }
+
 type tokenClaims = {
   sub: Data.Uuid.t,
   email: Email.t,
   name: string,
-  realmRoles: array<string>,
   orcaRoles: array<orcaRole>,
+  realmRoles: array<realmRole>,
 }
 
 type t = {
@@ -37,6 +47,12 @@ let hasRole = (session, ~role: orcaRole): bool => {
   open Belt
 
   let allRoles = session.tokenClaims.orcaRoles
+  Array.some(allRoles, r => r == role)
+}
+
+let hasRealmRole = (session, ~role: realmRole): bool => {
+  open Belt
+  let allRoles = session.tokenClaims.realmRoles
   Array.some(allRoles, r => r == role)
 }
 
@@ -55,18 +71,30 @@ module Decode = {
     }
   })
 
-  let realmRoles = object(field => field.required(. "roles", array(string)))
+  let realmRole = string->map((. str) => {
+    switch str {
+    | "manage-users" => ManageUsers
+    | _ => UnknownRealmRole(str)
+    }
+  })
 
   let orcaRoles = object(field =>
     field.required(. "orca", object(field => field.required(. "roles", array(orcaRole))))
+  )
+
+  let realmRoles = object(field =>
+    field.required(.
+      "realm-management",
+      object(field => field.required(. "roles", array(realmRole))),
+    )
   )
 
   let tokenClaims = object(field => {
     sub: field.required(. "sub", Data.Uuid.decode),
     email: field.required(. "email", Email.decode),
     name: field.required(. "name", string),
-    realmRoles: field.required(. "realm_access", realmRoles),
     orcaRoles: field.required(. "resource_access", orcaRoles),
+    realmRoles: field.required(. "resource_access", realmRoles),
   })
 
   let session = object(field => {

@@ -202,10 +202,7 @@ let columns: array<DataTable.column<MemberData.summary>> = [
   {
     name: "Phone",
     minMax: ("220px", "2fr"),
-    view: r =>
-      r.phoneNumber->View.option(phoneNumber =>
-          <Link.Tel phoneNumber />
-      ),
+    view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
   },
   {
     name: "Last Company",

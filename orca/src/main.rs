@@ -83,18 +83,7 @@ async fn main() -> Result<(), StartupError> {
     // Configure logger
     logging::setup_logger(config.log_level)?;
 
-    // Configure authorization
-    // poor man's applicative functor
-    let provider = match (
-        &config.keycloak_host,
-        &config.keycloak_realm,
-        &config.keycloak_client_id,
-    ) {
-        (Some(host), Some(realm), Some(client_id)) => {
-            server::oid::Provider::fetch(host, realm, client_id.clone()).await?
-        }
-        _ => Provider::disable(),
-    };
+    let provider = Provider::init(&config).await?;
 
     let web_db_pool = db::connect(db::Config {
         connection_url: &config.postgres,

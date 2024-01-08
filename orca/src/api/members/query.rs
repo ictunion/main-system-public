@@ -1,7 +1,10 @@
-use super::{Detail, NewMember, Occupation, Summary};
+use uuid::Uuid;
+
+use super::{Detail, MemberStatusData, NewMember, Occupation, Summary};
 use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
+use crate::server::oid;
 
 pub fn list_summaries() -> QueryAs<'static, Summary> {
     sqlx::query_as(
@@ -226,6 +229,55 @@ SELECT id
 FROM occupations
 WHERE member_id = $1
 ORDER BY created_at DESC
+",
+    )
+    .bind(id)
+}
+
+pub fn get_new_oid_user<'a>(id: Id<Member>) -> QueryAs<'a, oid::User> {
+    sqlx::query_as(
+        "
+SELECT first_name, last_name, email
+FROM members
+WHERE id = $1
+",
+    )
+    .bind(id)
+}
+
+pub fn assing_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+UPDATE members
+SET sub = $2
+WHERE id = $1
+RETURNING id
+, member_number
+, first_name
+, last_name
+, date_of_birth
+, email
+, phone_number
+, address
+, city
+, postal_code
+, language
+, registration_request_id as application_id
+, left_at
+, onboarding_finished_at
+, created_at
+",
+    )
+    .bind(id)
+    .bind(uuid)
+}
+
+pub fn get_status_data<'a>(id: Id<Member>) -> QueryAs<'a, MemberStatusData> {
+    sqlx::query_as(
+        "
+SELECT sub, left_at
+FROM members
+WHERE id = $1
 ",
     )
     .bind(id)
