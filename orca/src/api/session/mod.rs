@@ -39,7 +39,7 @@ async fn pair_by_email<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<SessionInfo>> {
-    // TODO: shouw we require some role for this action?
+    // TODO: should we require some role for this action?
     // in a way we're already trusting token so maybe we can also just
     // let any member assing themselves.
     let token_data = oid_provider.inner().decode_jwt(&token)?;

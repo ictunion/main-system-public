@@ -85,6 +85,9 @@ impl<'r> Responder<'r, 'static> for oid::Error {
             BadToken(_) => Err(Status::Unauthorized),
             Http(_) => Err(Status::BadGateway),
             Parsing(_) => Err(Status::InternalServerError),
+            Proxy(status_code) => Err(rocket::http::Status {
+                code: status_code.as_u16(),
+            }),
         }
     }
 }

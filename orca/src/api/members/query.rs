@@ -250,6 +250,7 @@ pub fn assing_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> QueryAs<'a, Deta
         "
 UPDATE members
 SET sub = $2
+, onboarding_finished_at = NOW()
 WHERE id = $1
 RETURNING id
 , member_number

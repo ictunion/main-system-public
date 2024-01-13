@@ -16,9 +16,9 @@ use self::keycloak::KeycloakProvider;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct User {
-    first_name: String,
-    last_name: String,
     email: String,
+    first_name: Option<String>,
+    last_name: Option<String>,
 }
 
 #[derive(Debug, Clone, FromForm)]
@@ -182,6 +182,7 @@ pub enum Error {
     Disabled,
     Http(reqwest::Error),
     Parsing(String),
+    Proxy(reqwest::StatusCode),
 }
 
 impl From<jwk::Error> for Error {

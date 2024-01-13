@@ -132,29 +132,34 @@ impl OidProvider for KeycloakProvider {
             .send()
             .await?;
 
-        debug!("Keycloak response status: {}", response.status());
+        let status = response.status();
+        debug!("Keycloak response status: {}", status);
         debug!("Keycloak response: {:?}", response);
 
-        // Keycloak responds with empty body but it includes `Location` with full
-        // api path to new user resource.
-        // Last segment of this path is uuid identifying new user so we can parse it out of this header.
-        match response.headers().get("Location") {
-            Some(header) => {
-                let string = header
-                    .to_str()
-                    .map_err(|_| Error::Parsing(format!("Bad header {:?}", header)))?;
-                let url = Url::parse(string)
-                    .map_err(|_| Error::Parsing(format!("Expected URL got {}", string)))?;
-                let uuid = url
-                    .path_segments()
-                    .ok_or(Error::Parsing(format!("Bad url {url}")))?
-                    .last()
-                    .ok_or(Error::Parsing(format!("Bad url {url}")))?;
+        if status.is_success() {
+            // Keycloak responds with empty body but it includes `Location` with full
+            // api path to new user resource.
+            // Last segment of this path is uuid identifying new user so we can parse it out of this header.
+            match response.headers().get("Location") {
+                Some(header) => {
+                    let string = header
+                        .to_str()
+                        .map_err(|_| Error::Parsing(format!("Bad header {:?}", header)))?;
+                    let url = Url::parse(string)
+                        .map_err(|_| Error::Parsing(format!("Expected URL got {}", string)))?;
+                    let uuid = url
+                        .path_segments()
+                        .ok_or(Error::Parsing(format!("Bad url {url}")))?
+                        .last()
+                        .ok_or(Error::Parsing(format!("Bad url {url}")))?;
 
-                Uuid::parse_str(uuid)
-                    .map_err(|_| Error::Parsing(format!("Canot parse UUID from {}", uuid)))
+                    Uuid::parse_str(uuid)
+                        .map_err(|_| Error::Parsing(format!("Canot parse UUID from {}", uuid)))
+                }
+                None => Err(Error::Parsing("Missing Location header".to_string())),
             }
-            None => Err(Error::Parsing("Missing Location header".to_string())),
+        } else {
+            Err(Error::Proxy(status))
         }
     }
 }

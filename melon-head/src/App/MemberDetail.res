@@ -96,18 +96,34 @@ module Actions = {
 
   module Accept = {
     @react.component
-    let make = (~modal, ~api, ~id) => {
+    let make = (~modal, ~api, ~id, ~setDetail) => {
+      let (error, setError) = React.useState(() => None)
+
       let doAccept = (_: JsxEvent.Mouse.t) => {
         let req =
           api->Api.patchJson(
             ~path="/members/" ++ Uuid.toString(id) ++ "/accept",
-            ~decoder=Json.Decode.string,
+            ~decoder=MemberData.Decode.detail,
             ~body=Js.Json.null,
           )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
       }
 
       <Modal.Content>
-        <p> {React.string("Approve user and give allow them to access internal resources")} </p>
+        <p> {React.string("Accept member and allow them to access internal resources.")} </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
         <Button.Panel>
           <Button onClick={_ => modal->Modal.Interface.closeModal}>
             {React.string("Cancel")}
@@ -118,17 +134,19 @@ module Actions = {
     }
   }
 
-  let acceptModal = (~modal, ~api, ~id): Modal.modalContent => {
+  let acceptModal = (~modal, ~api, ~id, ~setDetail): Modal.modalContent => {
     title: "Accept User",
-    content: <Accept modal api id />,
+    content: <Accept modal api id setDetail />,
   }
 
   @react.component
-  let make = (~status, ~modal, ~api, ~id) => {
+  let make = (~status, ~modal, ~api, ~id, ~setDetail) => {
     switch status {
     | NewMember =>
       <Button.Panel>
-        <Button onClick={_ => modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id))}>
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
           {React.string("Accept member")}
         </Button>
       </Button.Panel>
@@ -153,7 +171,7 @@ let viewOccupation = (occupation: MemberData.occupation) => {
 
 @react.component
 let make = (~api, ~id, ~modal) => {
-  let (detail: Api.webData<MemberData.detail>, _setDetail, _) =
+  let (detail: Api.webData<MemberData.detail>, setDetail, _) =
     api->Hook.getData(~path="/members/" ++ Uuid.toString(id), ~decoder=MemberData.Decode.detail)
 
   let status = RemoteData.map(detail, MemberData.getStatus)
@@ -264,7 +282,7 @@ let make = (~api, ~id, ~modal) => {
       />
     </Tabbed.Content>
     {switch status {
-    | Success(s) => <Actions status=s modal api id />
+    | Success(s) => <Actions status=s modal api id setDetail />
     | _ => React.null
     }}
   </Page>
