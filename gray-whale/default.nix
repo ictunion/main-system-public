@@ -4,7 +4,7 @@
 }:
 let
   migrations = stdenv.mkDerivation {
-    name = "gray-whale-migrations";
+    name = "gray-whale";
     src = ./migrations;
     dontBuild = true;
     installPhase = ''
