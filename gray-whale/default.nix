@@ -4,7 +4,7 @@
 }:
 let
   migrations = stdenv.mkDerivation {
-    name = "gray-whale";
+    name = "gray-whale-migrations";
     src = ./migrations;
     dontBuild = true;
     installPhase = ''
@@ -13,6 +13,7 @@ let
     '';
   };
 in
-writeScriptBin "gray-whale-migrate" ''
+writeScriptBin "gray-whale" ''
+    #!/bin/sh
     ${refinery-cli}/bin/refinery $@ -p ${migrations}/var/migrations
 ''
