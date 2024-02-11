@@ -7,14 +7,79 @@
 open Data
 open Belt
 
+// TODO: This and Members.NewNote are pretty much copy pasted
+// This should be abstracted and shared if the UX should be the same in both cases
+module NewNote = {
+  @react.component
+  let make = (
+    ~api: Api.t,
+    ~modal: Modal.Interface.t,
+    ~refreshApplications,
+    ~uuid: Uuid.t,
+    ~initialNote: option<string>,
+  ) => {
+    let (note, setNote) = React.useState(_ =>
+      switch initialNote {
+      | None => ""
+      | Some(v) => v
+      }
+    )
+    let (error, setError) = React.useState(() => None)
+
+    let onSubmit = _ => {
+      let body: Js.Json.t = ApplicationData.Encode.newNote(note)
+      let path = "/applications/" ++ Uuid.toString(uuid) ++ "/note"
+      let req = api->Api.patchJson(~path, ~decoder=ApplicationData.Decode.summary, ~body)
+
+      req->Future.get(res => {
+        switch res {
+        | Ok(_data) => {
+            let _ = refreshApplications()
+            Modal.Interface.closeModal(modal)
+          }
+        | Error(e) => setError(_ => Some(e))
+        }
+      })
+    }
+
+    <Form onSubmit>
+      <Form.TextField
+        label="Note"
+        placeholder="...some text..."
+        value=note
+        onInput={updated => setNote(_ => updated)}
+      />
+      <Button.Panel>
+        <Button
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          {React.string("Cancel")}
+        </Button>
+        <Button type_="submit" variant=Button.Cta> {React.string("Update note")} </Button>
+      </Button.Panel>
+      {switch error {
+      | None => React.null
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      }}
+    </Form>
+  }
+}
+
+let newNoteModal = (~api, ~modal, ~refreshApplications, uuid, initialNote): Modal.modalContent => {
+  title: "Update note",
+  content: <NewNote api modal refreshApplications uuid initialNote />,
+}
+
 module Processing = {
   @react.component
-  let make = (~api: Api.t) => {
-    let (processing, _, _) =
+  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+    let (processing, _, refreshApplications) =
       api->Hook.getData(
         ~path="/applications/processing",
         ~decoder=Json.Decode.array(ApplicationData.Decode.processingSummary),
       )
+
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
 
     <DataTable
       data=processing
@@ -35,14 +100,20 @@ module Processing = {
           view: r => r.lastName->View.option(React.string),
         },
         {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r => r.email->View.option(email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
-          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
         },
         {
           name: "City",
@@ -72,12 +143,15 @@ module Processing = {
 
 module Unverified = {
   @react.component
-  let make = (~api: Api.t) => {
-    let (unverified, _, _) =
+  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+    let (unverified, _, refreshApplications) =
       api->Hook.getData(
         ~path="/applications/unverified",
         ~decoder=Json.Decode.array(ApplicationData.Decode.unverifiedSummary),
       )
+
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
 
     <DataTable
       data=unverified
@@ -98,14 +172,20 @@ module Unverified = {
           view: r => r.lastName->View.option(React.string),
         },
         {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r => r.email->View.option(email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
-          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
         },
         {
           name: "City",
@@ -138,12 +218,15 @@ module Unverified = {
 
 module Accepted = {
   @react.component
-  let make = (~api: Api.t) => {
-    let (all, _, _) =
+  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+    let (all, _, refreshApplications) =
       api->Hook.getData(
         ~path="/applications/accepted",
         ~decoder=Json.Decode.array(ApplicationData.Decode.acceptedSummary),
       )
+
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
 
     <DataTable
       data=all
@@ -164,17 +247,20 @@ module Accepted = {
           view: r => r.lastName->View.option(React.string),
         },
         {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r => r.email->View.option(email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
+          name: "Note",
+          minMax: ("250px", "10fr"),
           view: r =>
-            r.phoneNumber->Option.mapWithDefault(React.string("--"), phoneNumber =>
-              <Link.Tel phoneNumber />
-            ),
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
         },
         {
           name: "City",
@@ -204,12 +290,15 @@ module Accepted = {
 
 module Rejected = {
   @react.component
-  let make = (~api: Api.t) => {
-    let (all, _, _) =
+  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+    let (all, _, refreshApplications) =
       api->Hook.getData(
         ~path="/applications/rejected",
         ~decoder=Json.Decode.array(ApplicationData.Decode.rejectedSummary),
       )
+
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
 
     <DataTable
       data=all
@@ -230,14 +319,20 @@ module Rejected = {
           view: r => r.lastName->View.option(React.string),
         },
         {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r => r.email->View.option(email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
-          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
         },
         {
           name: "City",
@@ -267,12 +362,15 @@ module Rejected = {
 
 module Invalid = {
   @react.component
-  let make = (~api: Api.t) => {
-    let (all, _, _) =
+  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+    let (all, _, refreshApplications) =
       api->Hook.getData(
         ~path="/applications/invalid",
         ~decoder=Json.Decode.array(ApplicationData.Decode.invalidSummary),
       )
+
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
 
     <DataTable
       data=all
@@ -293,14 +391,20 @@ module Invalid = {
           view: r => r.lastName->View.option(React.string),
         },
         {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r => r.email->View.option(email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
-          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
         },
         {
           name: "City",
@@ -330,12 +434,15 @@ module Invalid = {
 
 module All = {
   @react.component
-  let make = (~api: Api.t) => {
-    let (all, _, _) =
+  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+    let (all, _, refreshApplications) =
       api->Hook.getData(
         ~path="/applications",
         ~decoder=Json.Decode.array(ApplicationData.Decode.summary),
       )
+
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
 
     <DataTable
       data=all
@@ -356,14 +463,20 @@ module All = {
           view: r => r.lastName->View.option(React.string),
         },
         {
-          name: "Email",
-          minMax: ("250px", "2fr"),
-          view: r => r.email->View.option(email => <Link.Email email />),
-        },
-        {
-          name: "Phone",
-          minMax: ("220px", "2fr"),
-          view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
         },
         {
           name: "City",
@@ -415,7 +528,7 @@ let tabToUrl = (tab: option<ApplicationData.status>): string => {
 }
 
 @react.component
-let make = (~api: Api.t) => {
+let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
   let (activeTab, setActiveTab_) = React.useState(_ =>
     RescriptReactRouter.dangerouslyGetInitialUrl()->urlToTab
   )
@@ -498,22 +611,22 @@ let make = (~api: Api.t) => {
         </Tabbed.Tab>
       </Tabbed.Tabs>
       <Tabbed.Content tab={Some(ApplicationData.Processing)} handlers={tabHandlers}>
-        <Processing api />
+        <Processing api modal />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Unverified)} handlers={tabHandlers}>
-        <Unverified api />
+        <Unverified api modal />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Accepted)} handlers={tabHandlers}>
-        <Accepted api />
+        <Accepted api modal />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Rejected)} handlers={tabHandlers}>
-        <Rejected api />
+        <Rejected api modal />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Invalid)} handlers={tabHandlers}>
-        <Invalid api />
+        <Invalid api modal />
       </Tabbed.Content>
       <Tabbed.Content tab={None} handlers={tabHandlers}>
-        <All api />
+        <All api modal />
       </Tabbed.Content>
     </div>
   </Page>

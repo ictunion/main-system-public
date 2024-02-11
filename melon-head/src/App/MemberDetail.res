@@ -3,6 +3,8 @@
 open Data
 open Belt
 
+// todo: we should make Note editable also in application detail
+// https://github.com/ictunion/main-system/issues/164
 let layout: DataGrid.t<MemberData.detail> = [
   {
     label: "Membership",
@@ -72,11 +74,25 @@ let layout: DataGrid.t<MemberData.detail> = [
         view: d => View.option(d.address, React.string),
         minmax: ("450px", "900px"),
       },
-      {label: "City", view: d => View.option(d.city, React.string), minmax: ("150px", "500px")},
+      {
+        label: "City",
+        view: d => View.option(d.city, React.string),
+        minmax: ("150px", "500px"),
+      },
       {
         label: "Postal Code",
         view: d => View.option(d.postalCode, React.string),
         minmax: ("150px", "150px"),
+      },
+    ],
+  },
+  {
+    label: "Notes",
+    cells: [
+      {
+        label: "Note",
+        view: d => View.option(d.note, React.string),
+        minmax: ("150px", "1500px"),
       },
     ],
   },

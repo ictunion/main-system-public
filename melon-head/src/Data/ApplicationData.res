@@ -14,6 +14,7 @@ type detail = {
   lastName: option<string>,
   dateOfBirth: option<Js.Date.t>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   address: option<string>,
   postalCode: option<string>,
@@ -56,6 +57,7 @@ type summary = {
   firstName: option<string>,
   lastName: option<string>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   companyName: option<string>,
   registrationLocal: Local.t,
@@ -68,6 +70,7 @@ type acceptedSummary = {
   firstName: option<string>,
   lastName: option<string>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   companyName: option<string>,
   registrationLocal: Local.t,
@@ -82,6 +85,7 @@ type rejectedSummary = {
   firstName: option<string>,
   lastName: option<string>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   companyName: option<string>,
   registrationLocal: Local.t,
@@ -95,6 +99,7 @@ type invalidSummary = {
   firstName: option<string>,
   lastName: option<string>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   companyName: option<string>,
   registrationLocal: Local.t,
@@ -108,6 +113,7 @@ type processingSummary = {
   firstName: option<string>,
   lastName: option<string>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   companyName: option<string>,
   registrationLocal: Local.t,
@@ -121,6 +127,7 @@ type unverifiedSummary = {
   firstName: option<string>,
   lastName: option<string>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   companyName: option<string>,
   registrationLocal: Local.t,
@@ -138,6 +145,7 @@ module Decode = {
     lastName: field.required(. "last_name", option(string)),
     dateOfBirth: field.required(. "date_of_birth", option(date)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     address: field.required(. "address", option(string)),
     postalCode: field.required(. "postal_code", option(string)),
@@ -161,6 +169,7 @@ module Decode = {
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     companyName: field.required(. "company_name", option(string)),
     registrationLocal: field.required(. "registration_local", Local.decode),
@@ -173,6 +182,7 @@ module Decode = {
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     companyName: field.required(. "company_name", option(string)),
     registrationLocal: field.required(. "registration_local", Local.decode),
@@ -187,6 +197,7 @@ module Decode = {
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     companyName: field.required(. "company_name", option(string)),
     registrationLocal: field.required(. "registration_local", Local.decode),
@@ -200,6 +211,7 @@ module Decode = {
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     companyName: field.required(. "company_name", option(string)),
     registrationLocal: field.required(. "registration_local", Local.decode),
@@ -213,6 +225,7 @@ module Decode = {
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     companyName: field.required(. "company_name", option(string)),
     registrationLocal: field.required(. "registration_local", Local.decode),
@@ -226,10 +239,25 @@ module Decode = {
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     companyName: field.required(. "company_name", option(string)),
     registrationLocal: field.required(. "registration_local", Local.decode),
     createdAt: field.required(. "created_at", date),
     verificationSentAt: field.required(. "verification_sent_at", option(date)),
   })
+}
+
+module Encode = {
+  open Json.Encode
+
+  let strOption = str => {
+    if str == "" {
+      null
+    } else {
+      string(str)
+    }
+  }
+
+  let newNote = (newNote: string) => object([("note", strOption(newNote))])
 }

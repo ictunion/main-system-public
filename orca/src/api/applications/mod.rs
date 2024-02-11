@@ -24,6 +24,7 @@ pub struct Summary {
     first_name: Option<String>,
     last_name: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     company_name: Option<String>,
     registration_local: String,
@@ -50,6 +51,7 @@ pub struct UnverifiedSummary {
     first_name: Option<String>,
     last_name: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     company_name: Option<String>,
     registration_local: String,
@@ -79,6 +81,7 @@ pub struct AcceptedSummary {
     first_name: Option<String>,
     last_name: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     company_name: Option<String>,
     registration_local: String,
@@ -109,6 +112,7 @@ pub struct RejectedSummary {
     first_name: Option<String>,
     last_name: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     company_name: Option<String>,
     registration_local: String,
@@ -138,6 +142,7 @@ pub struct ProcessingSummary {
     first_name: Option<String>,
     last_name: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     company_name: Option<String>,
     registration_local: String,
@@ -167,6 +172,7 @@ pub struct InvalidSummary {
     first_name: Option<String>,
     last_name: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     company_name: Option<String>,
     registration_local: String,
@@ -197,6 +203,7 @@ pub struct Detail {
     last_name: Option<String>,
     date_of_birth: Option<Date>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     address: Option<String>,
     postal_code: Option<String>,
@@ -633,6 +640,35 @@ async fn hard_delete<'r>(
     Ok(SuccessResponse::Accepted)
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Note {
+    note: Option<String>,
+}
+
+#[patch("/<id>/note", format = "json", data = "<note>")]
+async fn update_note<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<RegistrationRequest>,
+    note: Json<Note>,
+) -> Response<Json<Detail>> {
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
+
+    let mut tx = db_pool.begin().await?;
+
+    let text = note.note.clone().unwrap_or("".to_string());
+
+    let detail = query::update_registration_note(id, text)
+        .fetch_one(&mut tx)
+        .await?;
+
+    tx.commit().await?;
+
+    Ok(Json(detail))
+}
+
 pub fn routes() -> Vec<Route> {
     routes![
         list,
@@ -651,5 +687,6 @@ pub fn routes() -> Vec<Route> {
         verify,
         accept,
         hard_delete,
+        update_note,
     ]
 }

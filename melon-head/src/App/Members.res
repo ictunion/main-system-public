@@ -1,6 +1,7 @@
 @module external styles: {..} = "./Members/styles.module.scss"
 
 open Belt
+open Data
 
 module NewMember = {
   open MemberData
@@ -12,6 +13,7 @@ module NewMember = {
     dateOfBirth: None,
     email: "",
     phoneNumber: "",
+    note: Some(""),
     address: "",
     city: "",
     postalCode: "",
@@ -130,9 +132,71 @@ module NewMember = {
   }
 }
 
+// TODO: This and Applications.NewNote are pretty much copy pasted
+// This should be abstracted and shared if the UX should be the same in both cases
+module NewNote = {
+  @react.component
+  let make = (
+    ~api: Api.t,
+    ~modal: Modal.Interface.t,
+    ~refreshMembers,
+    ~uuid: Uuid.t,
+    ~initialNote: option<string>,
+  ) => {
+    let (note, setNote) = React.useState(_ =>
+      switch initialNote {
+      | None => ""
+      | Some(v) => v
+      }
+    )
+    let (error, setError) = React.useState(() => None)
+
+    let onSubmit = _ => {
+      let body: Js.Json.t = ApplicationData.Encode.newNote(note)
+      let path = "/members/" ++ Uuid.toString(uuid) ++ "/note"
+      let req = api->Api.patchJson(~path, ~decoder=MemberData.Decode.detail, ~body)
+
+      req->Future.get(res => {
+        switch res {
+        | Ok(_data) => {
+            let _ = refreshMembers()
+            Modal.Interface.closeModal(modal)
+          }
+        | Error(e) => setError(_ => Some(e))
+        }
+      })
+    }
+
+    <Form onSubmit>
+      <Form.TextField
+        label="Note"
+        placeholder="...some text..."
+        value=note
+        onInput={updated => setNote(_ => updated)}
+      />
+      <Button.Panel>
+        <Button
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          {React.string("Cancel")}
+        </Button>
+        <Button type_="submit" variant=Button.Cta> {React.string("Update note")} </Button>
+      </Button.Panel>
+      {switch error {
+      | None => React.null
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      }}
+    </Form>
+  }
+}
+
 let newMemberModal = (~api, ~modal, ~refreshMembers): Modal.modalContent => {
   title: "Add New Member",
   content: <NewMember api modal refreshMembers />,
+}
+
+let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, initialNote): Modal.modalContent => {
+  title: "Update note",
+  content: <NewNote api modal refreshMembers uuid initialNote />,
 }
 
 let viewPaddedNumber = (n: int): React.element => {
@@ -225,15 +289,78 @@ let columns: array<DataTable.column<MemberData.summary>> = [
 
 module All = {
   @react.component
-  let make = (~api) => {
-    let (members, _, _) =
+  let make = (~api, ~modal) => {
+    let (members, _, refreshMembers) =
       api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
 
     let openNewMembersTab = _ => {
       RescriptReactRouter.push(Some(MemberData.NewMember)->tabToUrl)
     }
 
-    <DataTable data=members columns>
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, note))
+
+    <DataTable
+      data=members
+      columns=[
+        {
+          name: "ID",
+          minMax: ("100px", "1fr"),
+          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+        },
+        {
+          name: "Member Number",
+          minMax: ("200px", "1fr"),
+          view: r => viewPaddedNumber(r.memberNumber),
+        },
+        {
+          name: "Left On",
+          minMax: ("150px", "1fr"),
+          view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
+        },
+        {
+          name: "First Name",
+          minMax: ("150px", "2fr"),
+          view: r => r.firstName->View.option(React.string),
+        },
+        {
+          name: "Last Name",
+          minMax: ("150px", "2fr"),
+          view: r => r.lastName->View.option(React.string),
+        },
+        {
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
+        },
+        {
+          name: "Last Company",
+          minMax: ("220px", "2fr"),
+          view: r =>
+            r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+        },
+        {
+          name: "City",
+          minMax: ("250px", "1fr"),
+          view: r => r.city->View.option(React.string),
+        },
+        {
+          name: "Created On",
+          minMax: ("150px", "1fr"),
+          view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+        },
+      ]>
       <p> {React.string("Currently there are no member.")} </p>
       <p>
         <small>
@@ -257,11 +384,74 @@ module New = {
     let openNewMemberModal = _ =>
       Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))
 
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, note))
+
     <div className={styles["membersTab"]}>
       <Button.Panel>
         <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
       </Button.Panel>
-      <DataTable data=members columns>
+      <DataTable
+        data=members
+        columns=[
+          {
+            name: "ID",
+            minMax: ("100px", "1fr"),
+            view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+          },
+          {
+            name: "Member Number",
+            minMax: ("200px", "1fr"),
+            view: r => viewPaddedNumber(r.memberNumber),
+          },
+          {
+            name: "Left On",
+            minMax: ("150px", "1fr"),
+            view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
+          },
+          {
+            name: "First Name",
+            minMax: ("150px", "2fr"),
+            view: r => r.firstName->View.option(React.string),
+          },
+          {
+            name: "Last Name",
+            minMax: ("150px", "2fr"),
+            view: r => r.lastName->View.option(React.string),
+          },
+          {
+            name: "Note",
+            minMax: ("250px", "10fr"),
+            view: r =>
+              <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+                {
+                  let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                    "Add note"
+                  } else {
+                    Option.getWithDefault(r.note, "Add note")
+                  }
+
+                  React.string(note)
+                }
+              </a>,
+          },
+          {
+            name: "Last Company",
+            minMax: ("220px", "2fr"),
+            view: r =>
+              r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+          },
+          {
+            name: "City",
+            minMax: ("250px", "1fr"),
+            view: r => r.city->View.option(React.string),
+          },
+          {
+            name: "Created On",
+            minMax: ("150px", "1fr"),
+            view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+          },
+        ]>
         <p> {React.string("There are members who need to be onboarded.")} </p>
         <p>
           <small>
@@ -277,8 +467,8 @@ module New = {
 
 module Current = {
   @react.component
-  let make = (~api) => {
-    let (members, _, _) =
+  let make = (~api, ~modal) => {
+    let (members, _, refreshMembers) =
       api->Hook.getData(
         ~path="/members/current",
         ~decoder=Json.Decode.array(MemberData.Decode.summary),
@@ -288,7 +478,70 @@ module Current = {
       RescriptReactRouter.push(Some(MemberData.NewMember)->tabToUrl)
     }
 
-    <DataTable data=members columns>
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, note))
+
+    <DataTable
+      data=members
+      columns=[
+        {
+          name: "ID",
+          minMax: ("100px", "1fr"),
+          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+        },
+        {
+          name: "Member Number",
+          minMax: ("200px", "1fr"),
+          view: r => viewPaddedNumber(r.memberNumber),
+        },
+        {
+          name: "Left On",
+          minMax: ("150px", "1fr"),
+          view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
+        },
+        {
+          name: "First Name",
+          minMax: ("150px", "2fr"),
+          view: r => r.firstName->View.option(React.string),
+        },
+        {
+          name: "Last Name",
+          minMax: ("150px", "2fr"),
+          view: r => r.lastName->View.option(React.string),
+        },
+        {
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
+        },
+        {
+          name: "Last Company",
+          minMax: ("220px", "2fr"),
+          view: r =>
+            r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+        },
+        {
+          name: "City",
+          minMax: ("250px", "1fr"),
+          view: r => r.city->View.option(React.string),
+        },
+        {
+          name: "Created On",
+          minMax: ("150px", "1fr"),
+          view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+        },
+      ]>
       <p> {React.string("There are no members yet.")} </p>
       <p>
         <small>
@@ -305,14 +558,77 @@ module Current = {
 
 module Past = {
   @react.component
-  let make = (~api) => {
-    let (members, _, _) =
+  let make = (~api, ~modal) => {
+    let (members, _, refreshMembers) =
       api->Hook.getData(
         ~path="/members/past",
         ~decoder=Json.Decode.array(MemberData.Decode.summary),
       )
 
-    <DataTable data=members columns>
+    let openNewNoteModal = (uuid, note) =>
+      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, note))
+
+    <DataTable
+      data=members
+      columns=[
+        {
+          name: "ID",
+          minMax: ("100px", "1fr"),
+          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+        },
+        {
+          name: "Member Number",
+          minMax: ("200px", "1fr"),
+          view: r => viewPaddedNumber(r.memberNumber),
+        },
+        {
+          name: "Left On",
+          minMax: ("150px", "1fr"),
+          view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
+        },
+        {
+          name: "First Name",
+          minMax: ("150px", "2fr"),
+          view: r => r.firstName->View.option(React.string),
+        },
+        {
+          name: "Last Name",
+          minMax: ("150px", "2fr"),
+          view: r => r.lastName->View.option(React.string),
+        },
+        {
+          name: "Note",
+          minMax: ("250px", "10fr"),
+          view: r =>
+            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+              {
+                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                  "Add note"
+                } else {
+                  Option.getWithDefault(r.note, "Add note")
+                }
+
+                React.string(note)
+              }
+            </a>,
+        },
+        {
+          name: "Last Company",
+          minMax: ("220px", "2fr"),
+          view: r =>
+            r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+        },
+        {
+          name: "City",
+          minMax: ("250px", "1fr"),
+          view: r => r.city->View.option(React.string),
+        },
+        {
+          name: "Created On",
+          minMax: ("150px", "1fr"),
+          view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+        },
+      ]>
       <p> {React.string("There are no ex-members.")} </p>
     </DataTable>
   }
@@ -366,13 +682,13 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
       <New api modal />
     </Tabbed.Content>
     <Tabbed.Content tab=Some(MemberData.CurrentMember) handlers={tabHandlers}>
-      <Current api />
+      <Current api modal />
     </Tabbed.Content>
     <Tabbed.Content tab=Some(MemberData.PastMember) handlers={tabHandlers}>
-      <Past api />
+      <Past api modal />
     </Tabbed.Content>
     <Tabbed.Content tab=None handlers={tabHandlers}>
-      <All api />
+      <All api modal />
     </Tabbed.Content>
   </Page>
 }

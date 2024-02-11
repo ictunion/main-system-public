@@ -15,6 +15,7 @@ SELECT m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
@@ -27,6 +28,7 @@ GROUP BY m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , m.created_at
@@ -44,6 +46,7 @@ SELECT m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
@@ -56,6 +59,7 @@ GROUP BY m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , m.created_at
@@ -73,6 +77,7 @@ SELECT m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
@@ -85,6 +90,7 @@ GROUP BY m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , m.created_at
@@ -101,6 +107,7 @@ SELECT m.id
     , m.first_name
     , m.last_name
     , m.email
+    , m.note
     , m.phone_number
     , m.city
     , m.left_at
@@ -114,6 +121,7 @@ GROUP BY m.id
     , m.last_name
     , m.email
     , m.phone_number
+    , m.note
     , m.city
     , m.left_at
     , m.created_at
@@ -136,6 +144,7 @@ INSERT INTO members
     , city
     , postal_code
     , phone_number
+    , note
     )
 VALUES
     ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )
@@ -145,6 +154,7 @@ RETURNING id
     , last_name
     , email
     , phone_number
+    , note
     , city
     , left_at
     , created_at
@@ -173,6 +183,7 @@ SELECT id
     , date_of_birth
     , email
     , phone_number
+    , note
     , address
     , city
     , postal_code
@@ -259,6 +270,7 @@ RETURNING id
 , date_of_birth
 , email
 , phone_number
+, note
 , address
 , city
 , postal_code
@@ -282,4 +294,32 @@ WHERE id = $1
 ",
     )
     .bind(id)
+}
+
+pub fn update_member_note<'a>(id: Id<Member>, new_note: String) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+UPDATE members
+SET note = $2
+WHERE id = $1
+RETURNING id
+, member_number
+, first_name
+, last_name
+, date_of_birth
+, email
+, phone_number
+, note
+, address
+, city
+, postal_code
+, language
+, registration_request_id as application_id
+, left_at
+, onboarding_finished_at
+, created_at
+",
+    )
+    .bind(id)
+    .bind(new_note)
 }

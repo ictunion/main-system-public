@@ -17,6 +17,7 @@ SELECT id
 , first_name
 , last_name
 , phone_number
+, note
 , city
 , company_name
 , registration_local
@@ -35,6 +36,7 @@ SELECT id
 , first_name
 , last_name
 , phone_number
+, note
 , city
 , company_name
 , registration_local
@@ -54,6 +56,7 @@ SELECT id
 , first_name
 , last_name
 , phone_number
+, note
 , city
 , company_name
 , registration_local
@@ -73,6 +76,7 @@ SELECT rr.id
 , rr.first_name
 , rr.last_name
 , rr.phone_number
+, rr.note
 , rr.city
 , rr.company_name
 , rr.registration_local
@@ -94,6 +98,7 @@ SELECT id
 , first_name
 , last_name
 , phone_number
+, note
 , city
 , company_name
 , registration_local
@@ -113,6 +118,7 @@ SELECT id
 , first_name
 , last_name
 , phone_number
+, note
 , city
 , company_name
 , registration_local
@@ -133,6 +139,7 @@ SELECT rr.id
 , rr.last_name
 , rr.date_of_birth
 , rr.phone_number
+, rr.note
 , rr.city
 , rr.address
 , rr.postal_code
@@ -185,6 +192,7 @@ RETURNING id
 , last_name
 , date_of_birth
 , phone_number
+, note
 , city
 , address
 , postal_code
@@ -218,6 +226,7 @@ RETURNING id
 , last_name
 , date_of_birth
 , phone_number
+, note
 , city
 , address
 , postal_code
@@ -250,6 +259,7 @@ RETURNING id
 , last_name
 , date_of_birth
 , phone_number
+, note
 , city
 , address
 , postal_code
@@ -282,6 +292,7 @@ RETURNING id
 , last_name
 , date_of_birth
 , phone_number
+, note
 , city
 , address
 , postal_code
@@ -315,6 +326,7 @@ RETURNING id
 , last_name
 , date_of_birth
 , phone_number
+, note
 , city
 , address
 , postal_code
@@ -369,6 +381,7 @@ INSERT INTO members AS m
 , last_name
 , language
 , date_of_birth
+, note
 , address
 , city
 , postal_code
@@ -381,6 +394,7 @@ SELECT $2
 , last_name
 , registration_local
 , date_of_birth
+, note
 , address
 , city
 , postal_code
@@ -458,4 +472,41 @@ DELETE FROM registration_requests
 ",
     )
     .bind(registration_id)
+}
+
+pub fn update_registration_note<'a>(
+    id: Id<RegistrationRequest>,
+    new_note: String,
+) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+UPDATE registration_requests
+SET note = $2
+WHERE id = $1
+RETURNING id
+, email
+, first_name
+, last_name
+, date_of_birth
+, phone_number
+, note
+, city
+, address
+, postal_code
+, occupation
+, company_name
+, verification_sent_at
+, confirmed_at
+, registration_ip
+, registration_local
+, registration_user_agent
+, registration_source
+, rejected_at
+, invalidated_at
+, created_at
+, NULL AS accepted_at
+",
+    )
+    .bind(id)
+    .bind(new_note)
 }

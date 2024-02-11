@@ -24,6 +24,7 @@ pub struct Summary {
     last_name: Option<String>,
     email: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     city: Option<String>,
     left_at: Option<DateTime<Utc>>,
     company_names: Vec<Option<String>>,
@@ -139,6 +140,7 @@ pub struct Detail {
     date_of_birth: Option<Date>,
     email: Option<String>,
     phone_number: Option<String>,
+    note: Option<String>,
     address: Option<String>,
     city: Option<String>,
     postal_code: Option<String>,
@@ -248,6 +250,35 @@ async fn list_occupations<'r>(
     Ok(Json(occupations))
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Note {
+    note: Option<String>,
+}
+
+#[patch("/<id>/note", format = "json", data = "<note>")]
+async fn update_note<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+    note: Json<Note>,
+) -> Response<Json<Detail>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let mut tx = db_pool.begin().await?;
+
+    let text = note.note.clone().unwrap_or("".to_string());
+
+    let detail = query::update_member_note(id, text)
+        .fetch_one(&mut tx)
+        .await?;
+
+    tx.commit().await?;
+
+    Ok(Json(detail))
+}
+
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
@@ -259,5 +290,6 @@ pub fn routes() -> Vec<Route> {
         list_occupations,
         detail,
         accept,
+        update_note,
     ]
 }

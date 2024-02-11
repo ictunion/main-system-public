@@ -8,6 +8,7 @@ type summary = {
   lastName: option<string>,
   email: option<Email.t>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   city: option<string>,
   leftAt: option<Js.Date.t>,
   companyNames: array<option<string>>,
@@ -22,6 +23,7 @@ type newMember = {
   email: string,
   // this should be able to hold invalid state as well so it's not phoneNumber type
   phoneNumber: string,
+  note: option<string>,
   dateOfBirth: option<Js.Date.t>,
   address: string,
   city: string,
@@ -37,6 +39,7 @@ type detail = {
   dateOfBirth: option<Js.Date.t>,
   email: option<Email.t>,
   phoneNumber: option<PhoneNumber.t>,
+  note: option<string>,
   address: option<string>,
   city: option<string>,
   postalCode: option<string>,
@@ -80,6 +83,7 @@ module Decode = {
     lastName: field.required(. "last_name", option(string)),
     email: field.required(. "email", option(Email.decode)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),
     leftAt: field.required(. "left_at", option(date)),
     companyNames: field.required(. "company_names", array(option(string))),
@@ -94,6 +98,7 @@ module Decode = {
     dateOfBirth: field.required(. "date_of_birth", option(date)),
     email: field.required(. "email", option(Email.decode)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    note: field.required(. "note", option(string)),
     address: field.required(. "address", option(string)),
     city: field.required(. "city", option(string)),
     postalCode: field.required(. "postal_code", option(string)),
@@ -130,10 +135,12 @@ module Encode = {
       ("last_name", strOption(newMember.lastName)),
       ("email", strOption(newMember.email)),
       ("phone_number", strOption(newMember.phoneNumber)),
+      // there is no option to set note in Modal dialog
+      ("note", null),
       ("date_of_birth", option(Data.Encode.day, newMember.dateOfBirth)),
       ("address", strOption(newMember.address)),
       ("city", strOption(newMember.city)),
-      ("postal_code", strOption(newMember.city)),
+      ("postal_code", strOption(newMember.postalCode)),
       ("language", string(newMember.language)),
     ])
 }
