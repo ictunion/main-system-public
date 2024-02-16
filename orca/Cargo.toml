@@ -12,7 +12,7 @@ rocket = { version = "0.5.0-rc.2", features = [ "json" ] }
 serde = { version = "1.0.147", features = ["derive"] }
 rocket-validation = { git = "https://github.com/somehowchris/rocket-validation.git", rev = "4c81187be2144fefceade0d20e2f2f9ddd244970" }
 validator = "0.16.0"
-sqlx = { version = "0.6.2", features = [ "runtime-tokio-rustls", "postgres", "macros", "all-types", "uuid", "chrono" ] }
+sqlx = { version = "0.7.3", features = [ "runtime-tokio-rustls", "postgres", "macros", "uuid", "chrono", "ipnetwork", "time" ] }
 time = { version = "0.3.19", features = [ "serde-human-readable" ] }
 rustc-serialize = "0.3.24"
 tokio = { version = "1.25.0", features = [ "io-std", "fs", "process" ] }

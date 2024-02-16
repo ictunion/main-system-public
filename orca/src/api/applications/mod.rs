@@ -375,12 +375,12 @@ async fn reject<'r>(
 
     // check that the application status is in processing
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_waiting_or_in_processing_or()?;
 
-    let detail = query::reject_application(id).fetch_one(&mut tx).await?;
+    let detail = query::reject_application(id).fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
 
@@ -399,12 +399,14 @@ async fn invalidate<'r>(
     let mut tx = db_pool.inner().begin().await?;
 
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_waiting_or_in_processing_or()?;
 
-    let detail = query::invalidate_application(id).fetch_one(&mut tx).await?;
+    let detail = query::invalidate_application(id)
+        .fetch_one(&mut *tx)
+        .await?;
 
     tx.commit().await?;
 
@@ -426,12 +428,12 @@ async fn unreject<'r>(
 
     // check that the application status is rejected
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_rejected()?;
 
-    let detail = query::unreject_application(id).fetch_one(&mut tx).await?;
+    let detail = query::unreject_application(id).fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
 
@@ -451,13 +453,13 @@ async fn uninvalidate<'r>(
 
     // check that the application status is rejected
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_invalidated()?;
 
     let detail = query::uninvalidate_application(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?;
 
     tx.commit().await?;
@@ -487,7 +489,7 @@ async fn accept<'r>(
 
     // check that application status is in processing
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_in_proceesing()?;
@@ -497,7 +499,7 @@ async fn accept<'r>(
         Some(v) => v,
         None => {
             let (new_num,) = members::query::get_next_member_number()
-                .fetch_one(&mut tx)
+                .fetch_one(&mut *tx)
                 .await?;
             new_num
         }
@@ -505,7 +507,7 @@ async fn accept<'r>(
 
     // Inserting new member data
     let result = query::create_new_member(id, member_number)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await;
 
     // Gracefully handle colision of member numbers
@@ -522,15 +524,15 @@ async fn accept<'r>(
 
     // Populate all the relations for new member
     query::attach_files_to_member(id, member_id)
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
     query::attach_occupation(id, member_id)
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
 
     // Since we return just member_id from the insert query
     // let's just do an extra query for application detail
-    let detail = query::get_application(id).fetch_one(&mut tx).await?;
+    let detail = query::get_application(id).fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
 
@@ -568,12 +570,12 @@ async fn verify<'r>(
 
     // check that the application status is in processing
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_waiting_for_confirmation()?;
 
-    let detail = query::verify_application(id).fetch_one(&mut tx).await?;
+    let detail = query::verify_application(id).fetch_one(&mut *tx).await?;
 
     // Trigger event to send a notification out
     queue
@@ -623,16 +625,16 @@ async fn hard_delete<'r>(
 
     // check that the application status is rejected
     query::get_application_status_data(id)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?
         .to_status()
         .assert_invalidated()?;
 
     query::dangerous_hard_delete_application_data(id)
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
     query::dangerous_hard_delete_application(id)
-        .execute(&mut tx)
+        .execute(&mut *tx)
         .await?;
 
     tx.commit().await?;
@@ -661,7 +663,7 @@ async fn update_note<'r>(
     let text = note.note.clone().unwrap_or("".to_string());
 
     let detail = query::update_registration_note(id, text)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?;
 
     tx.commit().await?;

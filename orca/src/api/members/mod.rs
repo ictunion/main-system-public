@@ -116,14 +116,14 @@ async fn create_member<'r>(
     let member_number = match new_member.0.member_number {
         Some(num) => num,
         None => {
-            let (new_num,) = query::get_next_member_number().fetch_one(&mut tx).await?;
+            let (new_num,) = query::get_next_member_number().fetch_one(&mut *tx).await?;
             new_num
         }
     };
 
     // Create new member
     let summary = query::create_member(member_number, &new_member.0)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?;
 
     tx.commit().await?;
@@ -271,7 +271,7 @@ async fn update_note<'r>(
     let text = note.note.clone().unwrap_or("".to_string());
 
     let detail = query::update_member_note(id, text)
-        .fetch_one(&mut tx)
+        .fetch_one(&mut *tx)
         .await?;
 
     tx.commit().await?;
