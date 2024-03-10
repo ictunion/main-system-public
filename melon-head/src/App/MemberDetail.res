@@ -150,9 +150,53 @@ module Actions = {
     }
   }
 
+  module Remove = {
+    @react.component
+    let make = (~modal, ~api, ~id, ~setDetail) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doRemove = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.deleteJson(
+            ~path="/members/" ++ Uuid.toString(id),
+            ~decoder=MemberData.Decode.detail,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p> {React.string("Remove member and reject their access to organization resources.")} </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => modal->Modal.Interface.closeModal}>
+            {React.string("Cancel")}
+          </Button>
+          <Button variant=Button.Danger onClick=doRemove> {React.string("Remove Member")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
   let acceptModal = (~modal, ~api, ~id, ~setDetail): Modal.modalContent => {
-    title: "Accept User",
+    title: "Accept Member",
     content: <Accept modal api id setDetail />,
+  }
+
+  let removeModal = (~modal, ~api, ~id, ~setDetail): Modal.modalContent => {
+    title: "Remove Member",
+    content: <Remove modal api id setDetail />,
   }
 
   @react.component
@@ -161,12 +205,27 @@ module Actions = {
     | NewMember =>
       <Button.Panel>
         <Button
+          variant=Button.Cta
           onClick={_ =>
             modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
           {React.string("Accept member")}
         </Button>
+        <Button
+          variant=Button.Danger
+          onClick={_ =>
+            modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
+          {React.string("Remove member")}
+        </Button>
       </Button.Panel>
-    | CurrentMember => React.null
+    | CurrentMember =>
+      <Button.Panel>
+        <Button
+          variant=Button.Danger
+          onClick={_ =>
+            modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
+          {React.string("Remove member")}
+        </Button>
+      </Button.Panel>
     | PastMember => React.null
     }
   }

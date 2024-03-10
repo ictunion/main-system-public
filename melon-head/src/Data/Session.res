@@ -33,7 +33,7 @@ let showRealmRole = (r: realmRole): string =>
 type tokenClaims = {
   sub: Data.Uuid.t,
   email: Email.t,
-  name: string,
+  name: option<string>,
   orcaRoles: array<orcaRole>,
   realmRoles: array<realmRole>,
 }
@@ -92,7 +92,7 @@ module Decode = {
   let tokenClaims = object(field => {
     sub: field.required(. "sub", Data.Uuid.decode),
     email: field.required(. "email", Email.decode),
-    name: field.required(. "name", string),
+    name: field.required(. "name", option(string)),
     orcaRoles: field.required(. "resource_access", orcaRoles),
     realmRoles: field.required(. "resource_access", realmRoles),
   })

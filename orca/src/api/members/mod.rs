@@ -266,13 +266,43 @@ async fn update_note<'r>(
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let mut tx = db_pool.begin().await?;
-
+    // TODO: this clonning is avoidable
     let text = note.note.clone().unwrap_or("".to_string());
 
     let detail = query::update_member_note(id, text)
-        .fetch_one(&mut *tx)
+        .fetch_one(db_pool.inner())
         .await?;
+
+    Ok(Json(detail))
+}
+
+#[delete("/<id>", format = "json")]
+async fn remove_member<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+) -> Response<Json<Detail>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let mut tx = db_pool.begin().await?;
+
+    let status = query::get_status_data(id).fetch_one(&mut *tx).await?;
+
+    // Remove from keycloak if paired
+    if let Some(uuid) = status.sub {
+        oid_provider.inner().remove_user(&token, uuid).await?;
+    }
+
+    if status.left_at.is_some() {
+        return Err(ApiError::data_conflict(format!(
+            "Id {} is no longer a member of organization",
+            id
+        )));
+    }
+
+    // Mark in database
+    let detail = query::remove_member(id).fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
 
@@ -291,5 +321,6 @@ pub fn routes() -> Vec<Route> {
         detail,
         accept,
         update_note,
+        remove_member,
     ]
 }

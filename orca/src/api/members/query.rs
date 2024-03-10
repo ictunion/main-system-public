@@ -144,7 +144,6 @@ INSERT INTO members
     , city
     , postal_code
     , phone_number
-    , note
     )
 VALUES
     ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )
@@ -322,4 +321,33 @@ RETURNING id
     )
     .bind(id)
     .bind(new_note)
+}
+
+// This doesn't realy delete member from the database
+// We're just adding left_at flag to the data
+pub fn remove_member<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+UPDATE members
+SET left_at = NOW()
+WHERE id = $1
+RETURNING id
+, member_number
+, first_name
+, last_name
+, date_of_birth
+, email
+, phone_number
+, note
+, address
+, city
+, postal_code
+, language
+, registration_request_id as application_id
+, left_at
+, onboarding_finished_at
+, created_at
+",
+    )
+    .bind(id)
 }

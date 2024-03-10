@@ -228,7 +228,7 @@ let tabToUrl = (tab: option<MemberData.status>): string => {
   | None => "/members#all"
   | Some(NewMember) => "/members#new"
   | Some(CurrentMember) => "/members#current"
-  | Some(PastMember) => "members#past"
+  | Some(PastMember) => "/members#past"
   }
 }
 

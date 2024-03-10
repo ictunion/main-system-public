@@ -162,4 +162,28 @@ impl OidProvider for KeycloakProvider {
             Err(Error::Proxy(status))
         }
     }
+
+    async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: uuid::Uuid) -> Result<(), Error> {
+        // Send request to create a new user
+        let client = reqwest::Client::new();
+        let response = client
+            .delete(&format!(
+                "{}/admin/realms/{}/users/{}",
+                self.host, self.realm, id
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .send()
+            .await?;
+
+        let status = response.status();
+
+        debug!("Keycloak response status: {}", status);
+        debug!("Keycloak response: {:?}", response);
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(Error::Proxy(status))
+        }
+    }
 }

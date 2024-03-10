@@ -41,7 +41,9 @@ let make = (
               <tr>
                 <td> {React.string("name")} </td>
                 <td>
-                  <span className={styles["shorten"]}> {React.string(ses.tokenClaims.name)} </span>
+                  <span className={styles["shorten"]}>
+                    {React.string(ses.tokenClaims.name->Belt.Option.getWithDefault("[anonymous]"))}
+                  </span>
                 </td>
               </tr>
               <tr>

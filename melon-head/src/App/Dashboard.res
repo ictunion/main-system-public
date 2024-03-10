@@ -73,7 +73,11 @@ let make = (
     <div className={styles["welcome"]}>
       <h3>
         {React.string("Hello ")}
-        {React.string(session->RemoteData.unwrap(~default="--", s => s.tokenClaims.name))}
+        {React.string(
+          session->RemoteData.unwrap(~default="--", s =>
+            s.tokenClaims.name->Option.getWithDefault("[anonymous]")
+          ),
+        )}
         {React.string("!")}
       </h3>
       {switch session->RemoteData.map(s => s.memberId) {

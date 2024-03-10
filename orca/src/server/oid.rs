@@ -95,6 +95,7 @@ trait OidProvider {
     ) -> Result<TokenData<JwtClaims>, Error>;
 
     async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error>;
+    async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error>;
 }
 
 pub struct Provider(ProviderState);
@@ -170,6 +171,13 @@ impl Provider {
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
+
+    pub async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: uuid::Uuid) -> Result<(), Error> {
+        match &self.0 {
+            ProviderState::Keyclaok(k) => k.remove_user(token, id).await,
+            ProviderState::Disconnected => Err(Error::Disabled),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -213,7 +221,7 @@ pub struct JwtClaims {
     pub sub: uuid::Uuid,
     resource_access: HashMap<String, Roles>,
     pub email: String,
-    name: String,
+    name: Option<String>,
 }
 
 #[derive(Responder, Debug)]

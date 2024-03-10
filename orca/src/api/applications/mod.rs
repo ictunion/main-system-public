@@ -658,15 +658,12 @@ async fn update_note<'r>(
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    let mut tx = db_pool.begin().await?;
-
+    // TODO: avoid clone
     let text = note.note.clone().unwrap_or("".to_string());
 
     let detail = query::update_registration_note(id, text)
-        .fetch_one(&mut *tx)
+        .fetch_one(db_pool.inner())
         .await?;
-
-    tx.commit().await?;
 
     Ok(Json(detail))
 }
