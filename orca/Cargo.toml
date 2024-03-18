@@ -28,3 +28,4 @@ handlebars = "4.3.7"
 reqwest = { version =  "0.11.18", features = [ "json" ] }
 jsonwebtoken = "8.3.0"
 url = "2.5.0"
+mrml = "3.1.0"

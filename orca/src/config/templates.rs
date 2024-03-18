@@ -1,6 +1,8 @@
 use handlebars::Handlebars;
+use mrml;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::str;
 
 pub const EMAIL_VERIFICATION: Template = Template {
     name: "email_verification",
@@ -25,6 +27,9 @@ pub struct Templates<'a> {
 pub enum Error {
     Io(std::io::Error),
     TemplateLoading(Box<handlebars::TemplateError>),
+    Infallible(std::convert::Infallible),
+    Parser(Box<mrml::prelude::parser::Error>),
+    Renderer(Box<mrml::prelude::render::Error>),
 }
 
 impl From<std::io::Error> for Error {
@@ -39,12 +44,30 @@ impl From<handlebars::TemplateError> for Error {
     }
 }
 
+impl From<std::convert::Infallible> for Error {
+    fn from(value: std::convert::Infallible) -> Self {
+        Self::Infallible(value)
+    }
+}
+
+impl From<mrml::prelude::parser::Error> for Error {
+    fn from(value: mrml::prelude::parser::Error) -> Self {
+        Self::Parser(Box::new(value))
+    }
+}
+
+impl From<mrml::prelude::render::Error> for Error {
+    fn from(value: mrml::prelude::render::Error) -> Self {
+        Self::Renderer(Box::new(value))
+    }
+}
+
 fn get_key_for(template: &Template, lang: &str) -> String {
-    format!("{}/{}.html", template.name, lang)
+    format!("{}/{}.mjml", template.name, lang)
 }
 
 fn get_default_key(template: &Template) -> String {
-    format!("{}/default.html", template.name)
+    format!("{}/default.mjml", template.name)
 }
 
 impl<'a> Templates<'a> {
@@ -62,27 +85,31 @@ impl<'a> Templates<'a> {
     }
 
     fn load_template(&mut self, path: &str, template: &Template) -> Result<(), Error> {
-        // Tempalte can be directory containing different translations
+        // Template can be directory containing different translations
         // default.html is translation which gets used when no other translation is found.
+        let opts = mrml::prelude::render::RenderOptions::default();
         match fs::read_dir(format!("{}/{}", path, template.name)) {
             Ok(paths) => {
                 for path in paths {
                     let file_path = path?;
-                    self.handlebars.register_template_file(
+                    let mrml_template: String = fs::read_to_string(file_path.path())?.parse()?;
+                    let rendered = mrml::parse(mrml_template)?.render(&opts)?;
+                    self.handlebars.register_template_string(
                         &format!(
                             "{}/{}",
                             template.name,
                             file_path.file_name().to_str().unwrap()
                         ),
-                        file_path.path(),
+                        rendered,
                     )?;
                 }
             }
             Err(_err) => {
-                self.handlebars.register_template_file(
-                    &get_default_key(template),
-                    format!("{}/{}.html", path, template.name),
-                )?;
+                let mrml_template: String =
+                    fs::read_to_string(format!("{}/{}.mjml", path, template.name))?.parse()?;
+                let rendered = mrml::parse(mrml_template)?.render(&opts)?;
+                self.handlebars
+                    .register_template_string(&get_default_key(template), rendered)?;
             }
         };
 
@@ -109,7 +136,7 @@ impl<'a> Templates<'a> {
 
 pub struct Renderer<'a> {
     template: String,
-    // At the moment we don't really need more things thatn string
+    // At the moment we don't really need more things than string
     // otherwise this would become some serde base type
     data: HashMap<&'a str, &'a str>,
 }
@@ -135,6 +162,6 @@ mod tests {
     #[test]
     fn it_can_load_templates() {
         let mut templates = Templates::new();
-        assert!(templates.preload_templates("templates").is_ok());
+        assert!(templates.preload_templates("templates/emails").is_ok());
     }
 }

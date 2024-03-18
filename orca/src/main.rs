@@ -48,7 +48,7 @@ enum StartupError {
     Database(db::SqlError),
     Server(rocket::Error),
     Logger(fern::InitError),
-    Keyclaok(server::oid::Error),
+    Keycloak(server::oid::Error),
 }
 
 impl From<db::SqlError> for StartupError {
@@ -71,7 +71,7 @@ impl From<fern::InitError> for StartupError {
 
 impl From<server::oid::Error> for StartupError {
     fn from(value: server::oid::Error) -> Self {
-        Self::Keyclaok(value)
+        Self::Keycloak(value)
     }
 }
 

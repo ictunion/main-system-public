@@ -1,0 +1,82 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-text line-height="1.5"
+               font-size="15px"
+               color="#000000"
+               font-family="helvetica"
+               padding="5px 25px"
+               align="justify" />
+      <mj-button background-color="#FFC832"
+                 color="#000000"
+                 border-radius="0"
+                 width="100%"
+                 height="60px"
+                 font-size="24px"
+                 padding="10px 25px" />
+      <mj-divider border-color="#237fa8"  padding="10px 0"></mj-divider>
+    </mj-attributes>
+    <mj-preview>New application just came!</mj-preview>
+  </mj-head>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+
+        <mj-image width="200px" src="https://ictunion.cz/images/logo.png"></mj-image>
+
+        <mj-divider></mj-divider>
+
+        <mj-text>
+          🇨🇿 Ahoj, <br>
+
+          tento email ti dochází jako členovi*ce výboru,
+          protože přišla nová žádost o členství do Odborové organizace pracujících v ICT.
+        </mj-text>
+
+        <mj-text>
+          Detail přihlášky je dostupný na <a href="{{ application_detail_url }}">{{ application_detail_url }}</a>
+        </mj-text>
+        <mj-text>
+          Co je teď třeba:
+          <ul>
+            <li>Zkontrolovat vygenerovanou přihlášku, zda na ní nechybí žádná informace.</li>
+            <li>Napsat do výborového chatu na signálu, že přišla nová přihláška a domluvit se tam, kdo zájemci*kyni zavolá.</li>
+            <li>Zájemci*kyni je třeba zavolat do dvou týdnů od obdržení tohoto emailu a zároveň před dalším výborovým setkáním, abychom o ní*něm mohli hlasovat.</li>
+            <li>Více informací k celému procesu najdeš v tomto manuálu (pokud jsi člen*ka výboru, měl*a bys k němu mít přístup): <a href="https://docs.google.com/document/d/1pmkk1rnAZ5WVJEv_5Q0Yrw_XnEFSYoa9G-sU5N1Zzqg/edit?usp=share_link">google docs</a></li>
+          </ul>
+        </mj-text>
+
+        <mj-text>
+          🇬🇧 Hello, <br>
+
+          you are receiving this email as a member of the committee,
+          because a new membership application has been received for the Trade Union of Workers in ICT.
+        </mj-text>
+
+        <mj-text>
+          Detail of application is available at <a href="{{ application_detail_url }}">{{ application_detail_url }}</a>
+        </mj-text>
+        <mj-text>
+          What needs to be done now:
+          <ul>
+            <li>Check the generated application to ensure that no information is missing.</li>
+            <li>Write in the committee chat on Signal that a new application has been received and discuss who will call the applicant.</li>
+            <li>Call the applicant within two weeks of receiving this email and before the next committee meeting, so that we can vote on it.</li>
+            <li>You can find more information about the entire process in this manual (if you are a committee member, you should have access to it): <a href="https://docs.google.com/document/d/1pmkk1rnAZ5WVJEv_5Q0Yrw_XnEFSYoa9G-sU5N1Zzqg/edit?usp=share_lin">google docs</a></li>
+          </ul>
+        </mj-text>
+
+      </mj-column>
+    </mj-section>
+    <mj-hero background-color="#237fa8" padding="25px 25px">
+      <mj-text align="center" color="#FFFFFF" font-size="22px">
+        Trade union of workers in ICT
+      </mj-text>
+      <mj-text align="center" color="#FFFFFF">
+        <a href="https://ictunion.cz" style="color: #FFFFFF">ictunion.cz</a> |
+        <a href="mailto:support@ictunion.cz" style="color: #FFFFFF">support@ictunion.cz</a> |
+        <a href="tel:+420 737 035 289" style="color: #FFFFFF">+420 737 035 289</a>
+      </mj-text>
+    </mj-hero>
+  </mj-body>
+</mjml>

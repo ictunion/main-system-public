@@ -1,0 +1,66 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-text line-height="1.5"
+               font-size="15px"
+               color="#000000"
+               font-family="helvetica"
+               padding="5px 25px"
+               align="justify" />
+      <mj-button background-color="#FFC832"
+                 color="#000000"
+                 border-radius="0"
+                 width="100%"
+                 height="60px"
+                 font-size="24px"
+                 padding="10px 25px" />
+      <mj-divider border-color="#237fa8"  padding="10px 0"></mj-divider>
+    </mj-attributes>
+    <mj-preview>ICT union application confirmation</mj-preview>
+  </mj-head>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+
+        <mj-image width="200px" src="https://ictunion.cz/images/logo.png"></mj-image>
+
+        <mj-divider></mj-divider>
+
+        <mj-text font-size="24px">
+          Hello {{first_name}} {{last_name}}!
+        </mj-text>
+
+        <mj-text>
+          You are receiving this email because you have filled out an application on our website.
+          Thank you very much for your interest in becoming a member of
+          the Trade Union of Workers in ICT (ICT union for short)!
+        </mj-text>
+        <mj-text>
+          In order to process your application, we need confirmation of your email.
+        </mj-text>
+
+        <mj-button href="{{verify_link}}">
+          Confirm email address
+        </mj-button>
+
+        <mj-text font-weight="bold">
+          We are sending you a copy of your application in the attachment so that you can check it if needed.
+        </mj-text>
+        <mj-text>
+          Please do not reply to this email, as no one will respond to you.
+        </mj-text>
+
+      </mj-column>
+    </mj-section>
+    <mj-hero background-color="#237fa8"  padding="25px 25px">
+      <mj-text align="center" color="#FFFFFF" font-size="22px">
+        Trade union of workers in ICT
+      </mj-text>
+      <mj-text align="center" color="#FFFFFF">
+        <a href="https://ictunion.cz" style="color: #FFFFFF">ictunion.cz</a> |
+        <a href="mailto:support@ictunion.cz" style="color: #FFFFFF">support@ictunion.cz</a> |
+        <a href="tel:+420 737 035 289" style="color: #FFFFFF">+420 737 035 289</a>
+      </mj-text>
+    </mj-hero>
+  </mj-body>
+</mjml>

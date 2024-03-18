@@ -17,9 +17,9 @@ smtp_password = ""
 
 # Email configuration
 notification_email = ""
-email_sender_email = ""
+email_sender_email = "noreply@ictunion.cz"
 email_sender_name = "ICT Union"
-templates_dir = "./templates"
+templates_dir = "./templates/emails"
 
 # Database
 postgres = "postgres://orca@localhost/ictunion"
