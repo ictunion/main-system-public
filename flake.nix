@@ -22,9 +22,10 @@
 
         buildInputs = with pkgs; [
           tex
-          rustup
           openssl
           pkg-config
+          craneLib.rustc
+          craneLib.cargo
         ];
 
         orcaPkgs = pkgs.callPackage ./orca {
@@ -35,10 +36,6 @@
           mkShell {
             name = "ict-union-orca-dev-env";
             inherit buildInputs;
-            shellHook = ''
-              rustup install stable
-              rustup override set stable
-            '';
             OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
           };
         package = orcaPkgs.orca;
