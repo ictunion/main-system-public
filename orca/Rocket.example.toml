@@ -30,8 +30,8 @@ processing_db_pool = 2
 tex_exe = "xelatex"
 
 # Authentication / Authorization
-keycloak_host = "https://keycloak.ictunion.cz"
-keycloak_realm = "testing-members"
+keycloak_host = "http://localhost:8180"
+keycloak_realm = "members"
 keycloak_client_id = "orca"
 
 # Business logic configuration
