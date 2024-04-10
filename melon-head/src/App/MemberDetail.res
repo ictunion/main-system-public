@@ -107,14 +107,25 @@ let timeRows: array<RowBasedTable.row<MemberData.detail>> = [
   ("Left at", d => View.option(d.leftAt, a => a->Js.Date.toLocaleString->React.string)),
 ]
 
+module Loading = {
+  @react.component
+  let make = () => {
+    React.string("loading...")
+  }
+}
+
 module Actions = {
   open MemberData
 
   module Accept = {
+    type acceptTabs =
+      | Create
+      | Pair
+
     @react.component
     let make = (~modal, ~api, ~id, ~setDetail) => {
       let (error, setError) = React.useState(() => None)
-
+      let tabHandlers = Tabbed.make(Create)
       let doAccept = (_: JsxEvent.Mouse.t) => {
         let req =
           api->Api.patchJson(
@@ -134,18 +145,99 @@ module Actions = {
         })
       }
 
+      let (selectedId, setId) = React.useState(_ => None)
+
+      let selectId = (event: JsxEvent.Form.t) => {
+        let newVal = ReactEvent.Form.currentTarget(event)["value"]
+        setId(_ => Some(newVal))
+      }
+
+      let doPair = (_: JsxEvent.Mouse.t) => {
+        let uuid = switch selectedId {
+        | Some(uuid) => Json.Encode.string(uuid)
+        | None => Json.Encode.null
+        }
+        let req =
+          api->Api.patchJson(
+            ~path="/members/" ++ Uuid.toString(id) ++ "/pair_oid",
+            ~decoder=MemberData.Decode.detail,
+            ~body=Json.Encode.object([("sub", uuid)]),
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(data) => {
+              setDetail(_ => RemoteData.Success(data))
+              Modal.Interface.closeModal(modal)
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      let (candidates: Api.webData<array<Session.user>>, _, _) =
+        api->Hook.getData(
+          ~path="/members/" ++ Uuid.toString(id) ++ "/list_candidate_users",
+          ~decoder=Json.Decode.array(Session.Decode.user),
+        )
+
       <Modal.Content>
-        <p> {React.string("Accept member and allow them to access internal resources.")} </p>
-        {switch error {
-        | None => React.null
-        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
-        }}
-        <Button.Panel>
-          <Button onClick={_ => modal->Modal.Interface.closeModal}>
-            {React.string("Cancel")}
-          </Button>
-          <Button variant=Button.Cta onClick=doAccept> {React.string("Accept member")} </Button>
-        </Button.Panel>
+        <Tabbed.Tabs>
+          <Tabbed.Tab value=Create handlers=tabHandlers> {React.string("Create")} </Tabbed.Tab>
+          <Tabbed.Tab value=Pair handlers=tabHandlers> {React.string("Pair Existing")} </Tabbed.Tab>
+        </Tabbed.Tabs>
+        <Tabbed.Content tab=Create handlers=tabHandlers>
+          <div className={styles["modalBody"]}>
+            <p> {React.string("Accept member and allow them to access internal resources.")} </p>
+            {switch error {
+            | None => React.null
+            | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+            }}
+          </div>
+          <Button.Panel>
+            <Button onClick={_ => modal->Modal.Interface.closeModal}>
+              {React.string("Cancel")}
+            </Button>
+            <Button variant=Button.Cta onClick=doAccept> {React.string("Accept member")} </Button>
+          </Button.Panel>
+        </Tabbed.Content>
+        <Tabbed.Content tab=Pair handlers=tabHandlers>
+          <div className={styles["modalBody"]}>
+            <p> {React.string("Pair existing OID account with member")} </p>
+            {switch candidates {
+            | Idle => <Loading />
+            | Loading => <Loading />
+            | Failure(err) => React.string(Api.showError(err))
+            | Success(candidates) =>
+              if candidates == [] {
+                React.string("No candidates found")
+              } else {
+                <div className={styles["radioList"]}>
+                  {candidates
+                  ->Array.map(user => {
+                    <label className={styles["radio"]}>
+                      <input value={user.id->Uuid.toString} type_="radio" onInput=selectId />
+                      {React.string(user.email->Data.Email.toString)}
+                    </label>
+                  })
+                  ->React.array}
+                </div>
+              }
+            }}
+            {switch error {
+            | None => React.null
+            | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+            }}
+          </div>
+          <Button.Panel>
+            <Button onClick={_ => modal->Modal.Interface.closeModal}>
+              {React.string("Cancel")}
+            </Button>
+            <Button variant=Button.Cta onClick=doPair disabled={selectedId == None}>
+              {React.string("Pair Selected")}
+            </Button>
+          </Button.Panel>
+        </Tabbed.Content>
       </Modal.Content>
     }
   }

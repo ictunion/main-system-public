@@ -247,7 +247,7 @@ ORDER BY created_at DESC
 pub fn get_new_oid_user<'a>(id: Id<Member>) -> QueryAs<'a, oid::User> {
     sqlx::query_as(
         "
-SELECT first_name, last_name, email
+SELECT NULL as id, first_name, last_name, email
 FROM members
 WHERE id = $1
 ",

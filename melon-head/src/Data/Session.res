@@ -56,6 +56,13 @@ let hasRealmRole = (session, ~role: realmRole): bool => {
   Array.some(allRoles, r => r == role)
 }
 
+type user = {
+  id: Data.Uuid.t,
+  email: Email.t,
+  firstName: option<string>,
+  lastName: option<string>,
+}
+
 module Decode = {
   open Json.Decode
 
@@ -100,5 +107,12 @@ module Decode = {
   let session = object(field => {
     tokenClaims: field.required(. "token_claims", tokenClaims),
     memberId: field.required(. "member_id", option(Data.Uuid.decode)),
+  })
+
+  let user = object(field => {
+    id: field.required(. "id", Data.Uuid.decode),
+    email: field.required(. "email", Email.decode),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
   })
 }

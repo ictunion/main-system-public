@@ -14,8 +14,9 @@ use crate::config;
 mod keycloak;
 use self::keycloak::KeycloakProvider;
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct User {
+    id: Option<String>,
     email: String,
     first_name: Option<String>,
     last_name: Option<String>,
@@ -70,7 +71,7 @@ impl RealmManagementRole {
 }
 
 enum ProviderState {
-    Keyclaok(Box<keycloak::KeycloakProvider>),
+    Keycloak(Box<keycloak::KeycloakProvider>),
     Disconnected,
 }
 
@@ -96,6 +97,11 @@ trait OidProvider {
 
     async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error>;
     async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error>;
+    async fn get_matching_users<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        email: String,
+    ) -> Result<Vec<User>, Error>;
 }
 
 pub struct Provider(ProviderState);
@@ -108,7 +114,7 @@ impl Provider {
             &config.keycloak_client_id,
         ) {
             let k = KeycloakProvider::fetch(host, realm, client_id.clone()).await?;
-            return Ok(Provider(ProviderState::Keyclaok(Box::new(k))));
+            return Ok(Provider(ProviderState::Keycloak(Box::new(k))));
         }
 
         warn!("Keycloak authorization not configured. Authorization disabled");
@@ -117,7 +123,7 @@ impl Provider {
 
     pub fn decode_jwt(&self, token: &JwtToken) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Keyclaok(k) => {
+            ProviderState::Keycloak(k) => {
                 let res = k.decode_jwt(token)?;
                 Ok(res)
             }
@@ -131,7 +137,7 @@ impl Provider {
         role: Role,
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Keyclaok(k) => k.require_role(token, role),
+            ProviderState::Keycloak(k) => k.require_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -142,7 +148,7 @@ impl Provider {
         role: RealmManagementRole,
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Keyclaok(k) => k.require_realm_role(token, role),
+            ProviderState::Keycloak(k) => k.require_realm_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -153,28 +159,39 @@ impl Provider {
         role: &[Role],
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
-            ProviderState::Keyclaok(k) => k.require_any_role(token, role),
+            ProviderState::Keycloak(k) => k.require_any_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub fn is_connected(&self) -> bool {
         match self.0 {
-            ProviderState::Keyclaok(_) => true,
+            ProviderState::Keycloak(_) => true,
             ProviderState::Disconnected => false,
         }
     }
 
     pub async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error> {
         match &self.0 {
-            ProviderState::Keyclaok(k) => k.create_user(token, user).await,
+            ProviderState::Keycloak(k) => k.create_user(token, user).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: uuid::Uuid) -> Result<(), Error> {
         match &self.0 {
-            ProviderState::Keyclaok(k) => k.remove_user(token, id).await,
+            ProviderState::Keycloak(k) => k.remove_user(token, id).await,
+            ProviderState::Disconnected => Err(Error::Disabled),
+        }
+    }
+
+    pub async fn get_matching_users<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        email: String,
+    ) -> Result<Vec<User>, Error> {
+        match &self.0 {
+            ProviderState::Keycloak(k) => k.get_matching_users(token, email).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }

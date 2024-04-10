@@ -10,7 +10,7 @@ use crate::api::files::FileInfo;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::DbPool;
-use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role};
+use crate::server::oid::{self, JwtToken, Provider, RealmManagementRole, Role};
 
 use super::ApiError;
 
@@ -178,7 +178,6 @@ async fn accept<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
-    // TODO: this method shoudl probably use reference
     oid_provider.require_realm_role(&token, RealmManagementRole::ManageUsers)?;
 
     let status = query::get_status_data(id)
@@ -309,6 +308,46 @@ async fn remove_member<'r>(
     Ok(Json(detail))
 }
 
+#[get("/<id>/list_candidate_users")]
+async fn list_candidate_users<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+) -> Response<Json<Vec<oid::User>>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+
+    match detail.email {
+        Some(email) => Ok(Json(oid_provider.get_matching_users(&token, email).await?)),
+        None => Ok(Json(Vec::new())),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct PairRequest {
+    sub: Uuid,
+}
+
+#[patch("/<id>/pair_oid", format = "json", data = "<data>")]
+async fn pair_oid<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+    data: Json<PairRequest>,
+) -> Response<Json<Detail>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let detail = query::assing_member_oid_sub(id, data.sub)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    Ok(Json(detail))
+}
+
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
@@ -322,5 +361,7 @@ pub fn routes() -> Vec<Route> {
         accept,
         update_note,
         remove_member,
+        list_candidate_users,
+        pair_oid,
     ]
 }

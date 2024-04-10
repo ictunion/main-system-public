@@ -78,3 +78,22 @@
         }
     }
 }
+
+.modal-body {
+    margin-bottom: 12px;
+}
+
+.radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 0;
+}
+
+.radio {
+    display: block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color4);
+    background: var(--background-color);
+}

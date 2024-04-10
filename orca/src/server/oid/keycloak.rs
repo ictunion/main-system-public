@@ -1,11 +1,12 @@
 /// These implementations are very keycloak specific
 /// We're not using keycloak library from crates io because we want these to wrork differently
-use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role};
-use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
 use reqwest;
 use rocket::serde::json::json;
 use url::Url;
 use uuid::Uuid;
+
+use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role, User};
+use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
 
 use crate::server::jwk;
 
@@ -108,11 +109,7 @@ impl OidProvider for KeycloakProvider {
         Err(Error::MissingOneOfRoles(roles.to_vec()))
     }
 
-    async fn create_user<'a>(
-        &self,
-        token: &JwtToken<'a>,
-        user: &super::User,
-    ) -> Result<uuid::Uuid, Error> {
+    async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error> {
         // Keycalok expects json body with data about user
         let json = json!({
             "firstName": user.first_name,
@@ -163,7 +160,7 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: uuid::Uuid) -> Result<(), Error> {
+    async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error> {
         // Send request to create a new user
         let client = reqwest::Client::new();
         let response = client
@@ -185,5 +182,26 @@ impl OidProvider for KeycloakProvider {
         } else {
             Err(Error::Proxy(status))
         }
+    }
+
+    async fn get_matching_users<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        email: String,
+    ) -> Result<Vec<User>, Error> {
+        // query keycloak for user using email filtering
+        let client = reqwest::Client::new();
+        let response = client
+            .get(&format!(
+                "{}/admin/realms/{}/users?exact=true&email={}",
+                self.host, self.realm, email,
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .send()
+            .await?;
+
+        debug!("Keycloak response response {:?}", response);
+
+        Ok(response.json::<Vec<User>>().await?)
     }
 }
