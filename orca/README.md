@@ -61,14 +61,15 @@ The permissions to many admin features are granular.
 Orca is using [Keycloak's client roles](https://www.keycloak.org/docs/latest/server_admin/#core-concepts-and-terms)
 which needs to be configured for the `keycloak_client_id` set in the `Rocket.toml`:
 
-| Role Name            | Description                                            |
-|----------------------|--------------------------------------------------------|
-| list-applications    | Listing of applications/registrations in various state |
-| view-application     | Accessing detail of individual applications (by uuid)  |
-| resolve-applications | Resolve (Accept / Reject) applications                 |
-| list-members         | Listing of all past and current members                |
-| manage-members       | Manage (Create, Remove) members                        |
-| super-powers         | Dangerous actions like hard delete of data             |
+| Role Name            | Ability Description                                 |
+|----------------------|-----------------------------------------------------|
+| list-applications    | List of applications/registrations in various state |
+| view-application     | Access detail of individual applications (by uuid)  |
+| resolve-applications | Resolve (Accept / Reject) applications              |
+| list-members         | List of all past and current members                |
+| view-member          | Accept detail of individual member (by uuid)        |
+| manage-members       | Manage (Create, Remove) members                     |
+| super-powers         | Dangerous actions like hard delete of data          |
 
 ## Developing
 

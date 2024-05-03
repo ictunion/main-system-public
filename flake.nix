@@ -1,5 +1,5 @@
 {
-  description = "ITC Union official website";
+  description = "ITC Union application and member management system";
   inputs = {
     nixpkgs.url = github:NixOS/nixpkgs;
     flake-utils.url = github:numtide/flake-utils;

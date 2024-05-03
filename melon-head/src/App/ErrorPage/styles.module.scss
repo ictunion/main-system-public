@@ -26,9 +26,12 @@
 }
 
 .code {
+    display: block;
     background: var(--emphasis-dark-overlay);
     padding: 0 2px;
     font-family: monospace;
     font-style: normal;
     border-radius: 2px;
+    padding: 6px 12px;
+    line-height: 1.2em;
 }

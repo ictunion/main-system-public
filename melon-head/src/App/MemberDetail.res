@@ -359,7 +359,7 @@ let make = (~api, ~id, ~modal) => {
 
   let mainOccupation = occupationsData->RemoteData.map(xs => xs->Array.get(0))
 
-  <Page requireAnyRole=[ListMembers] mainResource=detail>
+  <Page requireAnyRole=[ListMembers, ViewMember] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Member ")}

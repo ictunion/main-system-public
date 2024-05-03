@@ -6,6 +6,7 @@ type orcaRole =
   | ViewApplication
   | ResolveApplications
   | ListMembers
+  | ViewMember
   | ManageMembers
   | SuperPowers
 
@@ -16,6 +17,7 @@ let showOrcaRole = (r: orcaRole): string =>
   | ViewApplication => "view-application"
   | ResolveApplications => "resolve-applications"
   | ListMembers => "list-members"
+  | ViewMember => "view-member"
   | ManageMembers => "manage-members"
   | SuperPowers => "super-powers"
   }
@@ -72,6 +74,7 @@ module Decode = {
     | "view-application" => ViewApplication
     | "resolve-applications" => ResolveApplications
     | "list-members" => ListMembers
+    | "view-member" => ViewMember
     | "manage-members" => ManageMembers
     | "super-powers" => SuperPowers
     | _ => UnknownOrcaRole(str)
@@ -86,14 +89,17 @@ module Decode = {
   })
 
   let orcaRoles = object(field =>
-    field.required(. "orca", object(field => field.required(. "roles", array(orcaRole))))
+    field.optional(.
+      "orca",
+      object(field => field.required(. "roles", array(orcaRole))),
+    )->Belt.Option.getWithDefault([])
   )
 
   let realmRoles = object(field =>
-    field.required(.
+    field.optional(.
       "realm-management",
       object(field => field.required(. "roles", array(realmRole))),
-    )
+    )->Belt.Option.getWithDefault([])
   )
 
   let tokenClaims = object(field => {

@@ -158,7 +158,7 @@ async fn detail<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
-    oid_provider.require_role(&token, Role::ListMembers)?;
+    oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
 
     let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
 
@@ -216,7 +216,7 @@ async fn list_files<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Vec<FileInfo>>> {
-    oid_provider.require_role(&token, Role::ListMembers)?;
+    oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewApplication])?;
 
     let files = query::list_member_files(id)
         .fetch_all(db_pool.inner())
@@ -240,7 +240,7 @@ async fn list_occupations<'r>(
     token: JwtToken<'r>,
     id: Id<Member>,
 ) -> Response<Json<Vec<Occupation>>> {
-    oid_provider.require_role(&token, Role::ListMembers)?;
+    oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
 
     let occupations = query::list_occupations(id)
         .fetch_all(db_pool.inner())
