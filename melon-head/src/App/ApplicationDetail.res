@@ -243,7 +243,7 @@ module Actions = {
       ~modal: Modal.Interface.t,
       ~openApplications,
     ) => {
-      let (memberNumber, setMemberNumber) = React.useState(_ => Some(""))
+      let (memberNumber, setMemberNumber) = React.useState(_ => None)
 
       // Api errors
       let (error, setError) = React.useState(() => None)
