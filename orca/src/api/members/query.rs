@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use super::{Detail, MemberStatusData, NewMember, Occupation, Summary};
+use super::{Detail, MemberStatusData, NewMember, Occupation, Summary, UpdateMember};
 use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
@@ -298,8 +298,45 @@ WHERE id = $1
 pub fn update_member_note<'a>(id: Id<Member>, new_note: String) -> QueryAs<'a, Detail> {
     sqlx::query_as(
         "
+    UPDATE members
+    SET note = $2
+    WHERE id = $1
+    RETURNING id
+    , member_number
+    , first_name
+    , last_name
+    , date_of_birth
+    , email
+    , phone_number
+    , note
+    , address
+    , city
+    , postal_code
+    , language
+    , registration_request_id as application_id
+    , left_at
+    , onboarding_finished_at
+    , created_at
+    ",
+    )
+    .bind(id)
+    .bind(new_note)
+}
+
+pub fn update_member<'a>(id: Id<Member>, updated_member: UpdateMember) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
 UPDATE members
-SET note = $2
+SET first_name = $2
+    , last_name = $3
+    , date_of_birth = $4
+    , email = $5
+    , phone_number = $6
+    , note = $7
+    , address = $8
+    , city = $9
+    , postal_code = $10
+    , language = $11
 WHERE id = $1
 RETURNING id
 , member_number
@@ -320,7 +357,16 @@ RETURNING id
 ",
     )
     .bind(id)
-    .bind(new_note)
+    .bind(updated_member.first_name)
+    .bind(updated_member.last_name)
+    .bind(updated_member.date_of_birth)
+    .bind(updated_member.email)
+    .bind(updated_member.phone_number)
+    .bind(updated_member.note)
+    .bind(updated_member.address)
+    .bind(updated_member.city)
+    .bind(updated_member.postal_code)
+    .bind(updated_member.language)
 }
 
 // This doesn't realy delete member from the database

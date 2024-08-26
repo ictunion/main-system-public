@@ -275,6 +275,40 @@ async fn update_note<'r>(
     Ok(Json(detail))
 }
 
+#[derive(Debug, Deserialize, Validate)]
+#[serde(crate = "rocket::serde")]
+pub struct UpdateMember {
+    first_name: Option<String>,
+    last_name: Option<String>,
+    date_of_birth: Option<Date>,
+    #[validate(required)]
+    #[validate(email)]
+    email: Option<String>,
+    phone_number: Option<String>,
+    note: Option<String>,
+    address: Option<String>,
+    city: Option<String>,
+    postal_code: Option<String>,
+    language: String,
+}
+
+#[patch("/<id>", format = "json", data = "<data>")]
+async fn update_member<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    id: Id<Member>,
+    data: Validated<Json<UpdateMember>>,
+) -> Response<Json<Detail>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let result = query::update_member(id, data.into_inner().into_inner())
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    Ok(Json(result))
+}
+
 #[delete("/<id>", format = "json")]
 async fn remove_member<'r>(
     db_pool: &State<DbPool>,
@@ -360,6 +394,7 @@ pub fn routes() -> Vec<Route> {
         detail,
         accept,
         update_note,
+        update_member,
         remove_member,
         list_candidate_users,
         pair_oid,
