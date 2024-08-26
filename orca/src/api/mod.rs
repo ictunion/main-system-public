@@ -11,6 +11,7 @@ mod members;
 mod registration;
 mod session;
 mod stats;
+mod workplaces;
 
 use crate::db::{self, DbPool};
 use crate::processing::SenderError;
@@ -234,6 +235,8 @@ pub fn build() -> Rocket<Build> {
         .register("/stats", errors::catchers())
         .mount("/members", members::routes())
         .register("/members", errors::catchers())
+        .mount("/workplaces", workplaces::routes())
+        .register("/workplaces", errors::catchers())
         // Files use default catchers
         .mount("/files", files::routes())
 }

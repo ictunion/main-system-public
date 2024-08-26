@@ -361,6 +361,24 @@
           "clientRole": true,
           "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
           "attributes": {}
+        },
+        {
+          "id": "6e9e0b13-452f-415a-986f-b41f708a9813",
+          "name": "list-workplaces",
+          "description": "Listing of workplaces",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
+          "attributes": {}
+        },
+        {
+          "id": "fdff6901-df97-4224-a1bd-db02648f464b",
+          "name": "manage-workplaces",
+          "description": "Manage (Create) workplaces",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
+          "attributes": {}
         }
       ],
       "security-admin-console": [],
@@ -483,7 +501,9 @@
           "resolve-applications",
           "manage-members",
           "list-applications",
-          "view-member"
+          "view-member",
+          "list-workplaces",
+          "manage-workplaces"
         ]
       }
     }

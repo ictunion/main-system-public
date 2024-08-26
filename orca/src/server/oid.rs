@@ -36,6 +36,8 @@ pub enum Role {
     ListMembers,
     ViewMember,
     ManageMembers,
+    ListWorkplaces,
+    ManageWorkplaces,
     SuperPowers,
 }
 
@@ -48,6 +50,8 @@ impl Role {
             Self::ListMembers => "list-members",
             Self::ViewMember => "view-member",
             Self::ManageMembers => "manage-members",
+            Self::ListWorkplaces => "list-workplaces",
+            Self::ManageWorkplaces => "manage-workplaces",
             Self::SuperPowers => "super-powers",
         }
     }

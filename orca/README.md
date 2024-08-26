@@ -69,6 +69,8 @@ which needs to be configured for the `keycloak_client_id` set in the `Rocket.tom
 | list-members         | List of all past and current members                |
 | view-member          | Accept detail of individual member (by uuid)        |
 | manage-members       | Manage (Create, Remove) members                     |
+| list-workplaces      | List of all workplaces                              |
+| manage-workplaces    | Manage (Create, Edit) workplaces                    |
 | super-powers         | Dangerous actions like hard delete of data          |
 
 ## Developing

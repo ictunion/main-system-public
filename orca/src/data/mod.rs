@@ -90,6 +90,9 @@ pub struct RegistrationRequest;
 pub struct Member;
 
 #[derive(Debug, Clone, Copy)]
+pub struct Workplace;
+
+#[derive(Debug, Clone, Copy)]
 pub struct MemberNumber(i32);
 
 impl Display for MemberNumber {

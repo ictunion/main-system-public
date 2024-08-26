@@ -56,6 +56,14 @@ let make = (~api: Api.t, ~session: Api.webData<Session.t>) => {
       session => {<ViewBool value={Session.hasRealmRole(session, ~role=Session.ManageUsers)} />},
     ),
     (
+      "List all workplaces",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListWorkplaces)} />},
+    ),
+    (
+      "Manage workplaces",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageWorkplaces)} />},
+    ),
+    (
       "Super-Powers (be careful!)",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
     ),

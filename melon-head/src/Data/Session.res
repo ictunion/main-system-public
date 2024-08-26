@@ -8,6 +8,8 @@ type orcaRole =
   | ListMembers
   | ViewMember
   | ManageMembers
+  | ListWorkplaces
+  | ManageWorkplaces
   | SuperPowers
 
 let showOrcaRole = (r: orcaRole): string =>
@@ -19,6 +21,8 @@ let showOrcaRole = (r: orcaRole): string =>
   | ListMembers => "list-members"
   | ViewMember => "view-member"
   | ManageMembers => "manage-members"
+  | ListWorkplaces => "list-workplaces"
+  | ManageWorkplaces => "manage-workplaces"
   | SuperPowers => "super-powers"
   }
 
@@ -76,6 +80,8 @@ module Decode = {
     | "list-members" => ListMembers
     | "view-member" => ViewMember
     | "manage-members" => ManageMembers
+    | "list-workplaces" => ListWorkplaces
+    | "manage-workplaces" => ManageWorkplaces
     | "super-powers" => SuperPowers
     | _ => UnknownOrcaRole(str)
     }

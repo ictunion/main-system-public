@@ -13,7 +13,6 @@ services:
       POSTGRES_HOST_AUTH_METHOD: "trust"
     ports:
       - "5432:5432"
-
   keycloak:
     image: quay.io/keycloak/keycloak:23.0.3
     environment:
@@ -34,3 +33,5 @@ services:
       - "./docker/keycloak/realm.json:/opt/keycloak/data/import/realm.json"
     ports:
       - "8180:8180"
+    depends_on:
+      - postgres
