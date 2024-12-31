@@ -1,7 +1,6 @@
-use time::Date;
-
+use base64::prelude::*;
 use rocket::serde::{Deserialize, Serialize};
-use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64};
+use time::Date;
 use tokio::fs;
 use tokio::io;
 
@@ -10,6 +9,7 @@ use tokio::io::AsyncWriteExt;
 use std::io::Cursor as BlockingCursor;
 
 use image::io::Reader as ImageReader;
+use thiserror::Error;
 
 /// Manipulating Base64 images
 
@@ -23,7 +23,7 @@ impl<'a> From<&'a str> for RawBase64<'a> {
     }
 }
 
-impl<'a> RawBase64<'a> {
+impl RawBase64<'_> {
     pub fn to_image_data(&self) -> Result<ImageData, Error> {
         // this is how prefix looks like
         // `data:image/png;base64,.....`
@@ -47,7 +47,7 @@ impl<'a> RawBase64<'a> {
             return Err(Error::Malformed);
         }
 
-        let image = value[start + 7..].from_base64()?;
+        let image = BASE64_STANDARD.decode(&value[start + 7..])?;
         Ok(ImageData {
             image_type: image_type.to_string(),
             image,
@@ -55,31 +55,18 @@ impl<'a> RawBase64<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
+    #[error("Data don't represent a valid image")]
     NotImage,
+    #[error("Image data malformed")]
     Malformed,
-    Io(io::Error),
-    Decoding(FromBase64Error),
-    Image(image::ImageError),
-}
-
-impl From<io::Error> for Error {
-    fn from(value: io::Error) -> Self {
-        Self::Io(value)
-    }
-}
-
-impl From<FromBase64Error> for Error {
-    fn from(value: FromBase64Error) -> Self {
-        Self::Decoding(value)
-    }
-}
-
-impl From<image::ImageError> for Error {
-    fn from(value: image::ImageError) -> Self {
-        Self::Image(value)
-    }
+    #[error("IO Error: {0}")]
+    Io(#[from] io::Error),
+    #[error("Data decoding error: {0}")]
+    Decoding(#[from] base64::DecodeError),
+    #[error("Image error: {0}")]
+    Image(#[from] image::ImageError),
 }
 
 impl PartialEq for Error {
@@ -119,7 +106,7 @@ impl ImageData {
 
     #[allow(dead_code)]
     pub fn to_base64(&self) -> String {
-        self.image.to_base64(rustc_serialize::base64::MIME)
+        BASE64_STANDARD.encode(&self.image)
     }
 
     pub fn to_vec(&self) -> &Vec<u8> {

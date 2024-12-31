@@ -253,23 +253,22 @@ pub struct ApplicationStatusData {
 
 impl ApplicationStatusData {
     pub fn to_status(&self) -> ApplicationStatus {
-        if let Some(accepted_at) = self.accepted_at {
-            if let Some(member_id) = self.member_id {
-                return ApplicationStatus::Accepted(member_id, accepted_at);
-            } else {
-                error!(
-                    "Broken invariant for status of application with id {}",
-                    self.id
-                );
+        if self.accepted_at.is_some() {
+            if self.member_id.is_some() {
+                return ApplicationStatus::Accepted;
             }
+            error!(
+                "Broken invariant for status of application with id {}",
+                self.id
+            );
         }
 
-        if let Some(rejected_at) = self.rejected_at {
-            return ApplicationStatus::Rejected(rejected_at);
+        if self.rejected_at.is_some() {
+            return ApplicationStatus::Rejected;
         }
 
-        if let Some(invalidated_at) = self.invalidated_at {
-            return ApplicationStatus::Invalid(invalidated_at);
+        if self.invalidated_at.is_some() {
+            return ApplicationStatus::Invalid;
         }
 
         if self.confirmed_at.is_some() {
@@ -284,9 +283,9 @@ impl ApplicationStatusData {
 pub enum ApplicationStatus {
     WaitingForConfirmation,
     InProcessing,
-    Rejected(DateTime<Utc>),
-    Accepted(Id<Member>, DateTime<Utc>),
-    Invalid(DateTime<Utc>),
+    Rejected,
+    Accepted,
+    Invalid,
 }
 
 impl ApplicationStatus {
@@ -340,7 +339,7 @@ impl ApplicationStatus {
 
     pub fn assert_rejected(&self) -> Result<(), ApiError> {
         match self {
-            Self::Rejected(_) => Ok(()),
+            Self::Rejected => Ok(()),
             _ => {
                 let message = format!("Application status must be `Rejected` but is `{:?}`.", self);
 
@@ -351,7 +350,7 @@ impl ApplicationStatus {
 
     pub fn assert_invalidated(&self) -> Result<(), ApiError> {
         match self {
-            Self::Invalid(_) => Ok(()),
+            Self::Invalid => Ok(()),
             _ => {
                 let message = format!("Application status must be `Invalid` but is `{:?}`.", self);
 

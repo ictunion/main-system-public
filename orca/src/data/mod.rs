@@ -1,11 +1,14 @@
 use rocket::serde::Deserializer;
 use rocket::{request::FromParam, serde::Serialize};
 use serde::Deserialize;
-use sqlx::{database::HasValueRef, Decode, Encode, Postgres, Type};
+use sqlx::encode::IsNull;
+use sqlx::{Decode, Encode, Postgres, Type};
 use std::error::Error;
 use std::fmt::Display;
 use std::marker::PhantomData;
 use uuid::Uuid;
+
+type EncodeResult = Result<IsNull, Box<dyn Error + Sync + Send>>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Id<T>(Uuid, PhantomData<T>);
@@ -56,7 +59,7 @@ where
     &'r str: Decode<'r, Postgres>,
 {
     fn decode(
-        value: <Postgres as HasValueRef<'r>>::ValueRef,
+        value: <Postgres as sqlx::Database>::ValueRef<'r>,
     ) -> Result<Id<T>, Box<dyn Error + 'static + Send + Sync>> {
         let value = <Uuid as Decode<Postgres>>::decode(value)?;
 
@@ -65,10 +68,7 @@ where
 }
 
 impl<'q, T> Encode<'q, Postgres> for Id<T> {
-    fn encode(
-        self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull
+    fn encode(self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>) -> EncodeResult
     where
         Self: Sized,
     {
@@ -77,8 +77,8 @@ impl<'q, T> Encode<'q, Postgres> for Id<T> {
 
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> EncodeResult {
         <Uuid as Encode<Postgres>>::encode(self.0, buf)
     }
 }
@@ -132,7 +132,7 @@ where
     i64: Decode<'r, Postgres>,
 {
     fn decode(
-        value: <Postgres as HasValueRef<'r>>::ValueRef,
+        value: <Postgres as sqlx::Database>::ValueRef<'r>,
     ) -> Result<MemberNumber, Box<dyn Error + 'static + Send + Sync>> {
         let value = <i32 as Decode<Postgres>>::decode(value)?;
 
@@ -141,10 +141,7 @@ where
 }
 
 impl<'q> Encode<'q, Postgres> for MemberNumber {
-    fn encode(
-        self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull
+    fn encode(self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>) -> EncodeResult
     where
         Self: Sized,
     {
@@ -153,8 +150,8 @@ impl<'q> Encode<'q, Postgres> for MemberNumber {
 
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> EncodeResult {
         <i32 as Encode<Postgres>>::encode(self.0, buf)
     }
 }

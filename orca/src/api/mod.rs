@@ -2,6 +2,7 @@ use log::{error, warn};
 use rocket::response::{self, Responder};
 use rocket::serde::{json::Json, Serialize};
 use rocket::{catchers, get, routes, Build, Request, Rocket, State};
+use thiserror::Error;
 use tokio::task::JoinError;
 use validator::ValidationError;
 
@@ -47,14 +48,9 @@ impl<'r> Responder<'r, 'static> for SqlError {
     }
 }
 
-#[derive(Debug)]
-pub struct ThreadingError(JoinError);
-
-impl From<JoinError> for ThreadingError {
-    fn from(value: JoinError) -> Self {
-        ThreadingError(value)
-    }
-}
+#[derive(Debug, Error)]
+#[error(transparent)]
+pub struct ThreadingError(#[from] JoinError);
 
 impl<'r> Responder<'r, 'static> for ThreadingError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
@@ -88,7 +84,7 @@ impl<'r> Responder<'r, 'static> for oid::Error {
             BadToken(_) => Err(Status::Unauthorized),
             Http(_) => Err(Status::BadGateway),
             Parsing(_) => Err(Status::InternalServerError),
-            Proxy(status_code) => Err(rocket::http::Status {
+            Proxy(status_code) => Err(Status {
                 code: status_code.as_u16(),
             }),
         }

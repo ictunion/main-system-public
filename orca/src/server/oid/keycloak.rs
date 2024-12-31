@@ -3,8 +3,8 @@
 use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
 use log::{debug, warn};
 use reqwest;
+use reqwest::Url;
 use rocket::serde::json::json;
-use url::Url;
 use uuid::Uuid;
 
 use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role, User};
@@ -123,7 +123,7 @@ impl OidProvider for KeycloakProvider {
         // Send request to create a new user
         let client = reqwest::Client::new();
         let response = client
-            .post(&format!("{}/admin/realms/{}/users", self.host, self.realm))
+            .post(format!("{}/admin/realms/{}/users", self.host, self.realm))
             .json(&json)
             .header("Authorization", format!("Bearer {}", token.string))
             .send()
@@ -164,7 +164,7 @@ impl OidProvider for KeycloakProvider {
         // Send request to create a new user
         let client = reqwest::Client::new();
         let response = client
-            .delete(&format!(
+            .delete(format!(
                 "{}/admin/realms/{}/users/{}",
                 self.host, self.realm, id
             ))
@@ -192,7 +192,7 @@ impl OidProvider for KeycloakProvider {
         // query keycloak for user using email filtering
         let client = reqwest::Client::new();
         let response = client
-            .get(&format!(
+            .get(format!(
                 "{}/admin/realms/{}/users?exact=true&email={}",
                 self.host, self.realm, email,
             ))

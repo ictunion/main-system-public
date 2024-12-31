@@ -17,6 +17,7 @@ use lettre::{
 };
 use log::{error, info};
 use std::process::Stdio;
+use thiserror::Error;
 
 mod query;
 
@@ -51,9 +52,10 @@ impl std::fmt::Display for Command {
 
 pub struct QueueSender(Sender<Command>);
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum SenderError {
-    Mpsc(tokio::sync::mpsc::error::SendError<Command>),
+    #[error(transparent)]
+    Mpsc(#[from] mpsc::error::SendError<Command>),
 }
 
 impl QueueSender {
@@ -81,51 +83,22 @@ pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
     QueueSender(sender)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 enum ProcessingError {
-    Io(io::Error),
-    Sql(sqlx::Error),
-    EmailAddress(address::AddressError),
-    EmailRendering(handlebars::RenderError),
-    Lettre(lettre::error::Error),
-    Smtp(lettre::transport::smtp::Error),
+    #[error("IO Error: {0}")]
+    Io(#[from] io::Error),
+    #[error("SQL Error: {0}")]
+    Sql(#[from] sqlx::Error),
+    #[error("Wrong e-mail address: {0}")]
+    EmailAddress(#[from] address::AddressError),
+    #[error("Failed rendering e-mail template: {0}")]
+    EmailRendering(#[from] handlebars::RenderError),
+    #[error("E-Mail client error: {0}")]
+    Lettre(#[from] lettre::error::Error),
+    #[error("SMTP error: {0}")]
+    Smtp(#[from] lettre::transport::smtp::Error),
+    #[error("Confirmation token missing")]
     MissingConfirmationToken,
-}
-
-impl From<io::Error> for ProcessingError {
-    fn from(value: io::Error) -> Self {
-        Self::Io(value)
-    }
-}
-
-impl From<sqlx::Error> for ProcessingError {
-    fn from(value: sqlx::Error) -> Self {
-        Self::Sql(value)
-    }
-}
-
-impl From<address::AddressError> for ProcessingError {
-    fn from(value: address::AddressError) -> Self {
-        Self::EmailAddress(value)
-    }
-}
-
-impl From<lettre::error::Error> for ProcessingError {
-    fn from(value: lettre::error::Error) -> Self {
-        Self::Lettre(value)
-    }
-}
-
-impl From<handlebars::RenderError> for ProcessingError {
-    fn from(value: handlebars::RenderError) -> Self {
-        Self::EmailRendering(value)
-    }
-}
-
-impl From<lettre::transport::smtp::Error> for ProcessingError {
-    fn from(value: lettre::transport::smtp::Error) -> Self {
-        Self::Smtp(value)
-    }
 }
 
 async fn process(

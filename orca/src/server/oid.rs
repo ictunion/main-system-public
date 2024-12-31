@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use jsonwebtoken::{self, TokenData};
 use log::warn;
 use reqwest;
@@ -8,6 +6,8 @@ use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::Deserialize;
 use rocket::serde::Serialize;
 use rocket::{FromForm, Responder};
+use std::collections::HashMap;
+use std::fmt::Display;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -60,9 +60,9 @@ impl Role {
     }
 }
 
-impl ToString for Role {
-    fn to_string(&self) -> String {
-        self.to_json_val().to_string()
+impl Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_json_val())
     }
 }
 
@@ -80,7 +80,7 @@ impl RealmManagementRole {
 }
 
 enum ProviderState {
-    Keycloak(Box<keycloak::KeycloakProvider>),
+    Keycloak(Box<KeycloakProvider>),
     Disconnected,
 }
 
@@ -187,7 +187,7 @@ impl Provider {
         }
     }
 
-    pub async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: uuid::Uuid) -> Result<(), Error> {
+    pub async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.remove_user(token, id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
@@ -235,7 +235,7 @@ struct Roles {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct JwtClaims {
-    pub sub: uuid::Uuid,
+    pub sub: Uuid,
     resource_access: HashMap<String, Roles>,
     pub email: String,
     name: Option<String>,

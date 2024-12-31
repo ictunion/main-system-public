@@ -11,9 +11,8 @@ rand = "0.8.5"
 rocket = { version = "0.5.1", features = [ "json" ] }
 serde = { version = "1.0.147", features = ["derive"] }
 validator = { version = "0.19.0", features = [ "derive"] }
-sqlx = { version = "0.7.3", features = [ "runtime-tokio-rustls", "postgres", "macros", "uuid", "chrono", "ipnetwork", "time" ] }
+sqlx = { version = "0.8.2", features = [ "runtime-tokio", "tls-rustls", "postgres", "macros", "uuid", "chrono", "ipnetwork", "time" ] }
 time = { version = "0.3.19", features = [ "serde-human-readable" ] }
-rustc-serialize = "0.3.24"
 tokio = { version = "1.25.0", features = [ "io-std", "fs", "process" ] }
 image = "0.24.5"
 cfg-if = "1.0.0"
@@ -22,10 +21,10 @@ fern = "0.6.1"
 chrono = { version = "0.4.24", features = [ "serde" ] }
 uuid = { version = "1.3.0", features = [ "v4", "serde" ] }
 phf = { version = "0.11.1", features = [ "macros" ] }
-lettre = { version = "0.10.4", features = [ "tokio1", "tokio1-native-tls" ] }
+lettre = { version = "0.11.11", features = [ "tokio1", "tokio1-native-tls" ] }
 handlebars = "4.3.7"
 reqwest = { version =  "0.11.18", features = [ "json" ] }
 jsonwebtoken = "8.3.0"
-url = "2.5.0"
 mrml = "3.1.0"
 thiserror = "2.0.9"
+base64 = "0.22.1"

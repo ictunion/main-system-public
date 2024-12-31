@@ -5,6 +5,7 @@ use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::{Data, Request};
 use std::fmt::Debug;
+use thiserror::Error;
 use validator::{Validate, ValidationErrors};
 
 pub(crate) type ValidationErrorsCache = Option<ValidationErrors>;
@@ -22,29 +23,31 @@ impl<T> Validated<T> {
     }
 }
 
-#[derive(Debug)]
-pub(crate) enum ValidatorError<'r> {
-    Deserialization(rocket::serde::json::Error<'r>),
-    ValidationErrors(ValidationErrors),
+#[derive(Debug, Error)]
+pub(crate) enum ValidatorError {
+    #[error("Deserialization error: {0}")]
+    Deserialization(String),
+    #[error("Validation error: {0}")]
+    ValidationErrors(#[from] ValidationErrors),
 }
 
 #[rocket::async_trait]
 impl<'r, T: rocket::serde::Deserialize<'r> + Validate> FromData<'r> for Validated<Json<T>> {
-    type Error = ValidatorError<'r>;
+    type Error = ValidatorError;
 
     async fn from_data(request: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self, Self::Error> {
         <Json<T> as FromData<'r>>::from_data(request, data)
             .await
             .map_error(|(s, e)| {
                 error!("Failed to parse request: {e}");
-                (s, ValidatorError::Deserialization(e))
+                (s, Self::Error::Deserialization(e.to_string()))
             })
             .and_then(|value| {
                 if let Err(e) = value.validate() {
                     request.local_cache(|| Some(e.to_owned()));
                     return Outcome::Error((
                         Status::UnprocessableEntity,
-                        ValidatorError::ValidationErrors(e),
+                        Self::Error::ValidationErrors(e),
                     ));
                 };
                 Outcome::Success(Self::new(value))

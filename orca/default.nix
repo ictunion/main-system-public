@@ -1,15 +1,17 @@
-{ pkg-config
-, openssl
-, stdenv
-, callPackage
-, texlive
-, makeWrapper
-, nix-gitignore
-, buildFeatures ? []
-, craneLib
-, system
-, lib
-, darwin
+{
+  pkg-config,
+  openssl,
+  stdenv,
+  callPackage,
+  texlive,
+  makeWrapper,
+  nix-gitignore,
+  buildFeatures ? [ ],
+  craneLib,
+  system,
+  lib,
+  darwin,
+  advisory-db,
 }:
 let
   tex = import ./latex { inherit texlive; };
@@ -39,6 +41,10 @@ let
   orca-fmt = craneLib.cargoFmt {
     inherit src;
   };
+
+  orca-audit = craneLib.cargoAudit {
+    inherit src advisory-db;
+  };
 in
 rec {
   orca = craneLib.buildPackage {
@@ -58,4 +64,5 @@ rec {
 
   inherit orca-clippy;
   inherit orca-fmt;
+  inherit orca-audit;
 }

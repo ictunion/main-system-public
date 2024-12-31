@@ -30,7 +30,7 @@ pub struct Config {
     pub keycloak_host: Option<String>,
     pub keycloak_realm: Option<String>,
     pub keycloak_client_id: Option<String>,
-    pub templates: templates::Templates<'static>,
+    pub templates: Templates<'static>,
 }
 
 impl Config {

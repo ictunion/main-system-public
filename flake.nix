@@ -6,9 +6,12 @@
     crane.url = "github:ipetkov/crane";
     crane.inputs.nixpkgs.follows = "nixpkgs";
     rust-overlay.url = "github:oxalica/rust-overlay";
+    rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
+    advisory-db.url = "github:rustsec/advisory-db";
+    advisory-db.flake = false;
   };
 
-  outputs = { self, nixpkgs, flake-utils, crane, rust-overlay }: flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, crane, rust-overlay, advisory-db}: flake-utils.lib.eachDefaultSystem (system:
   let
     pkgs = import nixpkgs {
       inherit system;
@@ -32,6 +35,7 @@
 
         orcaPkgs = pkgs.callPackage ./orca {
           inherit craneLib;
+          inherit advisory-db;
         };
       in {
         devShell = with pkgs;
@@ -42,7 +46,7 @@
           };
         package = orcaPkgs.orca;
         checks = {
-          inherit (orcaPkgs) orca orca-clippy orca-fmt;
+          inherit (orcaPkgs) orca orca-clippy orca-fmt orca-audit;
         };
       };
     gray-whale-stuff =

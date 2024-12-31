@@ -1,0 +1,4 @@
+[advisories]
+ignore = [
+    "RUSTSEC-2023-0071" # Gets into our Cargo.lock through weak dependency on mysql in sqlx (https://github.com/launchbadge/sqlx/issues/3211)
+]
