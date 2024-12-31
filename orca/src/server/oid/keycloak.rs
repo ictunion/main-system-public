@@ -1,13 +1,13 @@
 /// These implementations are very keycloak specific
-/// We're not using keycloak library from crates io because we want these to wrork differently
+/// We're not using keycloak library from crates io because we want these to work differently
+use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
+use log::{debug, warn};
 use reqwest;
 use rocket::serde::json::json;
 use url::Url;
 use uuid::Uuid;
 
 use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role, User};
-use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
-
 use crate::server::jwk;
 
 fn keycloak_url(host: &str, realm: &str) -> String {

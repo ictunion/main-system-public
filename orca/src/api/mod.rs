@@ -1,6 +1,7 @@
+use log::{error, warn};
 use rocket::response::{self, Responder};
 use rocket::serde::{json::Json, Serialize};
-use rocket::{Build, Request, Rocket, State};
+use rocket::{catchers, get, routes, Build, Request, Rocket, State};
 use tokio::task::JoinError;
 use validator::ValidationError;
 
@@ -13,6 +14,7 @@ mod session;
 mod stats;
 mod workplaces;
 
+use crate::api::errors::validation_error;
 use crate::db::{self, DbPool};
 use crate::processing::SenderError;
 use crate::server::oid::{self, Provider};
@@ -223,10 +225,7 @@ pub fn build() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![status_api])
         .mount("/registration", registration::routes())
-        .register(
-            "/registration",
-            catchers![rocket_validation::validation_catcher],
-        )
+        .register("/registration", catchers![validation_error])
         .mount("/applications", applications::routes())
         .register("/applications", errors::catchers())
         .mount("/session", session::routes())

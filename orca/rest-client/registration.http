@@ -1,0 +1,137 @@
+# HTTP requests for Jetbrains IDEs
+
+# Check status of the service
+GET {{ host }}/status
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+
+###
+
+# Register new user
+# This request should succeeed
+POST {{ host }}/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+X-Real-IP: 0.0.0.0
+
+{
+    "email": "{{ email }}",
+    "first_name": "Tester",
+    "last_name": "Testovic",
+    "date_of_birth": "1979-01-31",
+    "address": "Bezrucova 12",
+    "city": "Of Lost Heaven",
+    "postal_code": "82232",
+    "phone_number": "+420777888999",
+    "company_name": "The Corporate Overlords",
+    "occupation": "bussy man",
+    "signature": "{{ signature }}",
+    "local": "cs"
+}
+
+###
+
+# Register new user
+# This request should succeeed with minimal data
+POST {{ host }}/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+X-Real-IP: 0.0.0.0
+
+{
+    "email": "{{ email }}",
+    "first_name": "Tester",
+    "last_name": "Testovic",
+    "date_of_birth": "1979-01-31",
+    "address": null,
+    "city": "Of Lost Heaven",
+    "postal_code": null,
+    "phone_number": "+420777888999",
+    "company_name": "The Corporate Overlords",
+    "occupation": "bussy man",
+    "signature": "{{ signature }}",
+    "local": "cs"
+}
+
+###
+
+# Confirm registration from link
+GET {{ host }}/registration/{{ token }}/confirm
+User-Agent: Emacs
+Accept: text/html
+
+#
+# Testing validations Validations
+#
+
+###
+
+# Names are required
+POST {{ host }}/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "{{ email }}",
+    "local": "en"
+}
+
+###
+
+# Date of birth is required
+POST {{ host }}/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "{{ email }}",
+    "first_name": "A",
+    "last_name": "B",
+    "signature": "{{ signature }}",
+    "local": "en"
+}
+
+###
+
+# Empty values
+POST {{ host }}/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "{{ host }}",
+    "first_name": "",
+    "last_name": "",
+    "date_of_birth": null,
+    "signature": "",
+    "local": "en"
+}
+
+###
+
+# Whitespace is stripped
+POST {{ host }}/registration/join
+User-Agent: Emacs
+Content-Type: application/json
+Accept: application/json
+
+{
+    "email": "{{ email }}",
+    "first_name": " ",
+    "last_name": " ",
+    "date_of_birth": "1979-01-31",
+    "address": " ",
+    "city": "  ",
+    "postal_code": " ",
+    "phone_number": "  ",
+    "company_name": "  ",
+    "occupation": " ",
+    "signature": "{{ signature }}",
+    "local": "en"
+}

@@ -1,18 +1,21 @@
 use std::collections::HashMap;
 
 use jsonwebtoken::{self, TokenData};
+use log::warn;
 use reqwest;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::Deserialize;
 use rocket::serde::Serialize;
+use rocket::{FromForm, Responder};
+use thiserror::Error;
 use uuid::Uuid;
+
+mod keycloak;
 
 use super::jwk;
 use crate::config;
-
-mod keycloak;
-use self::keycloak::KeycloakProvider;
+use keycloak::KeycloakProvider;
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct User {
@@ -203,35 +206,26 @@ impl Provider {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
-    BadKey(jwk::Error),
-    BadToken(jsonwebtoken::errors::Error),
+    #[error("Bad key: {0}")]
+    BadKey(#[from] jwk::Error),
+    #[error("Bad token: {0}")]
+    BadToken(#[from] jsonwebtoken::errors::Error),
+    #[error("Token is missing role: {0:?}")]
     MissingRole(Role),
+    #[error("Token is missing realm role {0:?}")]
     MissingRealmRole(RealmManagementRole),
+    #[error("One of roles missing: {0:?}")]
     MissingOneOfRoles(Vec<Role>),
+    #[error("Keycloak is disconnected")]
     Disabled,
-    Http(reqwest::Error),
+    #[error("Http error: {0}")]
+    Http(#[from] reqwest::Error),
+    #[error("Parsing error: {0}")]
     Parsing(String),
+    #[error("Proxy error: {0}")]
     Proxy(reqwest::StatusCode),
-}
-
-impl From<jwk::Error> for Error {
-    fn from(value: jwk::Error) -> Self {
-        Self::BadKey(value)
-    }
-}
-
-impl From<jsonwebtoken::errors::Error> for Error {
-    fn from(value: jsonwebtoken::errors::Error) -> Self {
-        Self::BadToken(value)
-    }
-}
-
-impl From<reqwest::Error> for Error {
-    fn from(value: reqwest::Error) -> Self {
-        Self::Http(value)
-    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

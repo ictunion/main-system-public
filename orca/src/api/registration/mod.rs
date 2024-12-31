@@ -1,11 +1,12 @@
-use time::Date;
-
+use log::{info, warn};
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::serde::{json::Json, Deserialize};
-use rocket::{Route, State};
-use rocket_validation::{Validate, Validated};
+use rocket::{get, post, routes, Route, State};
+use time::Date;
+use validator::Validate;
 
+mod query;
 use super::{validate_non_empty, Response, SuccessResponse};
 use crate::config::Config;
 use crate::data::{self, Id};
@@ -14,9 +15,7 @@ use crate::generate;
 use crate::media::RawBase64;
 use crate::processing::{Command, QueueSender};
 use crate::server::{IpAddress, UserAgent};
-
-mod query;
-
+use crate::validation::Validated;
 #[derive(Debug, Clone, Deserialize, Validate)]
 #[serde(crate = "rocket::serde")]
 /// Input for join api (website form)
@@ -25,10 +24,10 @@ pub struct RegistrationRequest<'r> {
     #[validate(email)]
     email: Option<&'r str>,
     #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
+    #[validate(custom(function = "validate_non_empty"))]
     first_name: Option<&'r str>,
     #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
+    #[validate(custom(function = "validate_non_empty"))]
     last_name: Option<&'r str>,
     /// We use option here so that `null` value goes
     /// through the parser into validator
@@ -36,17 +35,17 @@ pub struct RegistrationRequest<'r> {
     date_of_birth: Option<Date>,
     address: Option<&'r str>,
     #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
+    #[validate(custom(function = "validate_non_empty"))]
     city: Option<&'r str>,
     postal_code: Option<&'r str>,
     #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
+    #[validate(custom(function = "validate_non_empty"))]
     phone_number: Option<&'r str>,
     #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
+    #[validate(custom(function = "validate_non_empty"))]
     company_name: Option<&'r str>,
     #[validate(required)]
-    #[validate(custom = "validate_non_empty")]
+    #[validate(custom(function = "validate_non_empty"))]
     occupation: Option<&'r str>,
     #[validate(required)]
     signature: Option<RawBase64<'r>>,
@@ -63,7 +62,7 @@ async fn api_join<'r>(
     queue: &State<QueueSender>,
     validated_user: Validated<Json<RegistrationRequest<'r>>>,
 ) -> Response<SuccessResponse> {
-    let user = validated_user.0;
+    let user = validated_user.into_inner();
 
     // First lets create a request record so we don't loose
     // any people even if rest of the stuff goes wrong for one reason or another
@@ -100,10 +99,12 @@ async fn api_join<'r>(
     let mut signature_data = user
         .signature
         .as_ref()
-        .ok_or(Status::UnprocessableEntity)
+        .ok_or(Status::UnprocessableEntity) // Can't happen due to validator
         .and_then(|data| {
-            data.to_image_data()
-                .map_err(|_| Status::UnprocessableEntity)
+            data.to_image_data().map_err(|_| {
+                warn!("Bad input image data"); // FIXME: Rethink the error output to expose this to API consumer
+                Status::UnprocessableEntity
+            })
         })?;
 
     // This is done in response thread because we want to be sure

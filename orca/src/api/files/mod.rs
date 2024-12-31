@@ -1,14 +1,13 @@
 use chrono::{DateTime, Utc};
+use rocket::http::ContentType;
 use rocket::response::Responder;
 use rocket::serde::Serialize;
-use rocket::{Route, State};
+use rocket::{get, routes, Route, State};
 
 use crate::api::Response;
-
 use crate::data::Id;
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider, Role};
-use rocket::http::ContentType;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct File {

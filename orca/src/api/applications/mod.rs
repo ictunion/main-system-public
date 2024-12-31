@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
+use log::error;
 use rocket::serde::json::Json;
-use rocket::{Route, State};
+use rocket::{delete, get, patch, post, routes, Route, State};
 use serde::{Deserialize, Serialize};
 use time::Date;
 

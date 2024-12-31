@@ -1,5 +1,8 @@
+use rocket::serde::json::serde_json::json;
 use rocket::serde::json::Value;
-use rocket::Catcher;
+use rocket::{catch, catchers, Catcher, Request};
+
+use crate::validation::ValidationErrorsCache;
 
 #[derive(Debug)]
 enum ErrorType {
@@ -7,6 +10,7 @@ enum ErrorType {
     NotFound,
     Unauthorized,
     Forbidden,
+    ValidationFailed,
 }
 
 impl ErrorType {
@@ -16,6 +20,7 @@ impl ErrorType {
             Self::NotFound => 404,
             Self::Unauthorized => 401,
             Self::Forbidden => 403,
+            Self::ValidationFailed => 422,
         }
     }
 }
@@ -60,9 +65,21 @@ fn forbidden_error() -> Value {
     error_json(error_type, message)
 }
 
+#[catch(422)]
+pub(crate) fn validation_error(request: &Request) -> Value {
+    let error_type = ErrorType::ValidationFailed;
+    let cached_errors: &ValidationErrorsCache = request.local_cache(|| None);
+    json! ({
+        "code": error_type.to_status_code(),
+        "message": "Unprocessable Entity. The request was well-formed but was unable to be followed \
+                  due to semantic errors.",
+        "errors": cached_errors
+    })
+}
+
 pub fn catchers() -> Vec<Catcher> {
     catchers![
-        rocket_validation::validation_catcher,
+        validation_error,
         internal_error,
         not_found_error,
         unauthorized_error,

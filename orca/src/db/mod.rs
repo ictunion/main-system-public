@@ -1,23 +1,18 @@
-use rocket::futures::TryFutureExt;
 use sqlx::{
     postgres::{PgArguments, PgPoolOptions},
     PgPool, Postgres,
 };
 use std::ops::Deref;
 
-#[derive(Debug)]
-pub struct SqlError(sqlx::Error);
-
 pub struct Config<'a> {
     pub connection_url: &'a str,
     pub max_connections: u32,
 }
 
-pub async fn connect(config: Config<'_>) -> Result<PgPool, SqlError> {
+pub async fn connect(config: Config<'_>) -> sqlx::Result<PgPool> {
     PgPoolOptions::new()
         .max_connections(config.max_connections)
         .connect(config.connection_url)
-        .map_err(SqlError)
         .await
 }
 

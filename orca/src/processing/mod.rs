@@ -15,15 +15,16 @@ use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
 };
+use log::{error, info};
 use std::process::Stdio;
+
+mod query;
 
 use crate::config::templates;
 use crate::config::Config;
 use crate::data::{Id, RegistrationRequest};
 use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};
-
-mod query;
 
 #[derive(Debug)]
 pub enum Command {

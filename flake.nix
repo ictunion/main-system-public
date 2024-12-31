@@ -18,8 +18,10 @@
     orca-stuff =
       let
         tex = with pkgs; import ./orca/latex { inherit texlive; };
-        craneLib = (crane.mkLib pkgs).overrideToolchain pkgs.rust-bin.stable.latest.default;
-
+        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+          extensions = [ "rust-src" ]; # RustRover wants stdlib sources
+        };
+        craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
         buildInputs = with pkgs; [
           tex
           openssl
@@ -62,6 +64,9 @@
       devShells = {
         orca = orca-stuff.devShell;
         gray-whale = gray-whale-stuff.devShell;
+        default = pkgs.mkShell {
+          packages = with pkgs; [ gnumake postgresql_15 ];
+        };
       };
 
       packages = {

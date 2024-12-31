@@ -1,11 +1,11 @@
 use rocket::serde::json::Json;
-use rocket::{serde::Serialize, Route, State};
+use rocket::{get, routes, serde::Serialize, Route, State};
+
+mod query;
 
 use super::Response;
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider};
-
-mod query;
 
 #[derive(Debug, Serialize)]
 struct ApplicationsBasicStats {

@@ -1,20 +1,20 @@
 use chrono::{DateTime, Utc};
 use rocket::serde::json::Json;
-use rocket::{Route, State};
-use rocket_validation::{Validate, Validated};
+use rocket::{delete, get, patch, post, routes, Route, State};
 use serde::{Deserialize, Serialize};
 use time::Date;
 use uuid::Uuid;
+use validator::Validate;
 
+pub mod query;
+
+use super::ApiError;
 use crate::api::files::FileInfo;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::DbPool;
 use crate::server::oid::{self, JwtToken, Provider, RealmManagementRole, Role};
-
-use super::ApiError;
-
-pub mod query;
+use crate::validation::Validated;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Summary {
@@ -111,9 +111,10 @@ async fn create_member<'r>(
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
     let mut tx = db_pool.begin().await?;
+    let member = new_member.into_inner();
 
     // ensure member number
-    let member_number = match new_member.0.member_number {
+    let member_number = match member.member_number {
         Some(num) => num,
         None => {
             let (new_num,) = query::get_next_member_number().fetch_one(&mut *tx).await?;
@@ -122,7 +123,7 @@ async fn create_member<'r>(
     };
 
     // Create new member
-    let summary = query::create_member(member_number, &new_member.0)
+    let summary = query::create_member(member_number, &member)
         .fetch_one(&mut *tx)
         .await?;
 

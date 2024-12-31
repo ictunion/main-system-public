@@ -133,6 +133,11 @@ impl<'a> Templates<'a> {
         self.handlebars.render(&renderer.template, &renderer.data)
     }
 }
+impl Default for Templates<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 pub struct Renderer<'a> {
     template: String,

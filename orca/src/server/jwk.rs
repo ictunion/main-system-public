@@ -1,6 +1,7 @@
 use jsonwebtoken::DecodingKey;
 use reqwest;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 // Define a struct to represent the Keycloak JSON Web Key Set (JWKS)
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,23 +21,14 @@ struct Jwk {
     x5c: Option<Vec<String>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
-    FaildToGetCerts(reqwest::Error),
+    #[error("Failed to get certs: {0}")]
+    FailedToGetCerts(#[from] reqwest::Error),
+    #[error("Signature key is missing")]
     SignatureKeyMissing,
-    InvalidKey(jsonwebtoken::errors::Error),
-}
-
-impl From<reqwest::Error> for Error {
-    fn from(value: reqwest::Error) -> Self {
-        Self::FaildToGetCerts(value)
-    }
-}
-
-impl From<jsonwebtoken::errors::Error> for Error {
-    fn from(value: jsonwebtoken::errors::Error) -> Self {
-        Self::InvalidKey(value)
-    }
+    #[error("Invalid key: {0}")]
+    InvalidKey(#[from] jsonwebtoken::errors::Error),
 }
 
 pub async fn fetch_jwk(jwks_url: &str) -> Result<DecodingKey, Error> {
