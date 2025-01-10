@@ -5,7 +5,7 @@ const config = require('./config.json');
 
 module.exports = (env, argv) => {
     const mode = argv.mode === 'production' ? 'production' : 'development';
-    const apiHost = env['api-host'] ? env['spi-host'] : 'http://127.0.0.1:8000';
+    const apiHost = env['api-host'] ? env['api-host'] : 'http://127.0.0.1:8000';
 
     console.log("webpack runs in", mode, "mode");
 
