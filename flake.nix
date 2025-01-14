@@ -36,6 +36,10 @@
         orcaPkgs = pkgs.callPackage ./orca {
           inherit craneLib;
           inherit advisory-db;
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = pkgs.rust-bin.stable.latest.minimal;
+            rustc = pkgs.rust-bin.stable.latest.minimal;
+          };
         };
       in {
         devShell = with pkgs;
@@ -45,6 +49,10 @@
             OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
           };
         package = orcaPkgs.orca;
+        package-min = orcaPkgs.orca-min.overrideAttrs {
+          buildFeatures = [ "proxy-support"];
+          doCheck = false;
+        };
         checks = {
           inherit (orcaPkgs) orca orca-clippy orca-fmt orca-audit;
         };
@@ -75,6 +83,7 @@
 
       packages = {
         orca = orca-stuff.package;
+        orca-min = orca-stuff.package-min;
         gray-whale = gray-whale-stuff.package;
       };
 

@@ -19,3 +19,16 @@ jobs:
 
       - name: Build via nix
         run: nix build .#orca --log-format raw
+
+  nix-build-min:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      # Nix
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build via nix
+        run: nix build .#orca-min --log-format raw

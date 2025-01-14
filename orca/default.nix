@@ -7,6 +7,7 @@
   makeWrapper,
   nix-gitignore,
   buildFeatures ? [ ],
+  rustPlatform,
   craneLib,
   system,
   lib,
@@ -19,6 +20,7 @@ let
   nativeBuildInputs = [
     openssl
     pkg-config
+    makeWrapper
   ];
 
   # Build *just* the cargo dependencies, so we can reuse
@@ -45,21 +47,31 @@ let
   orca-audit = craneLib.cargoAudit {
     inherit src advisory-db;
   };
-in
-rec {
+
+  buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
+    darwin.apple_sdk.frameworks.Security
+  ];
+
+  postInstall = ''
+    wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
+  '';
+in {
   orca = craneLib.buildPackage {
-    inherit cargoArtifacts src;
+    inherit cargoArtifacts src buildInputs postInstall nativeBuildInputs;
     cargoExtraArgs =
       if buildFeatures == []
       then ""
       else ''--features "${lib.strings.concatStringsSep " " buildFeatures}"'';
-    nativeBuildInputs = nativeBuildInputs ++ [ makeWrapper ];
-    buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
-      darwin.apple_sdk.frameworks.Security
-    ];
-    postInstall = ''
-      wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
-  '';
+  };
+
+  orca-min = rustPlatform.buildRustPackage {
+    inherit src buildInputs postInstall nativeBuildInputs buildFeatures;
+    pname = "ict-union-orca-min";
+    version = "0.1.0";
+    cargoLock = {
+      lockFile = ./Cargo.lock;
+      allowBuiltinFetchGit = true;
+    };
   };
 
   inherit orca-clippy;
