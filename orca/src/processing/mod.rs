@@ -150,9 +150,7 @@ async fn process(
                 let message_html = config.templates.render(&renderer)?;
 
                 let email_subject = format!(
-                    "New Application - {} {} from {}",
-                    application_details.first_name.as_deref().unwrap_or(""),
-                    application_details.last_name.as_deref().unwrap_or(""),
+                    "New Application from {}",
                     application_details.company_name.as_deref().unwrap_or("")
                 );
 
