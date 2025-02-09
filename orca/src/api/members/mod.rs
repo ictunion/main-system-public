@@ -252,7 +252,7 @@ async fn list_occupations<'r>(
 
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
-struct Note {
+pub struct Note {
     note: Option<String>,
 }
 
@@ -266,10 +266,7 @@ async fn update_note<'r>(
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    // TODO: this clonning is avoidable
-    let text = note.note.clone().unwrap_or("".to_string());
-
-    let detail = query::update_member_note(id, text)
+    let detail = query::update_member_note(id, &note)
         .fetch_one(db_pool.inner())
         .await?;
 

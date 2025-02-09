@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use super::{Detail, MemberStatusData, NewMember, Occupation, Summary, UpdateMember};
+use super::{Detail, MemberStatusData, NewMember, Note, Occupation, Summary, UpdateMember};
 use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
@@ -295,7 +295,7 @@ WHERE id = $1
     .bind(id)
 }
 
-pub fn update_member_note<'a>(id: Id<Member>, new_note: String) -> QueryAs<'a, Detail> {
+pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<Detail> {
     sqlx::query_as(
         "
     UPDATE members
@@ -320,7 +320,7 @@ pub fn update_member_note<'a>(id: Id<Member>, new_note: String) -> QueryAs<'a, D
     ",
     )
     .bind(id)
-    .bind(new_note)
+    .bind(new_note.note.as_deref())
 }
 
 pub fn update_member<'a>(id: Id<Member>, updated_member: UpdateMember) -> QueryAs<'a, Detail> {

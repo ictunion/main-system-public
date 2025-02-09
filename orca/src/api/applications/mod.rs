@@ -644,7 +644,7 @@ async fn hard_delete<'r>(
 
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
-struct Note {
+pub struct Note {
     note: Option<String>,
 }
 
@@ -658,10 +658,7 @@ async fn update_note<'r>(
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    // TODO: avoid clone
-    let text = note.note.clone().unwrap_or("".to_string());
-
-    let detail = query::update_registration_note(id, text)
+    let detail = query::update_registration_note(id, &note)
         .fetch_one(db_pool.inner())
         .await?;
 

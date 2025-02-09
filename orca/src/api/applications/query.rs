@@ -4,8 +4,8 @@ use crate::{
 };
 
 use super::{
-    AcceptedSummary, ApplicationStatusData, Detail, FileInfo, InvalidSummary, ProcessingSummary,
-    RejectedSummary, Summary, UnverifiedSummary,
+    AcceptedSummary, ApplicationStatusData, Detail, FileInfo, InvalidSummary, Note,
+    ProcessingSummary, RejectedSummary, Summary, UnverifiedSummary,
 };
 use crate::data::{Id, RegistrationRequest};
 
@@ -474,10 +474,7 @@ DELETE FROM registration_requests
     .bind(registration_id)
 }
 
-pub fn update_registration_note<'a>(
-    id: Id<RegistrationRequest>,
-    new_note: String,
-) -> QueryAs<'a, Detail> {
+pub fn update_registration_note(id: Id<RegistrationRequest>, new_note: &Note) -> QueryAs<Detail> {
     sqlx::query_as(
         "
 UPDATE registration_requests
@@ -508,5 +505,5 @@ RETURNING id
 ",
     )
     .bind(id)
-    .bind(new_note)
+    .bind(new_note.note.as_deref())
 }
