@@ -1,7 +1,7 @@
 { buildNpmPackage
 , nodejs
 , nix-gitignore
-, python39
+, python312
 , config
 }:
 let
@@ -11,7 +11,7 @@ buildNpmPackage {
   name = "ict-union-melon-head";
   nativeBuildInputs = [
     nodejs
-    python39
+    python312
   ];
   src = nix-gitignore.gitignoreSource [] ./.;
   npmDepsHash = "sha256-TpiTIdGPgbC9Upa2AefC4DqMHRFsatKjYdG8JAZ8jvc=";
