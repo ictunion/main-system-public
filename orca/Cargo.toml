@@ -12,7 +12,6 @@ rocket = { version = "0.5.1", features = [ "json" ] }
 serde = { version = "1.0.147", features = ["derive"] }
 validator = { version = "0.19.0", features = [ "derive"] }
 sqlx = { version = "0.8.2", features = [ "runtime-tokio", "tls-rustls", "postgres", "macros", "uuid", "chrono", "ipnetwork", "time" ] }
-time = { version = "0.3.19", features = [ "serde-human-readable" ] }
 tokio = { version = "1.25.0", features = [ "io-std", "fs", "process" ] }
 image = "0.24.5"
 cfg-if = "1.0.0"

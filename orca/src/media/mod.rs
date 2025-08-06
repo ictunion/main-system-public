@@ -1,6 +1,6 @@
 use base64::prelude::*;
+use chrono::{DateTime, NaiveDate, Utc};
 use rocket::serde::{Deserialize, Serialize};
-use time::Date;
 use tokio::fs;
 use tokio::io;
 
@@ -175,7 +175,14 @@ impl TexEscape for String {
     }
 }
 
-impl TexEscape for Date {
+impl TexEscape for DateTime<Utc> {
+    /// We can trust date not to contain any dangerous chars
+    fn escape_tex(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl TexEscape for NaiveDate {
     /// We can trust date not to contain any dangerous chars
     fn escape_tex(&self) -> String {
         format!("{}", self)

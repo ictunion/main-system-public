@@ -1,9 +1,9 @@
+use chrono::NaiveDate;
 use log::{info, warn};
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::serde::{json::Json, Deserialize};
 use rocket::{get, post, routes, Route, State};
-use time::Date;
 use validator::Validate;
 
 mod query;
@@ -32,7 +32,7 @@ pub struct RegistrationRequest<'r> {
     /// We use option here so that `null` value goes
     /// through the parser into validator
     #[validate(required)]
-    date_of_birth: Option<Date>,
+    date_of_birth: Option<NaiveDate>,
     address: Option<&'r str>,
     #[validate(required)]
     #[validate(custom(function = "validate_non_empty"))]

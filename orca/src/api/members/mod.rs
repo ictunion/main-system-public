@@ -1,8 +1,7 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use rocket::serde::json::Json;
 use rocket::{delete, get, patch, post, routes, Route, State};
 use serde::{Deserialize, Serialize};
-use time::Date;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -90,7 +89,7 @@ pub struct NewMember {
     member_number: Option<MemberNumber>,
     first_name: Option<String>,
     last_name: Option<String>,
-    date_of_birth: Option<Date>,
+    date_of_birth: Option<NaiveDate>,
     #[validate(required)]
     #[validate(email)]
     email: Option<String>,
@@ -138,7 +137,7 @@ pub struct Detail {
     member_number: MemberNumber,
     first_name: Option<String>,
     last_name: Option<String>,
-    date_of_birth: Option<Date>,
+    date_of_birth: Option<NaiveDate>,
     email: Option<String>,
     phone_number: Option<String>,
     note: Option<String>,
@@ -278,7 +277,7 @@ async fn update_note<'r>(
 pub struct UpdateMember {
     first_name: Option<String>,
     last_name: Option<String>,
-    date_of_birth: Option<Date>,
+    date_of_birth: Option<NaiveDate>,
     #[validate(required)]
     #[validate(email)]
     email: Option<String>,

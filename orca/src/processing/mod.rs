@@ -3,7 +3,7 @@
 //! This also might be called `queue` or `worker`
 use phf::phf_map;
 
-use time::Date;
+use chrono::NaiveDate;
 use tokio::fs;
 use tokio::io::{self, AsyncWriteExt};
 use tokio::process;
@@ -293,7 +293,7 @@ pub struct RegistrationDetails {
     pub email: String,
     pub first_name: Option<String>,
     pub last_name: Option<String>,
-    pub date_of_birth: Option<Date>,
+    pub date_of_birth: Option<NaiveDate>,
     pub phone_number: Option<String>,
     pub address: Option<String>,
     pub city: Option<String>,

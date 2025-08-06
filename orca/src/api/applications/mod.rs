@@ -1,9 +1,8 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use log::error;
 use rocket::serde::json::Json;
 use rocket::{delete, get, patch, post, routes, Route, State};
 use serde::{Deserialize, Serialize};
-use time::Date;
 
 use crate::api::files::FileInfo;
 use crate::api::members;
@@ -202,7 +201,7 @@ pub struct Detail {
     email: Option<String>,
     first_name: Option<String>,
     last_name: Option<String>,
-    date_of_birth: Option<Date>,
+    date_of_birth: Option<NaiveDate>,
     phone_number: Option<String>,
     note: Option<String>,
     city: Option<String>,
