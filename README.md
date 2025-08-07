@@ -1,140 +1,208 @@
 # Main System
 
-This is what we use to run ICT Union.
+This repository contains the core system for running ICT Union, organized into
+several components with distinct responsibilities:
 
-System is split into few components witch separated responsibilities.
+- **Gray Whale:** Handles database migrations.
+- **Orca:** Backend for registration and member management.
+- **Melon Head:** Frontend for registration and member management.
+- **Keycloak:** Manages authentication and user identities.
 
-This helps us to have much finer grain control over permissions.
-For instance [Gray Whale](gray-whale) -- out database migration manager --
-expects super user level permissions to db
-while [Orca](orca) -- our registration and members management service --
-requires just permissions necessary for its operation.
+Separating these components allows for more precise permission control and
+a modular architecture.
 
-## Components
+## Prerequisites
 
-Every component has its own documentation within README.md file!
+- **WSL (on Windows):** Windows Subsystem for Linux, preferably with a
+distribution like Ubuntu, is required to run the Nix Package Manager
+development environment. For instructions on how to install WSL with an Ubuntu
+distribution, please refer to [How to install Linux on Windows with WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
 
-| name                                         | status                                                                                                               | role                                      | language   |
-|----------------------------------------------|----------------------------------------------------------------------------------------------------------------------|-------------------------------------------|------------|
-| [Acceptance Test](acceptance-test)           | ![status](https://github.com/ictunion/main-system/actions/workflows/acceptance-test.yaml/badge.svg?branch=main)      | Integration test of whole system          | Python3    |
-| [Gray Whale](gray-whale)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/gray-whale.yaml/badge.svg?branch=main)           | Database migrations and management        | SQL        |
-| [Orca](orca)                                 | ![status](https://github.com/ictunion/main-system/actions/workflows/orca.yaml/badge.svg?branch=main)                 | Registration and onboarding processing    | Rust       |
-| [Melon Head](melon-head)                     | ![status](https://github.com/ictunion/main-system/actions/workflows/melon-head.yaml/badge.svg?branch=main)           | Web UI client for orca                    | Rescript   |
-| [Member's Panel](members-panel)              | ![status](https://github.com/ictunion/main-system/actions/workflows/members-panel.yaml/badge.svg?branch=main)        | Entry dashboard for organization members  | TypeScript |
+---
 
-## Goals
+## Setup and Run
 
-The goal behind this project is to eventually aggregate all systems that help
-with organization management starting with system for new member registrations.
-We use service oriented architecture but with monolithic [Postgresql](https://www.postgresql.org/).
-Isolation is of db layer is done purely by capabilities provided by the DB.
-This is so that we could leverage unified data source for providing various functionality.
-But it also means we will need to be super careful about coupling database schema into services.
+The following instructions assume they will be followed step-by-step in the
+order they are written from the root of the project source tree, including the
+`cd` commands that use relative paths. If you have cloned the repository on the
+host system, the sources must be cloned again in the target environment (e.g.,
+a WSL or Docker container). If you need to interrupt the setup, you may need to
+redo some of the previous steps. For example, if the host system is rebooted
+during the frontend setup, the backend will need to be launched again before
+you can proceed.
 
-Primary motivation for service oriented architecture is that this imposes little to no restriction
-on what technical implementation of any individual part. That should hopefully in turn reduce
-the barrier for entry as individual contributors have a free hand in choosing familiar stack for
-implementation of individual services.
+### Environment Setup
 
-We choose to use Rust for the first service supporting the registrations since it is community driven,
-focused on producing safe and fast goal and community governance is fairly compatible with union internal
-guidelines.
+<details>
+<summary>Click for <b>Windows with WSL</b> specific instructions</summary>
 
-Technical solution is also guided by principles of:
+1. **Open your WSL terminal.**
 
-- Limiting amount of dependencies on corporate owned proprietary technology
-- Focus on cheap running costs of the system
-- Focus on sustainability in terms of maintenance cost, environmental impact etc.
+2. **Install Docker:**
+    ```sh
+    sudo apt-get update
+    sudo apt-get install -y docker.io
+    ```
 
-## Working with the Project
+3. **Start Docker and grant permissions:**
+    ```sh
+    sudo systemctl start docker
+    sudo usermod -aG docker $USER
+    newgrp docker
+    ```
+    *You may need to restart your terminal for the group change to take effect.*
 
-We define [Makefile](Makefile) for convenient workflow around the project.
+</details>
 
-### Start Database
+<details>
+<summary>Click for <b>Ubuntu</b> specific instructions</summary>
 
-```
-make postgres
-```
+1. **Install Docker:**
+    ```sh
+    sudo apt-get update
+    sudo apt-get install -y docker.io
+    ```
 
-### Migrate Database
+2. **Ensure the Docker daemon is running** and that your user can run Docker
+    commands (usually by being in the `docker` group).
+    ```sh
+    sudo systemctl status docker.service
+    ```
+</details>
 
-__Make sure to configure [Gray Whale](gray-whale) according to its documentation first!__
+### Install Nix Package Manager
 
-```
-make migrate
-```
+1. **Install Nix Package Manager:**
+    ```sh
+    sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --no-daemon
+    ```
+    *This is required for operating systems other than NixOS.*
+    *If you are running a WSL shell inside VSCode, the session needs to be
+    restarted. Opening a new terminal is not enough; restarting VSCode does the
+    trick.*
 
-### Explore Database
+2. **Enable Nix Flakes (on Windows with WSL):**
+    ```sh
+    mkdir -p  ~/.config/nix/
+    echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+    ```
+    *For other environments, follow the instructions on the
+    [NixOS Wiki for Flakes](https://nixos.wiki/wiki/flakes).*
+    
+The current terminal can be closed now.
 
-```
-make psql
-```
+### Start PostgreSQL, Keycloak, and Migrate the Database
 
-Clean all outputs from make
+In a **new terminal**:
 
-```
-make clean
-```
+1. **Enter the Nix development environment:**
+    ```sh
+    nix develop
+    ```
 
-### Start all services
+2. **Start PostgreSQL and Keycloak:**
+    ```sh
+    make up
+    ```
+    *Keep this terminal running.*
 
-```
-make up
-```
+The PostgreSQL database will be running at port 5432.
 
-### Local Keycloak
+The Keycloak will be available at [http://localhost:8180](http://localhost:8180).
 
-Run all docker-compose services locally
+In a **new terminal**:
 
-```
-make up
-```
+1. **Enter the Nix development environment:**
+    ```sh
+    nix develop
+    ```
 
-Then visit http://localhost:8180 to access keycloak console.
-Default permissions:
+2. **Copy the migration tool configuration**
+    ```sh
+    cp gray-whale/refinery.example.toml gray-whale/refinery.toml
+    ```
 
-| field     | value   |
-|-----------|---------|
-| user name | `admin` |
-| password  | `admin` |
+3. **Run Gray Whale migrations for Orca**
+    ```sh
+    make migrate
+    ```
 
-This resource, unlike official documentation, has some useful examples https://www.mastertheboss.com/keycloak/keycloak-with-docker/
+4. **Create a development Orca admin user in Keycloak**
+    ```sh
+    sudo apt-get install -y jq
+    ./scripts/create-dev-user.sh <username> <password> [email] [firstName lastName]
+    ```
+    *Replace `<username>` and `<password>` with your desired credentials.*
 
-## Nix
+The current terminal can be closed now.
 
-[flake.nix](https://nixos.wiki/wiki/Flakes) so don't forget to make sure that you have [support for flakes](https://nixos.wiki/wiki/Flakes) enabled in your config.
+### Run the Backend (Orca)
 
-Flake exports dev various components as packages and their corresponding dev shells. See examples bellow.
+In a **new terminal**:
 
-```bash
-# Run migrations using nix
-$ nix run .#gray-whale -- migrate
+1. **Navigate to the `orca` directory**
+    ```sh
+    cd orca
+    ```
+    *This is necessary because Orca reads files from the directory where
+    `cargo run` is launched.*
 
-# Build orca using nix
-$ nix build .#orca
+2. **Enter the Orca-specific Nix shell**
+    ```sh
+    nix develop .#orca
+    ```
 
-# jump into dev shell for orca
-$ cd orca
-$ nix develop .#orca
-```
+3. **Copy the configuration file**
+    ```sh
+    cp Rocket.example.toml Rocket.toml
+    ```
 
-## License
+4. **Run the backend server**
+    ```sh
+    cargo run
+    ```
+    *Keep this terminal running.*
 
-All source code is releleased under [AGPLv3](LICENSE) license unless specifically state otherwise.
+The backend will be available at [http://localhost:8000](http://localhost:8000).
 
-````
-    Copyright (C) 2023 members of Odborová organizace pracujících v ICT
+### Run the Frontend (Melon Head)
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+In a **new terminal**:
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
+1. **Navigate to the `melon-head` directory**
+    ```sh
+    cd melon-head
+    ```
 
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-````
+2. **Enter the Melon-Head-specific Nix shell**
+    ```sh
+    nix develop .#melon-head
+    ```
+
+3. **Copy the configuration file**
+    ```sh
+    cp config.example.json config.json
+    ```
+
+4. **Install dependencies, build the frontend, and start the development server**
+    ```sh
+    npm install
+    npm run build
+    npm start
+    ```
+
+The frontend will be available at [http://localhost:1234](http://localhost:1234).
+
+### Running Backend Tests
+
+In a **new terminal**:
+
+1. **Enter the Nix development environment:**
+    ```sh
+    nix develop
+    ```
+
+2. **Run the tests:**
+    ```sh
+    cargo test
+    ```

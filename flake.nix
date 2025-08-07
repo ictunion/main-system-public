@@ -71,13 +71,26 @@
           };
         package = pkgs.callPackage ./gray-whale {};
       };
+    melon-head-stuff =
+      let
+        buildInputs = with pkgs; [
+        ];
+      in
+      {
+        devShell = with pkgs;
+          mkShell {
+            name = "ict-union-melon-head-dev";
+            inherit buildInputs;
+          };
+        package = pkgs.callPackage ./melon-head {};
+      };
   in
     {
       devShells = {
         orca = orca-stuff.devShell;
         gray-whale = gray-whale-stuff.devShell;
         default = pkgs.mkShell {
-          packages = with pkgs; [ gnumake postgresql_15 ];
+          packages = with pkgs; [ refinery-cli gnumake postgresql_15 docker ];
         };
       };
 
@@ -85,6 +98,7 @@
         orca = orca-stuff.package;
         orca-min = orca-stuff.package-min;
         gray-whale = gray-whale-stuff.package;
+        melon-head = melon-head-stuff.package;
       };
 
       checks = orca-stuff.checks;
