@@ -145,6 +145,7 @@ module Actions = {
           api->Api.deleteJson(
             ~path="/applications/" ++ Uuid.toString(id),
             ~decoder=ApplicationData.Decode.detail,
+            ~body=None,
           )
 
         req->Future.get(res => {
@@ -494,6 +495,7 @@ module Actions = {
           api->Api.deleteJson(
             ~path="/applications/" ++ Uuid.toString(id) ++ "/hard",
             ~decoder=Api.Decode.acceptedResponse,
+            ~body=None,
           )
 
         req->Future.get(res => {

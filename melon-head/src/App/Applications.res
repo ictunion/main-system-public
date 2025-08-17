@@ -7,66 +7,9 @@
 open Data
 open Belt
 
-// TODO: This and Members.NewNote are pretty much copy pasted
-// This should be abstracted and shared if the UX should be the same in both cases
-module NewNote = {
-  @react.component
-  let make = (
-    ~api: Api.t,
-    ~modal: Modal.Interface.t,
-    ~refreshApplications,
-    ~uuid: Uuid.t,
-    ~initialNote: option<string>,
-  ) => {
-    let (note, setNote) = React.useState(_ =>
-      switch initialNote {
-      | None => ""
-      | Some(v) => v
-      }
-    )
-    let (error, setError) = React.useState(() => None)
-
-    let onSubmit = _ => {
-      let body: Js.Json.t = ApplicationData.Encode.newNote(note)
-      let path = "/applications/" ++ Uuid.toString(uuid) ++ "/note"
-      let req = api->Api.patchJson(~path, ~decoder=ApplicationData.Decode.summary, ~body)
-
-      req->Future.get(res => {
-        switch res {
-        | Ok(_data) => {
-            let _ = refreshApplications()
-            Modal.Interface.closeModal(modal)
-          }
-        | Error(e) => setError(_ => Some(e))
-        }
-      })
-    }
-
-    <Form onSubmit>
-      <Form.TextField
-        label="Note"
-        placeholder="...some text..."
-        value=note
-        onInput={updated => setNote(_ => updated)}
-      />
-      <Button.Panel>
-        <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
-          {React.string("Cancel")}
-        </Button>
-        <Button type_="submit" variant=Button.Cta> {React.string("Update note")} </Button>
-      </Button.Panel>
-      {switch error {
-      | None => React.null
-      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
-      }}
-    </Form>
-  }
-}
-
-let newNoteModal = (~api, ~modal, ~refreshApplications, uuid, initialNote): Modal.modalContent => {
+let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, initialNote): Modal.modalContent => {
   title: "Update note",
-  content: <NewNote api modal refreshApplications uuid initialNote />,
+  content: <NewNote api modal refreshMembers uuid initialNote />,
 }
 
 module Processing = {
@@ -79,7 +22,10 @@ module Processing = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+      )
 
     <DataTable
       data=processing
@@ -151,7 +97,10 @@ module Unverified = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+      )
 
     <DataTable
       data=unverified
@@ -226,7 +175,10 @@ module Accepted = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+      )
 
     <DataTable
       data=all
@@ -298,7 +250,10 @@ module Rejected = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+      )
 
     <DataTable
       data=all
@@ -370,7 +325,10 @@ module Invalid = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+      )
 
     <DataTable
       data=all
@@ -442,7 +400,10 @@ module All = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshApplications, uuid, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+      )
 
     <DataTable
       data=all

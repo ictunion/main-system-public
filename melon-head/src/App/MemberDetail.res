@@ -252,6 +252,7 @@ module Actions = {
           api->Api.deleteJson(
             ~path="/members/" ++ Uuid.toString(id),
             ~decoder=MemberData.Decode.detail,
+            ~body=None,
           )
 
         req->Future.get(res => {
@@ -323,10 +324,94 @@ module Actions = {
   }
 }
 
+module MemberWorkplaceSelect = {
+  module Loading = {
+    @react.component
+    let make = () =>
+      <select disabled={true}>
+        <option> {React.string("(loading...)")} </option>
+      </select>
+  }
+
+  module Active = {
+    let viewWorkplaces = (workplace: WorkplaceData.summary) => {
+      <option key={workplace.id->Uuid.toString} value={workplace.id->Uuid.toString}>
+        {React.string(workplace.name)}
+      </option>
+    }
+
+    @react.component
+    let make = (~api, ~detail: MemberData.detail, ~workplaces: array<WorkplaceData.summary>) => {
+      let (workplaceId, setWorkplaceId) = React.useState(() => detail.workplaceId)
+
+      <select
+        defaultValue={switch detail.workplaceId {
+        | Some(id) => Uuid.toString(id)
+        | None => ""
+        }}
+        onChange={e => {
+          let value = ReactEvent.Form.currentTarget(e)["value"]
+
+          // remove current workplace -> workplaceID that is assigned before this change event
+          let _ = workplaceId->Option.map(workplaceId => {
+            let _ = api->Api.deleteJson(
+              ~path="/workplaces/" ++ Uuid.toString(workplaceId),
+              ~decoder=Api.Decode.acceptedResponse,
+              ~body=Some(
+                MemberData.Encode.newWorkplaceMember({
+                  memberId: detail.id->Uuid.toString,
+                }),
+              ),
+            )
+          })
+
+          // get selected/new workplace ID or None
+          let newWorkplaceId = switch value {
+          | "" => None
+          | v => Some(Uuid.unsafeFromString(v))
+          }
+
+          // add new workplace if user selected valid workplace from menu
+          let _ = newWorkplaceId->Option.map(newWorkplaceId =>
+            api->Api.postJson(
+              ~path="/workplaces/" ++ Uuid.toString(newWorkplaceId),
+              ~decoder=Api.Decode.acceptedResponse,
+              ~body=MemberData.Encode.newWorkplaceMember({
+                memberId: detail.id->Uuid.toString,
+              }),
+            )
+          )
+
+          setWorkplaceId(_ => newWorkplaceId)
+        }}>
+        <option value=""> {React.string("(none)")} </option>
+        {workplaces->Array.map(viewWorkplaces)->React.array}
+      </select>
+    }
+  }
+
+  @react.component
+  let make = (~api, ~detail: Api.webData<MemberData.detail>) => {
+    let (workplaces, _, _) =
+      api->Hook.getData(
+        ~path="/workplaces",
+        ~decoder=Json.Decode.array(WorkplaceData.Decode.summary),
+      )
+
+    {
+      switch (detail, workplaces) {
+      | (Success(detail), Success(workplaces)) => <Active api detail workplaces />
+      | _ => <Loading />
+      }
+    }
+  }
+}
+
 type tabs =
   | Metadata
   | Files
   | Occupations
+  | Workplace
 
 let viewOccupation = (occupation: MemberData.occupation) => {
   <tr key={occupation.id->Uuid.toString}>
@@ -371,10 +456,16 @@ let make = (~api, ~id, ~modal) => {
         </span>
       </h1>
       <Page.BackButton name="applications" path={status->RemoteData.toOption->Members.tabToUrl} />
-      <h2 className={styles["status"]}>
-        {React.string("Status:")}
-        <Chip.MemberStatus value=status />
-      </h2>
+      <dl className={styles["headerRow"]}>
+        <dt> {React.string("Status:")} </dt>
+        <dd>
+          <Chip.MemberStatus value=status />
+        </dd>
+        <dt> {React.string("Workplace:")} </dt>
+        <dd>
+          <MemberWorkplaceSelect api detail />
+        </dd>
+      </dl>
     </header>
     <DataGrid layout data=detail />
     <DataGrid
@@ -406,6 +497,7 @@ let make = (~api, ~id, ~modal) => {
       </Tabbed.Tab>
       <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
       <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
+      // <Tabbed.Tab value=Workplace handlers=tabHandlers> {React.string("Workplace")} </Tabbed.Tab>
     </Tabbed.Tabs>
     <Tabbed.Content tab=Occupations handlers=tabHandlers>
       <div className={styles["occupations"]}>
@@ -448,6 +540,9 @@ let make = (~api, ~id, ~modal) => {
         ]}
       />
     </Tabbed.Content>
+    // <Tabbed.Content tab=Workplace handlers=tabHandlers>
+    //   React.string("I work in this place (?)")
+    // </Tabbed.Content>
     {switch status {
     | Success(s) => <Actions status=s modal api id setDetail />
     | _ => React.null

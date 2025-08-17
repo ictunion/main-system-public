@@ -191,7 +191,9 @@ SELECT id
     , left_at
     , onboarding_finished_at
     , created_at
+    , mw.workplace_id
 FROM members
+LEFT JOIN members_workplaces mw ON mw.member_id = members.id
 WHERE id = $1
 ",
     )
@@ -255,7 +257,7 @@ WHERE id = $1
     .bind(id)
 }
 
-pub fn assing_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> QueryAs<'a, Detail> {
+pub fn assign_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> QueryAs<'a, Detail> {
     sqlx::query_as(
         "
 UPDATE members
@@ -278,6 +280,7 @@ RETURNING id
 , left_at
 , onboarding_finished_at
 , created_at
+, null as workplace_id
 ",
     )
     .bind(id)
@@ -317,6 +320,7 @@ pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<Detail> {
     , left_at
     , onboarding_finished_at
     , created_at
+    , null as workplace_id
     ",
     )
     .bind(id)
@@ -354,6 +358,7 @@ RETURNING id
 , left_at
 , onboarding_finished_at
 , created_at
+, null as workplace_id
 ",
     )
     .bind(id)
@@ -393,6 +398,7 @@ RETURNING id
 , left_at
 , onboarding_finished_at
 , created_at
+, null as workplace_id
 ",
     )
     .bind(id)

@@ -31,6 +31,8 @@ type newMember = {
   language: string,
 }
 
+type newWorkplaceMember = {memberId: string}
+
 type detail = {
   id: Uuid.t,
   memberNumber: int,
@@ -47,6 +49,7 @@ type detail = {
   applicationId: option<Uuid.t>,
   leftAt: option<Js.Date.t>,
   onboardingFinishAt: option<Js.Date.t>,
+  workplaceId: option<Uuid.t>,
   createdAt: Js.Date.t,
 }
 
@@ -106,6 +109,7 @@ module Decode = {
     applicationId: field.required(. "application_id", option(Uuid.decode)),
     leftAt: field.required(. "left_at", option(date)),
     onboardingFinishAt: field.required(. "onboarding_finished_at", option(date)),
+    workplaceId: field.required(. "workplace_id", option(Uuid.decode)),
     createdAt: field.required(. "created_at", date),
   })
 
@@ -143,4 +147,7 @@ module Encode = {
       ("postal_code", strOption(newMember.postalCode)),
       ("language", string(newMember.language)),
     ])
+
+  let newWorkplaceMember = (newWorkplaceMember: newWorkplaceMember) =>
+    object([("member_id", string(newWorkplaceMember.memberId))])
 }

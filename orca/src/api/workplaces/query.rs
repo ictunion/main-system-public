@@ -18,6 +18,20 @@ ORDER BY created_at DESC
     )
 }
 
+pub fn detail<'a>(id: Id<Workplace>) -> QueryAs<'a, WorkplaceSummary> {
+    sqlx::query_as(
+        "
+SELECT id
+    , name
+    , email
+    , created_at
+FROM workplaces
+WHERE id = $1
+",
+    )
+    .bind(id)
+}
+
 pub fn create_workplace(new_workplace: &NewWorkplace) -> QueryAs<'_, WorkplaceSummary> {
     sqlx::query_as(
         "
@@ -84,7 +98,7 @@ SELECT m.id
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
-FROM members_current AS m
+FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 LEFT JOIN members_workplaces mw ON mw.member_id = m.id 
 WHERE mw.workplace_id = $1

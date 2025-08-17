@@ -29,11 +29,30 @@ async fn list_all<'r>(
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
-    oid_provider.require_role(&token, Role::ListWorkplaces)?;
+    // We should restrict this only for Admins/Board (people with ManageWorkplaces), until we have permissions to ViewMember separated by workplace
+    // If we allowed access to this EP to anyone with ListWorkplaces, reps could see members from other workplaces
+    // We still need to be careful when sharing links to specific workplaces, because every rep will have combination of ListWorkplaces and ViewMember, which allow them to open link to list of members of any workplace
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
     let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
 
     Ok(Json(summaries))
+}
+
+#[get("/<workplace_id>")]
+async fn detail<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    workplace_id: Id<Workplace>,
+) -> Response<Json<WorkplaceSummary>> {
+    oid_provider.require_any_role(&token, &[Role::ListWorkplaces])?;
+
+    let detail = query::detail(workplace_id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    Ok(Json(detail))
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -117,7 +136,7 @@ async fn remove_member_from_workplace<'r>(
     Ok(SuccessResponse::Accepted)
 }
 
-#[get("/<workplace_id>")]
+#[get("/<workplace_id>/members")]
 async fn get_all_workplace_members<'r>(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
@@ -125,7 +144,7 @@ async fn get_all_workplace_members<'r>(
     workplace_id: Id<Workplace>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
-    oid_provider.require_role(&token, Role::ListMembers)?;
+    oid_provider.require_role(&token, Role::ViewMember)?;
 
     let summaries = query::get_all_workplace_members(workplace_id)
         .fetch_all(db_pool.inner())
@@ -137,6 +156,7 @@ async fn get_all_workplace_members<'r>(
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
+        detail,
         create_workplace,
         assign_member_to_workplace,
         remove_member_from_workplace,

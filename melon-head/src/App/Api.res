@@ -126,15 +126,19 @@ let getJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<res
   )->fromRequest(decoder)
 }
 
-let deleteJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<
-  result<'a, error>,
-> => {
+let deleteJson = (
+  api: t,
+  ~path: string,
+  ~decoder: Json.Decode.t<'a>,
+  ~body: option<Js.Json.t>,
+): Future.t<result<'a, error>> => {
   Request.make(
     ~url=api.host ++ path,
     ~responseType=Json,
     ~method=#DELETE,
     (),
     ~headers=makeHeaders(api),
+    ~body=?body->Belt.Option.map(Js.Json.stringify),
   )->fromRequest(decoder)
 }
 

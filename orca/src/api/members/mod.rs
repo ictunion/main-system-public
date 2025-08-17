@@ -10,7 +10,7 @@ pub mod query;
 use super::ApiError;
 use crate::api::files::FileInfo;
 use crate::api::Response;
-use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
+use crate::data::{Id, Member, MemberNumber, RegistrationRequest, Workplace};
 use crate::db::DbPool;
 use crate::server::oid::{self, JwtToken, Provider, RealmManagementRole, Role};
 use crate::validation::Validated;
@@ -149,6 +149,7 @@ pub struct Detail {
     left_at: Option<DateTime<Utc>>,
     onboarding_finished_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
+    workplace_id: Option<Id<Workplace>>,
 }
 
 #[get("/<id>")]
@@ -202,7 +203,7 @@ async fn accept<'r>(
 
     let uuid = oid_provider.create_user(&token, &user).await?;
 
-    let detail = query::assing_member_oid_sub(id, uuid)
+    let detail = query::assign_member_oid_sub(id, uuid)
         .fetch_one(db_pool.inner())
         .await?;
 
@@ -372,7 +373,7 @@ async fn pair_oid<'r>(
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::assing_member_oid_sub(id, data.sub)
+    let detail = query::assign_member_oid_sub(id, data.sub)
         .fetch_one(db_pool.inner())
         .await?;
 
