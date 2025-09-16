@@ -7,9 +7,9 @@
 open Data
 open Belt
 
-let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, initialNote): Modal.modalContent => {
+let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, ~isApplication, initialNote): Modal.modalContent => {
   title: "Update note",
-  content: <NewNote api modal refreshMembers uuid initialNote />,
+  content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
 }
 
 module Processing = {
@@ -24,7 +24,7 @@ module Processing = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, ~isApplication=true, note),
       )
 
     <DataTable
@@ -99,7 +99,7 @@ module Unverified = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, ~isApplication=true, note),
       )
 
     <DataTable
@@ -177,7 +177,7 @@ module Accepted = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, ~isApplication=true, note),
       )
 
     <DataTable
@@ -252,7 +252,7 @@ module Rejected = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, ~isApplication=true, note),
       )
 
     <DataTable
@@ -327,7 +327,7 @@ module Invalid = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, ~isApplication=true, note),
       )
 
     <DataTable
@@ -402,7 +402,7 @@ module All = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, note),
+        newNoteModal(~api, ~modal, ~refreshMembers=refreshApplications, uuid, ~isApplication=true, note),
       )
 
     <DataTable

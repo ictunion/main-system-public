@@ -6,6 +6,9 @@ let make = (
   ~modal: Modal.Interface.t,
   ~refreshMembers,
   ~uuid: Uuid.t,
+  // could be Enum? Application, Member
+  // Does this language support Enums?
+  ~isApplication: bool,
   ~initialNote: option<string>,
 ) => {
   let (note, setNote) = React.useState(_ =>
@@ -18,18 +21,33 @@ let make = (
 
   let onSubmit = _ => {
     let body: Js.Json.t = ApplicationData.Encode.newNote(note)
-    let path = "/members/" ++ Uuid.toString(uuid) ++ "/note"
-    let req = api->Api.patchJson(~path, ~decoder=MemberData.Decode.detail, ~body)
 
-    req->Future.get(res => {
-      switch res {
-      | Ok(_data) => {
-          let _ = refreshMembers()
-          Modal.Interface.closeModal(modal)
+    // We need to use different PATH and different DECODER. I was not able to figure out how to write it better, but I hope that it is possible.
+    if (isApplication) {
+      let path = "/applications/" ++ Uuid.toString(uuid) ++ "/note"
+      let req = api->Api.patchJson(~path, ~decoder=ApplicationData.Decode.detail, ~body)
+      req->Future.get(res => {
+        switch res {
+        | Ok(_data) => {
+            let _ = refreshMembers()
+            Modal.Interface.closeModal(modal)
+          }
+        | Error(e) => setError(_ => Some(e))
         }
-      | Error(e) => setError(_ => Some(e))
-      }
-    })
+      })
+    } else {
+      let path = "/members/" ++ Uuid.toString(uuid) ++ "/note"
+      let req = api->Api.patchJson(~path, ~decoder=MemberData.Decode.detail, ~body)
+      req->Future.get(res => {
+        switch res {
+        | Ok(_data) => {
+            let _ = refreshMembers()
+            Modal.Interface.closeModal(modal)
+          }
+        | Error(e) => setError(_ => Some(e))
+        }
+      })
+    } 
   }
 
   <Form onSubmit>

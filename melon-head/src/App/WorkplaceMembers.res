@@ -3,9 +3,9 @@
 open Data
 open Belt
 
-let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, initialNote): Modal.modalContent => {
+let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, ~isApplication, initialNote): Modal.modalContent => {
   title: "Update note",
-  content: <NewNote api modal refreshMembers uuid initialNote />,
+  content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
 }
 
 @react.component
@@ -25,7 +25,7 @@ let make = (~api: Api.t, ~id, ~modal) => {
   let openNewNoteModal = (uuid, note) =>
     Modal.Interface.openModal(
       modal,
-      newNoteModal(~api, ~modal, ~refreshMembers=refreshWorkplaceMembers, uuid, note),
+      newNoteModal(~api, ~modal, ~refreshMembers=refreshWorkplaceMembers, uuid, ~isApplication=false, note),
     )
 
   <Page requireAnyRole=[ListWorkplaces]>
