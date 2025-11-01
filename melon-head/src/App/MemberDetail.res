@@ -300,6 +300,15 @@ module Actions = {
         <Button
           variant=Button.Cta
           onClick={_ =>
+            RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
+            //<Navigate to="/login" />
+            //<Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid ++ "/welcome"} />
+            //modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
+          {React.string("Send welcome email")}
+        </Button>
+        <Button
+          variant=Button.Cta
+          onClick={_ =>
             modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
           {React.string("Accept member")}
         </Button>
@@ -455,7 +464,7 @@ let make = (~api, ~id, ~modal) => {
           }}
         </span>
       </h1>
-      <Page.BackButton name="applications" path={status->RemoteData.toOption->Members.tabToUrl} />
+      <Page.BackButton name="members" path={status->RemoteData.toOption->Members.tabToUrl} />
       <dl className={styles["headerRow"]}>
         <dt> {React.string("Status:")} </dt>
         <dd>

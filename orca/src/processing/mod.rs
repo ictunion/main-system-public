@@ -32,6 +32,7 @@ pub enum Command {
     NewRegistrationRequest(Id<RegistrationRequest>, ImageData),
     RegistrationRequestVerified(Id<RegistrationRequest>),
     ResentRegistrationEmail(Id<RegistrationRequest>),
+    SendWelcomeEmail(String, String, String, String),
 }
 
 impl std::fmt::Display for Command {
@@ -45,6 +46,9 @@ impl std::fmt::Display for Command {
             }
             Self::ResentRegistrationEmail(id) => {
                 write!(f, "ResentRegistrationEmail id: {id}")
+            }
+            Self::SendWelcomeEmail(_, _, email, _) => {
+                write!(f, "SendWelcomeEmail to member with email: {email}")
             }
         }
     }
@@ -120,6 +124,21 @@ async fn process(
                 .await?;
 
             send_verification_email(config, db_pool, &application_details, pdf_data).await?;
+        }
+        SendWelcomeEmail(full_name, subject, email, message_html) => {
+            let email_sender_name = "";
+            let email_sender_email = "treasurer@ictunion.cz";
+
+            let sender_info: Mailbox =
+                format!("{} <{}>", email_sender_name, email_sender_email).parse()?;
+
+            let message = Message::builder()
+                .from(sender_info.clone())
+                .reply_to(sender_info)
+                .to(format!("{} <{}>", full_name, email).parse()?)
+                .subject(subject)
+                .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
+            send_email(config, message).await?;
         }
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured

@@ -32,6 +32,7 @@ type newMember = {
 }
 
 type newWorkplaceMember = {memberId: string}
+type emailInfo = {template: string}
 
 type detail = {
   id: Uuid.t,
@@ -150,4 +151,11 @@ module Encode = {
 
   let newWorkplaceMember = (newWorkplaceMember: newWorkplaceMember) =>
     object([("member_id", string(newWorkplaceMember.memberId))])
+
+  let newEmailInfo = (template: string) =>
+    object([("template", string(template))])
+
+  let newEmailInfo2 = (emailInfo: emailInfo) =>
+    object([("template", string(emailInfo.template))])
+    
 }

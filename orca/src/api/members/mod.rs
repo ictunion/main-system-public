@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use rocket::serde::json::Json;
+use handlebars::Handlebars;
+use rocket::serde::json::{json, Json};
 use rocket::{delete, get, patch, post, routes, Route, State};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,10 +9,12 @@ use validator::Validate;
 pub mod query;
 
 use super::ApiError;
+use super::SuccessResponse;
 use crate::api::files::FileInfo;
 use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest, Workplace};
 use crate::db::DbPool;
+use crate::processing::{Command, QueueSender};
 use crate::server::oid::{self, JwtToken, Provider, RealmManagementRole, Role};
 use crate::validation::Validated;
 
@@ -129,6 +132,59 @@ async fn create_member<'r>(
     tx.commit().await?;
 
     Ok(Json(summary))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct EmailInfo {
+    template: String,
+}
+
+#[post("/<id>/welcome_email", format = "json", data = "<request_email_info>")]
+async fn send_welcome_email<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    queue: &State<QueueSender>,
+    token: JwtToken<'r>,
+    request_email_info: Json<EmailInfo>,
+    id: Id<Member>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let email_info = request_email_info.into_inner();
+    let member_detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+
+    let variable_symbol = member_detail.member_number.to_string();
+    let message_html = Handlebars::new()
+        .render_template(
+            &email_info.template,
+            &json!({ "variable_symbol": variable_symbol }),
+        )
+        .unwrap();
+
+    let full_name = format!(
+        "{} {}",
+        member_detail.first_name.as_deref().unwrap_or(""),
+        member_detail.last_name.as_deref().unwrap_or("")
+    );
+    let email = member_detail.email.as_deref().unwrap_or("").to_string();
+    let subject = if member_detail.language.as_deref().unwrap_or("") == "cs" {
+        "Vítej v Odborové organizaci pracujících v ICT!"
+    } else {
+        "Welcome to the ICT Union!"
+    };
+
+    queue
+        .inner()
+        .send(Command::SendWelcomeEmail(
+            full_name,
+            subject.to_string(),
+            email,
+            message_html,
+        ))
+        .await?;
+
+    Ok(SuccessResponse::Accepted)
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -387,6 +443,7 @@ pub fn routes() -> Vec<Route> {
         list_new,
         list_current,
         create_member,
+        send_welcome_email,
         list_files,
         list_occupations,
         detail,

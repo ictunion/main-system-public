@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 type EncodeResult = Result<IsNull, Box<dyn Error + Sync + Send>>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct Id<T>(Uuid, PhantomData<T>);
 
 impl<T> From<Uuid> for Id<T> {
