@@ -126,15 +126,22 @@ async fn process(
             send_verification_email(config, db_pool, &application_details, pdf_data).await?;
         }
         SendWelcomeEmail(full_name, subject, email, message_html) => {
-            let email_sender_name = "";
-            let email_sender_email = "treasurer@ictunion.cz";
+            let email_reply_name = "";
+            let email_reply_email = "treasurer@ictunion.cz";
 
-            let sender_info: Mailbox =
-                format!("{} <{}>", email_sender_name, email_sender_email).parse()?;
+            let sender_info: Mailbox = format!(
+                "{} <{}>",
+                config.email_sender_name.clone().unwrap_or("".to_string()),
+                config.email_sender_email
+            )
+            .parse()?;
+
+            let reply_info: Mailbox =
+                format!("{} <{}>", email_reply_name, email_reply_email).parse()?;
 
             let message = Message::builder()
                 .from(sender_info.clone())
-                .reply_to(sender_info)
+                .reply_to(reply_info)
                 .to(format!("{} <{}>", full_name, email).parse()?)
                 .subject(subject)
                 .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
