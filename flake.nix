@@ -82,7 +82,7 @@
             name = "ict-union-melon-head-dev";
             inherit buildInputs;
           };
-        package = pkgs.callPackage ./melon-head {};
+        package = pkgs.callPackage ./melon-head { config = {}; };
       };
   in
     {

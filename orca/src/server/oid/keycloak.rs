@@ -147,7 +147,7 @@ impl OidProvider for KeycloakProvider {
                     let uuid = url
                         .path_segments()
                         .ok_or(Error::Parsing(format!("Bad url {url}")))?
-                        .last()
+                        .next_back()
                         .ok_or(Error::Parsing(format!("Bad url {url}")))?;
 
                     Uuid::parse_str(uuid)

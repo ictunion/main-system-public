@@ -298,7 +298,7 @@ WHERE id = $1
     .bind(id)
 }
 
-pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<Detail> {
+pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<'_, Detail> {
     sqlx::query_as(
         "
     UPDATE members

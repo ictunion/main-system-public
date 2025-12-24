@@ -23,7 +23,7 @@ phf = { version = "0.11.1", features = [ "macros" ] }
 lettre = { version = "0.11.11", features = [ "tokio1", "tokio1-native-tls" ] }
 handlebars = "4.3.7"
 reqwest = { version =  "0.11.18", features = [ "json" ] }
-jsonwebtoken = "8.3.0"
+jsonwebtoken = { version = "10.2.0", features = [ "rust_crypto" ] }
 mrml = "3.1.0"
 thiserror = "2.0.9"
 base64 = "0.22.1"

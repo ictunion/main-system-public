@@ -15,7 +15,7 @@ use orca::config::Config;
 use orca::{start, StartupError};
 
 #[rocket::main]
-async fn main() -> Result<(), StartupError> {
+async fn main() -> Result<(), Box<StartupError>> {
     // Read cofiguration
     let config = Config::get();
     start(config).await?;

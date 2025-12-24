@@ -474,7 +474,10 @@ DELETE FROM registration_requests
     .bind(registration_id)
 }
 
-pub fn update_registration_note(id: Id<RegistrationRequest>, new_note: &Note) -> QueryAs<Detail> {
+pub fn update_registration_note(
+    id: Id<RegistrationRequest>,
+    new_note: &Note,
+) -> QueryAs<'_, Detail> {
     sqlx::query_as(
         "
 UPDATE registration_requests
