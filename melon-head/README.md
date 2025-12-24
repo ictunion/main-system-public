@@ -23,7 +23,6 @@ We're using npm and npm scripts while working on project.
 | command            | function                     |
 | ------------------ | ---------------------------- |
 | `npm install`      | Install dependencies         |
-| `npm run clean`    | Clean parcel cache           |
 | `npm run build`    | Build production assets      |
 | `npm run format`   | Autoformat source code       |
 | `npm start`        | Run development server       |

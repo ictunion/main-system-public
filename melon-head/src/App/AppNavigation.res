@@ -69,7 +69,7 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             path="/workplaces"
             text="Workplaces"
             session
-            requiredRole=Some(Session.ListApplications)
+            requiredRole=Some(Session.ListWorkplaces)
           />
           /* <NavItem */
           /* key="8" */
@@ -84,7 +84,6 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             path="/settings"
             text="Settings"
             session
-            requiredRole=Some(Session.ListApplications)
           />
         </ul>
       | Loading =>
