@@ -31,4 +31,4 @@ We're using npm and npm scripts while working on project.
 
 ## Nix Build
 
-`$ nix-build test.nix`
+`$ nix build .#melon-head

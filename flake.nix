@@ -73,8 +73,8 @@
       };
     melon-head-stuff =
       let
-        buildInputs = with pkgs; [
-        ];
+        buildInputs = with pkgs; [];
+        config = builtins.fromJSON (builtins.readFile ./melon-head/config.example.json);
       in
       {
         devShell = with pkgs;
@@ -82,7 +82,7 @@
             name = "ict-union-melon-head-dev";
             inherit buildInputs;
           };
-        package = pkgs.callPackage ./melon-head { config = {}; };
+        package = pkgs.callPackage ./melon-head { inherit config; };
       };
   in
     {

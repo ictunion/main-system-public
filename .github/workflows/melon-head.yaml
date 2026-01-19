@@ -12,8 +12,7 @@ jobs:
 
       # Nix
       - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Build via nix
         working-directory: melon-head
-        run: nix-build test.nix
+        run: nix build .#melon-head
