@@ -51,6 +51,7 @@ keycloak_host = "https://keycloak.ictunion.cz"
 keycloak_realm = "testing-members"
 keycloak_client_id = "orca"
 ```
+keycloak must be configured to add `orca` audience to issued tokens.
 
 If you don't want to have administration features simply don't set these values.
 Orca can run without keycloak but it won't allow any administration API to be used.

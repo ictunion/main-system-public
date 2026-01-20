@@ -10,6 +10,8 @@ use uuid::Uuid;
 use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role, User};
 use crate::server::jwk;
 
+const ORCA_AUDIENCE: &str = "orca";
+
 fn keycloak_url(host: &str, realm: &str) -> String {
     format!("{host}/realms/{realm}")
 }
@@ -30,6 +32,7 @@ impl KeycloakProvider {
         // Configure validations
         let mut validation = Validation::new(Algorithm::RS256);
         validation.set_issuer(&[keycloak_url(host, realm)]);
+        validation.set_audience(&[ORCA_AUDIENCE]);
 
         Ok(Self {
             key,
