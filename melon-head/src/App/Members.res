@@ -136,7 +136,14 @@ let newMemberModal = (~api, ~modal, ~refreshMembers): Modal.modalContent => {
   content: <NewMember api modal refreshMembers />,
 }
 
-let newNoteModal = (~api, ~modal, ~refreshMembers, uuid, ~isApplication, initialNote): Modal.modalContent => {
+let newNoteModal = (
+  ~api,
+  ~modal,
+  ~refreshMembers,
+  uuid,
+  ~isApplication,
+  initialNote,
+): Modal.modalContent => {
   title: "Update note",
   content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
 }
@@ -240,7 +247,10 @@ module All = {
     }
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+      )
 
     <DataTable
       data=members
@@ -327,7 +337,10 @@ module New = {
       Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+      )
 
     <div className={styles["membersTab"]}>
       <Button.Panel>
@@ -421,7 +434,10 @@ module Current = {
     }
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+      )
 
     <DataTable
       data=members
@@ -503,7 +519,10 @@ module Past = {
       )
 
     let openNewNoteModal = (uuid, note) =>
-      Modal.Interface.openModal(modal, newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note))
+      Modal.Interface.openModal(
+        modal,
+        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+      )
 
     <DataTable
       data=members

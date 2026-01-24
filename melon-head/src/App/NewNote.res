@@ -23,7 +23,7 @@ let make = (
     let body: Js.Json.t = ApplicationData.Encode.newNote(note)
 
     // We need to use different PATH and different DECODER. I was not able to figure out how to write it better, but I hope that it is possible.
-    if (isApplication) {
+    if isApplication {
       let path = "/applications/" ++ Uuid.toString(uuid) ++ "/note"
       let req = api->Api.patchJson(~path, ~decoder=ApplicationData.Decode.detail, ~body)
       req->Future.get(res => {
@@ -47,7 +47,7 @@ let make = (
         | Error(e) => setError(_ => Some(e))
         }
       })
-    } 
+    }
   }
 
   <Form onSubmit>

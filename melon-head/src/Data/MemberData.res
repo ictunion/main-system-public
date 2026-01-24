@@ -152,10 +152,7 @@ module Encode = {
   let newWorkplaceMember = (newWorkplaceMember: newWorkplaceMember) =>
     object([("member_id", string(newWorkplaceMember.memberId))])
 
-  let newEmailInfo = (template: string) =>
-    object([("template", string(template))])
+  let newEmailInfo = (template: string) => object([("template", string(template))])
 
-  let newEmailInfo2 = (emailInfo: emailInfo) =>
-    object([("template", string(emailInfo.template))])
-    
+  let newEmailInfo2 = (emailInfo: emailInfo) => object([("template", string(emailInfo.template))])
 }

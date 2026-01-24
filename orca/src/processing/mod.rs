@@ -141,8 +141,9 @@ async fn process(
 
             let message = Message::builder()
                 .from(sender_info.clone())
-                .reply_to(reply_info)
+                .reply_to(reply_info.clone())
                 .to(format!("{} <{}>", full_name, email).parse()?)
+                .bcc(reply_info.clone())
                 .subject(subject)
                 .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
             send_email(config, message).await?;
