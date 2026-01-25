@@ -17,7 +17,7 @@ module Actions = {
       let sendEmail = (_: JsxEvent.Mouse.t) => {
         let req =
           api->Api.postJson(
-            ~path="/members/" ++ Uuid.toString(id) ++ "/welcome_email",
+            ~path="/members/" ++ Uuid.toString(id) ++ "/workplace_welcome_email",
             ~decoder=Api.Decode.acceptedResponse,
             ~body=MemberData.Encode.newEmailInfo(template),
           )
@@ -72,10 +72,8 @@ module Actions = {
 
 @react.component
 let make = (~api, ~id, ~modal) => {
-  let en: string = %raw("require('../../raw/welcome_email_en.mjml').default")
-  let cs: string = %raw("require('../../raw/welcome_email_cs.mjml').default")
-
-  //new EP needed here, to send email to new member ???
+  let en: string = %raw("require('../../raw/welcome_workplace_email_en.mjml').default")
+  let cs: string = %raw("require('../../raw/welcome_workplace_email_cs.mjml').default")
 
   // back url
   let backPath = "/members/" ++ Uuid.toString(id)

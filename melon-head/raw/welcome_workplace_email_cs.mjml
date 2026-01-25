@@ -1,0 +1,85 @@
+<mjml>
+    <mj-head>
+        <mj-attributes>
+            <mj-text line-height="1.5"
+                    font-size="15px"
+                    color="#000000"
+                    font-family="helvetica"
+                    padding="5px 25px"
+                    align="justify" />
+            <mj-button background-color="#FFC832"
+                    color="#000000"
+                    border-radius="0"
+                    width="100%"
+                    height="60px"
+                    font-size="24px"
+                    padding="10px 25px" />
+            <mj-divider border-color="#237fa8"  padding="10px 0"></mj-divider>
+        </mj-attributes>
+    </mj-head>
+    <mj-body>
+        <mj-section>
+            <mj-column>
+
+                <mj-image width="200px" src="https://ictunion.cz/images/logo.png"></mj-image>
+
+                <mj-divider></mj-divider>
+
+                <mj-text font-size="24px">
+                    Ahoj,
+                </mj-text>
+
+                <mj-text>
+                    vítej v Odborové organizaci pracujících ICT. Jsme moc rádi*y, že ses rozhodl*a se organizovat na pracovišti a těšíme se na další spolupráci.
+                </mj-text>
+                <mj-text>
+                    Naše odborová organizace funguje na dvou úrovních - organizujeme se na sektorové úrovni, kam se můžeš a nemusíš zapojit, a také na některým z pracovišť. Pokud se hlásíš za pracoviště, určitě už máš základní informace o tom, jak na pracovišti fungujete. Pokud ne, určitě napiš na tento e-mail (<a href='mailto:info@ictunion.cz'>info@ictunion.cz</a>) nebo na +420 775 319 271.
+                </mj-text>
+
+                <mj-text>
+                    Členské schůzky se konají každou první středu v měsíci<br/>
+                    Agenda schůzky: <br>
+                    <a href='https://docs.google.com/document/d/1YL1ZPCjJ_CCn2aw7mTNK6_l0hi0-CiMT6-fkvGxaLDI/edit?usp=sharing'>https://docs.google.com/document/d/1YL1ZPCjJ_CCn2aw7mTNK6_l0hi0-CiMT6-fkvGxaLDI/edit?usp=sharing</a> 
+                </mj-text>
+
+                <mj-text>
+                    Aby jsme se všichni*y orientovali*y v tom, jak odbory fungují, tak máme wiki: <a href='https://wiki.ictunion.cz'>wiki.ictunion.cz</a>  
+                </mj-text>
+
+                <mj-text>
+                    Wiki po tobě chtít uživatelské jméno a heslo. Neboj se, stačí si “resetovat” heslo pro e-mail, který jsi použil*a v přihlášce.
+                </mj-text>
+
+                <mj-text>
+                   V příštích pár dnech ti dojde e-mail o placení příspěvků.
+                </mj-text>
+
+                <mj-text>
+                    Abychom věděli*y, co se děje, tak máme také odborový Signal, kde každý týden informujeme o tom, co vše se v odborech událo. Pokud v této chvíli Signal nemáš, ale budeš se chtít připojit, tady je krátké info na naší wiki <a href='https://wiki.ictunion.cz/members/community/signal.html'>https://wiki.ictunion.cz/members/community/signal.html</a><br> 
+                    Pro připojení klikni na tento link, kterým požádáš o přidání do Signal skupiny: <a href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu</a>
+
+                </mj-text>
+
+                <mj-text>
+                    Těším se na setkání na nějaké ze schůzek nebo akcí,
+                </mj-text>
+
+                <mj-text>
+                    Za ICT odbory,<br>
+                    Daniil Svirin<br>
+                    Tel: +420 777 350 557<br>
+                </mj-text>
+            </mj-column>
+        </mj-section>
+        <mj-hero background-color="#237fa8"  padding="25px 25px">
+            <mj-text align="center" color="#FFFFFF" font-size="22px">
+                Odborová organizace pracujících v ICT
+            </mj-text>
+            <mj-text align="center" color="#FFFFFF">
+                <a href="https://ictunion.cz" style="color: #FFFFFF">ictunion.cz</a> |
+                <a href="mailto:support@ictunion.cz" style="color: #FFFFFF">support@ictunion.cz</a> |
+                <a href="tel:+420 775 319 271" style="color: #FFFFFF">+420 775 319 271</a>
+            </mj-text>
+        </mj-hero>
+    </mj-body>
+</mjml>

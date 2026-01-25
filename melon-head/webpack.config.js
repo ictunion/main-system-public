@@ -15,6 +15,10 @@ module.exports = (env, argv) => {
         module: {
             rules: [
                 {
+                    test: /\.mjml$/i,
+                    use: 'raw-loader',
+                },
+                {
                     test: /\.scss$/i,
                     use: [
                         "style-loader",

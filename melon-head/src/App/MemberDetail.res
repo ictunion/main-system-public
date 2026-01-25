@@ -300,10 +300,13 @@ module Actions = {
         <Button
           variant=Button.Cta
           onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
-          //<Navigate to="/login" />
-          //<Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid ++ "/welcome"} />
-          //modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
           {React.string("Send welcome email")}
+        </Button>
+        <Button
+          variant=Button.Cta
+          onClick={_ =>
+            RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/workplacewelcome")}>
+          {React.string("Send workplace welcome email")}
         </Button>
         <Button
           variant=Button.Cta

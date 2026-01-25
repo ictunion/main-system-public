@@ -43,6 +43,8 @@ module ConfiguredApp = {
           | list{"members", id} => <MemberDetail api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"members", id, "welcome"} =>
             <MemberWelcome api id={Data.Uuid.unsafeFromString(id)} modal />
+          | list{"members", id, "workplacewelcome"} =>
+            <MemberWorkplaceWelcome api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"settings"} => <Settings api session=sessionState />
           | list{"workplaces"} => <Workplaces api modal />
           | list{"workplaces", id} =>
