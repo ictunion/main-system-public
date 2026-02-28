@@ -1,17 +1,17 @@
+use super::{ApiError, SuccessResponse};
+use crate::api::members::query::get_status_data;
+use crate::api::members::Summary;
+use crate::api::Response;
+use crate::data::{Id, Member, Workplace};
+use crate::db::DbPool;
+use crate::server::oid::{JwtToken, Provider, Role};
+use crate::validation::Validated;
 use chrono::{DateTime, Utc};
 use rocket::serde::json::Json;
 use rocket::{delete, get, post, routes, Route, State};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-
-use super::SuccessResponse;
-use crate::api::members::Summary;
-use crate::api::Response;
-use crate::data::{Id, Workplace};
-use crate::db::DbPool;
-use crate::server::oid::{JwtToken, Provider, Role};
-use crate::validation::Validated;
 
 pub mod query;
 
@@ -21,6 +21,7 @@ pub struct WorkplaceSummary {
     name: String,
     email: String,
     created_at: DateTime<Utc>,
+    keycloak_group_id: Uuid,
 }
 
 #[get("/")]
@@ -61,6 +62,8 @@ pub struct NewWorkplace {
     name: Option<String>,
     #[validate(required)]
     email: Option<String>,
+    #[validate(required)]
+    keycloak_group_id: Option<Uuid>,
 }
 
 #[post("/", format = "json", data = "<new_workplace>")]
@@ -85,6 +88,12 @@ pub struct NewWorkplaceMember {
     member_id: Uuid,
 }
 
+impl From<NewWorkplaceMember> for Id<Member> {
+    fn from(value: NewWorkplaceMember) -> Self {
+        Id::from(value.member_id)
+    }
+}
+
 #[post("/<workplace_id>", format = "json", data = "<new_workplace_member>")]
 async fn assign_member_to_workplace<'r>(
     db_pool: &State<DbPool>,
@@ -95,13 +104,30 @@ async fn assign_member_to_workplace<'r>(
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
+    let workplace_member = new_workplace_member.into_inner();
+
     // Create new connection
-    query::create_connection_between_member_and_workplace(
-        workplace_id,
-        new_workplace_member.into_inner().member_id,
-    )
-    .execute(db_pool.inner())
-    .await?;
+    query::create_connection_between_member_and_workplace(workplace_id, workplace_member.member_id)
+        .execute(db_pool.inner())
+        .await?;
+
+    let workplace_details = query::detail(workplace_id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    let orca_user_id = workplace_member.into();
+
+    let user_data = get_status_data(orca_user_id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    let keycloak_id = user_data.sub().ok_or_else(|| {
+        ApiError::keycloak_push(format!("keycloak ID for user {orca_user_id} not assigned"))
+    })?;
+
+    oid_provider
+        .connect_keycloak_user_and_group(&token, keycloak_id, workplace_details.keycloak_group_id)
+        .await?;
 
     Ok(SuccessResponse::Accepted)
 }

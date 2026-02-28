@@ -12,6 +12,7 @@ SELECT id
     , name
     , email
     , created_at
+    , keycloak_group_id
 FROM workplaces
 ORDER BY created_at DESC
 ",
@@ -25,6 +26,7 @@ SELECT id
     , name
     , email
     , created_at
+    , keycloak_group_id
 FROM workplaces
 WHERE id = $1
 ",
@@ -38,17 +40,20 @@ pub fn create_workplace(new_workplace: &NewWorkplace) -> QueryAs<'_, WorkplaceSu
 INSERT INTO workplaces
     ( name
      , email
+     , keycloak_group_id
     )
 VALUES
-    ( $1, $2 )
+    ( $1, $2, $3 )
 RETURNING id
     , name
     , email
     , created_at
+    , keycloak_group_id
 ",
     )
     .bind(&new_workplace.name)
     .bind(&new_workplace.email)
+    .bind(new_workplace.keycloak_group_id)
 }
 
 pub fn create_connection_between_member_and_workplace<'a>(

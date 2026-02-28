@@ -113,7 +113,7 @@ impl OidProvider for KeycloakProvider {
     }
 
     async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error> {
-        // Keycalok expects json body with data about user
+        // Keycloak expects json body with data about user
         let json = json!({
             "firstName": user.first_name,
             "lastName": user.last_name,
@@ -154,7 +154,7 @@ impl OidProvider for KeycloakProvider {
                         .ok_or(Error::Parsing(format!("Bad url {url}")))?;
 
                     Uuid::parse_str(uuid)
-                        .map_err(|_| Error::Parsing(format!("Canot parse UUID from {}", uuid)))
+                        .map_err(|_| Error::Parsing(format!("Cannot parse UUID from {}", uuid)))
                 }
                 None => Err(Error::Parsing("Missing Location header".to_string())),
             }
@@ -206,5 +206,33 @@ impl OidProvider for KeycloakProvider {
         debug!("Keycloak response response {:?}", response);
 
         Ok(response.json::<Vec<User>>().await?)
+    }
+
+    async fn connect_keycloak_user_and_group<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        keycloak_user_id: Uuid,
+        keycloak_group_id: Uuid,
+    ) -> Result<(), Error> {
+        let client = reqwest::Client::new();
+        let response = client
+            .put(format!(
+                "{}/admin/realms/{}/users/{}/groups/{}",
+                self.host, self.realm, keycloak_user_id, keycloak_group_id
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .send()
+            .await?;
+
+        let status = response.status();
+
+        debug!("Keycloak response status: {}", status);
+        debug!("Keycloak response: {:?}", response);
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(Error::Proxy(status))
+        }
     }
 }

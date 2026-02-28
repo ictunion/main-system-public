@@ -146,6 +146,25 @@ impl ApiError {
 
         Self::Custom(custom_error)
     }
+    pub fn keycloak_push(description: String) -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let custom_error = CustomError {
+            status: Status::InternalServerError,
+            json: json!(
+            {
+                "error": {
+                    "code": 500,
+                    "reason": "Could not push user data to Keycloak.",
+                    "description": description
+                }
+            }
+            ),
+        };
+
+        Self::Custom(custom_error)
+    }
 }
 
 impl From<sqlx::Error> for ApiError {

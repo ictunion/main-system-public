@@ -274,6 +274,12 @@ pub struct MemberStatusData {
     left_at: Option<DateTime<Utc>>,
 }
 
+impl MemberStatusData {
+    pub(crate) fn sub(&self) -> &Option<Uuid> {
+        &self.sub
+    }
+}
+
 #[patch("/<id>/accept")]
 async fn accept<'r>(
     db_pool: &State<DbPool>,
@@ -425,6 +431,7 @@ async fn remove_member<'r>(
     // Remove from keycloak if paired
     if let Some(uuid) = status.sub {
         oid_provider.inner().remove_user(&token, uuid).await?;
+        // TODO add keycloak workplace removal here as well (if still needed afetr the above call)
     }
 
     if status.left_at.is_some() {
