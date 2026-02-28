@@ -117,6 +117,12 @@ trait OidProvider {
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error>;
+    async fn remove_keycloak_user_from_group<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        keycloak_user_id: Uuid,
+        keycloak_group_id: Uuid,
+    ) -> Result<(), Error>;
 }
 
 pub struct Provider(ProviderState);
@@ -209,6 +215,21 @@ impl Provider {
         match &self.0 {
             ProviderState::Keycloak(k) => {
                 k.connect_keycloak_user_and_group(token, keycloak_user_id, keycloak_group_id)
+                    .await
+            }
+            ProviderState::Disconnected => Err(Error::Disabled),
+        }
+    }
+
+    pub async fn remove_keycloak_user_from_group<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        keycloak_user_id: Uuid,
+        keycloak_group_id: Uuid,
+    ) -> Result<(), Error> {
+        match &self.0 {
+            ProviderState::Keycloak(k) => {
+                k.remove_keycloak_user_from_group(token, keycloak_user_id, keycloak_group_id)
                     .await
             }
             ProviderState::Disconnected => Err(Error::Disabled),

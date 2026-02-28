@@ -137,6 +137,12 @@ pub struct RemovedWorkplaceMember {
     member_id: Uuid,
 }
 
+impl From<RemovedWorkplaceMember> for Id<Member> {
+    fn from(value: RemovedWorkplaceMember) -> Self {
+        Id::from(value.member_id)
+    }
+}
+
 #[delete(
     "/<workplace_id>",
     format = "json",
@@ -151,13 +157,30 @@ async fn remove_member_from_workplace<'r>(
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
+    let workplace_member = removed_workplace_member.into_inner();
+
+    let workplace_details = query::detail(workplace_id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
     // Remove existing connection
-    query::remove_connection_between_member_and_workplace(
-        workplace_id,
-        removed_workplace_member.into_inner().member_id,
-    )
-    .execute(db_pool.inner())
-    .await?;
+    query::remove_connection_between_member_and_workplace(workplace_id, workplace_member.member_id)
+        .execute(db_pool.inner())
+        .await?;
+
+    let orca_user_id = workplace_member.into();
+
+    let user_data = get_status_data(orca_user_id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    let keycloak_id = user_data.sub().ok_or_else(|| {
+        ApiError::keycloak_push(format!("keycloak ID for user {orca_user_id} not assigned"))
+    })?;
+
+    oid_provider
+        .remove_keycloak_user_from_group(&token, keycloak_id, workplace_details.keycloak_group_id)
+        .await?;
 
     Ok(SuccessResponse::Accepted)
 }

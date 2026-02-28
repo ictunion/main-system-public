@@ -235,4 +235,32 @@ impl OidProvider for KeycloakProvider {
             Err(Error::Proxy(status))
         }
     }
+
+    async fn remove_keycloak_user_from_group<'a>(
+        &self,
+        token: &JwtToken<'a>,
+        keycloak_user_id: Uuid,
+        keycloak_group_id: Uuid,
+    ) -> Result<(), Error> {
+        let client = reqwest::Client::new();
+        let response = client
+            .delete(format!(
+                "{}/admin/realms/{}/users/{}/groups/{}",
+                self.host, self.realm, keycloak_user_id, keycloak_group_id
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .send()
+            .await?;
+
+        let status = response.status();
+
+        debug!("Keycloak response status: {}", status);
+        debug!("Keycloak response: {:?}", response);
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(Error::Proxy(status))
+        }
+    }
 }
