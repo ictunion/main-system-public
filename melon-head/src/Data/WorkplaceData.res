@@ -3,6 +3,7 @@ open Data
 type newWorkplace = {
   name: string,
   email: string,
+  keycloakGroupId: string,
 }
 
 type workplaceMember = {memberId: string}
@@ -37,7 +38,11 @@ module Encode = {
   }
 
   let newWorkplace = (newWorkplace: newWorkplace) =>
-    object([("name", strOption(newWorkplace.name)), ("email", strOption(newWorkplace.email))])
+    object([
+      ("name", strOption(newWorkplace.name)),
+      ("email", strOption(newWorkplace.email)),
+      ("keycloak_group_id", strOption(newWorkplace.keycloakGroupId)),
+    ])
 
   let workplaceMember = (workplaceMember: workplaceMember) =>
     object([("member_id", strOption(workplaceMember.memberId))])

@@ -6,6 +6,7 @@ module NewWorkplace = {
   let emptyWorkplace = {
     name: "",
     email: "",
+    keycloakGroupId: "",
   }
 
   @react.component
@@ -45,6 +46,12 @@ module NewWorkplace = {
         placeholder="Evil corp."
         value=newWorkplace.name
         onInput={name => setNewWorkplace(m => {...m, name})}
+      />
+      <Form.TextField
+        label="Keycloak ID"
+        placeholder="acabcafe-ba11-4491-b29d-1aefccfddd93"
+        value=newWorkplace.keycloakGroupId
+        onInput={keycloakGroupId => setNewWorkplace(m => {...m, keycloakGroupId})}
       />
       <Button.Panel>
         <Button
