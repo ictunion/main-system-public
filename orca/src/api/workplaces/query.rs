@@ -13,7 +13,7 @@ SELECT id
     , email
     , created_at
     , keycloak_group_id
-    , count(mw.member_id) AS member_count
+    , COUNT(mw.member_id) AS member_count
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
 GROUP BY workplaces.id

@@ -1,5 +1,7 @@
 @module external styles: {..} = "./Members/styles.module.scss"
 
+open Belt
+
 module NewWorkplace = {
   open WorkplaceData
 
@@ -96,7 +98,7 @@ let columns: array<DataTable.column<WorkplaceData.summary>> = [
   {
     name: "Member count",
     minMax: ("50px", "1fr"),
-    view: r => r.member_count->React.string,
+    view: r => r.memberCount->(memberCount => React.string(memberCount->Int.toString)),
   },
   {
     name: "Created On",
@@ -144,7 +146,7 @@ module All = {
           {
             name: "Member count",
             minMax: ("50px", "1fr"),
-            view: r => r.member_count->React.string,
+            view: r => r.memberCount->(memberCount => React.string(memberCount->Int.toString)),
           },
           {
             name: "Created On",

@@ -22,7 +22,7 @@ pub struct WorkplaceSummary {
     email: String,
     created_at: DateTime<Utc>,
     keycloak_group_id: Uuid,
-    member_count: i32,
+    member_count: i64,
 }
 
 #[get("/")]
