@@ -13,8 +13,15 @@ SELECT id
     , email
     , created_at
     , keycloak_group_id
+    , count(mw.member_id) AS member_count
 FROM workplaces
-ORDER BY created_at DESC
+LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
+GROUP BY workplaces.id
+    , workplaces.name
+    , workplaces.email
+    , workplaces.created_at
+    , workplaces.keycloak_group_id
+ORDER BY workplaces.created_at DESC
 ",
     )
 }
@@ -27,8 +34,15 @@ SELECT id
     , email
     , created_at
     , keycloak_group_id
+    , count(mw.member_id) AS member_count
 FROM workplaces
-WHERE id = $1
+LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
+WHERE workplaces.id = $1
+GROUP BY workplaces.id
+    , workplaces.name
+    , workplaces.email
+    , workplaces.created_at
+    , workplaces.keycloak_group_id
 ",
     )
     .bind(id)
@@ -49,6 +63,7 @@ RETURNING id
     , email
     , created_at
     , keycloak_group_id
+    , 0 AS member_count
 ",
     )
     .bind(&new_workplace.name)

@@ -94,6 +94,11 @@ let columns: array<DataTable.column<WorkplaceData.summary>> = [
     view: r => r.email->(email => <Link.Email email />),
   },
   {
+    name: "Member count",
+    minMax: ("50px", "1fr"),
+    view: r => r.member_count->React.string,
+  },
+  {
     name: "Created On",
     minMax: ("150px", "1fr"),
     view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
@@ -135,6 +140,11 @@ module All = {
             name: "Email",
             minMax: ("250px", "2fr"),
             view: r => r.email->(email => <Link.Email email />),
+          },
+          {
+            name: "Member count",
+            minMax: ("50px", "1fr"),
+            view: r => r.member_count->React.string,
           },
           {
             name: "Created On",

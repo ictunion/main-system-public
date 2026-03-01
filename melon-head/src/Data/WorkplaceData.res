@@ -12,6 +12,7 @@ type summary = {
   id: Uuid.t,
   name: string,
   email: Email.t,
+  member_count: string,
   createdAt: Js.Date.t,
 }
 
@@ -22,6 +23,7 @@ module Decode = {
     id: field.required(. "id", Uuid.decode),
     name: field.required(. "name", string),
     email: field.required(. "email", Email.decode),
+    member_count: field.required(. "member_count", string),
     createdAt: field.required(. "created_at", date),
   })
 }
