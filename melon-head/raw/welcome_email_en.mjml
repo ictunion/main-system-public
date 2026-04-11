@@ -62,7 +62,7 @@
             </mj-text>
 
             <mj-text>
-                Invitation to signal channel:</br>
+                Invitation to signal channel:<br/>
                 <a href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu</a>
             </mj-text>
 
@@ -76,13 +76,14 @@
             </mj-text>
 
             <mj-text>
-                On behalf of the ICT Union,<br>
-                Daniil Svirin<br>
-                Tel: +420 777 350 557<br>
+                On behalf of the ICT Union,<br/>
+                Daniil Svirin<br/>
+                Tel: +420 777 350 557<br/>
             </mj-text>
         </mj-column>
         </mj-section>
-        <mj-hero background-color="#237fa8"  padding="25px 25px">
+        <mj-section background-color="#237fa8" padding="25px 25px">
+        <mj-column>
         <mj-text align="center" color="#FFFFFF" font-size="22px">
             Trade union of workers in ICT
         </mj-text>
@@ -91,6 +92,7 @@
             <a href="mailto:support@ictunion.cz" style="color: #FFFFFF">support@ictunion.cz</a> |
             <a href="tel:+420 775 319 271" style="color: #FFFFFF">+420 775 319 271</a>
         </mj-text>
-        </mj-hero>
+        </mj-column>
+        </mj-section>
     </mj-body>
 </mjml>

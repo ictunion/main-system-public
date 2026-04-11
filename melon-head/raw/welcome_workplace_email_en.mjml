@@ -37,7 +37,7 @@
 
                 <mj-text>
                     Membership meetings are held on the first Wednesday of every month:<br/>
-                    Meeting Agenda: <br>
+                    Meeting Agenda: <br/>
                     <a href='https://docs.google.com/document/d/1YL1ZPCjJ_CCn2aw7mTNK6_l0hi0-CiMT6-fkvGxaLDI/edit?usp=sharing'>https://docs.google.com/document/d/1YL1ZPCjJ_CCn2aw7mTNK6_l0hi0-CiMT6-fkvGxaLDI/edit?usp=sharing</a> 
                 </mj-text>
 
@@ -54,7 +54,7 @@
                 </mj-text>
 
                 <mj-text>
-                    To let you know what's going on, we also have a union Signal where we post weekly updates on what's been happening in the union. If you don't have Signal at this time but would like to join, you can read about Signal on our wiki <a href='https://wiki.ictunion.cz/members/community/signal.html'>https://wiki.ictunion.cz/members/community/signal.html</a><br> 
+                    To let you know what's going on, we also have a union Signal where we post weekly updates on what's been happening in the union. If you don't have Signal at this time but would like to join, you can read about Signal on our wiki <a href='https://wiki.ictunion.cz/members/community/signal.html'>https://wiki.ictunion.cz/members/community/signal.html</a><br/>
                     To join you can click this link to request access to the Signal group: <a href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu</a>
 
                 </mj-text>
@@ -64,13 +64,14 @@
                 </mj-text>
 
                 <mj-text>
-                    Za ICT odbory,<br>
-                    Daniil Svirin<br>
-                    Tel: +420 777 350 557<br>
+                    Za ICT odbory,<br/>
+                    Daniil Svirin<br/>
+                    Tel: +420 777 350 557<br/>
                 </mj-text>
             </mj-column>
         </mj-section>
-        <mj-hero background-color="#237fa8"  padding="25px 25px">
+        <mj-section background-color="#237fa8" padding="25px 25px">
+            <mj-column>
             <mj-text align="center" color="#FFFFFF" font-size="22px">
                 Odborová organizace pracujících v ICT
             </mj-text>
@@ -79,6 +80,7 @@
                 <a href="mailto:support@ictunion.cz" style="color: #FFFFFF">support@ictunion.cz</a> |
                 <a href="tel:+420 775 319 271" style="color: #FFFFFF">+420 775 319 271</a>
             </mj-text>
-        </mj-hero>
+            </mj-column>
+        </mj-section>
     </mj-body>
 </mjml>

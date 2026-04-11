@@ -103,6 +103,10 @@ enum ProcessingError {
     Smtp(#[from] lettre::transport::smtp::Error),
     #[error("Confirmation token missing")]
     MissingConfirmationToken,
+    #[error("Failed to parse MJML template: {0}")]
+    MjmlParse(String),
+    #[error("Failed to render MJML template: {0}")]
+    MjmlRender(String),
 }
 
 async fn process(
@@ -125,7 +129,13 @@ async fn process(
 
             send_verification_email(config, db_pool, &application_details, pdf_data).await?;
         }
-        SendWelcomeEmail(full_name, subject, email, message_html) => {
+        SendWelcomeEmail(full_name, subject, email, message_mjml) => {
+            let opts = mrml::prelude::render::RenderOptions::default();
+            let message_html = mrml::parse(&message_mjml)
+                .map_err(|e| ProcessingError::MjmlParse(e.to_string()))?
+                .render(&opts)
+                .map_err(|e| ProcessingError::MjmlRender(e.to_string()))?;
+
             let email_reply_name = "";
             let email_reply_email = "treasurer@ictunion.cz";
 
