@@ -27,7 +27,7 @@ export default class App extends React.Component<Props, AppState> {
             userInfo: null
         };
 
-        props.keycloak.loadUserInfo().then((userInfo: UserInfo) => {
+        props.keycloak.loadUserProfile().then((userInfo: UserInfo) => {
             this.setState((state) => {
                 return {
                     ...state, userInfo: userInfo

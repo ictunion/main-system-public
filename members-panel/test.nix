@@ -1,5 +1,5 @@
 with (import <nixpkgs> {});
 callPackage ./. {
-  nodejs = nodejs-18_x;
+  nodejs = nodejs_24;
   config = builtins.fromJSON (builtins.readFile ./config.example.json);
 }
