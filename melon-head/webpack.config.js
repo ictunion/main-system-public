@@ -81,6 +81,12 @@ module.exports = (env, argv) => {
                 publicPath: '/',
                 favicon: "./static/svg/melon-head.svg",
             }),
+            new HtmlWebpackPlugin({
+                template: path.resolve(__dirname, "./src/silent-check-sso.html"),
+                filename: "silent-check-sso.html",
+                inject: false,
+                chunks: [],
+            }),
         ],
     };
 };

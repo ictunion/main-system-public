@@ -25,11 +25,16 @@ keycloak.onTokenExpired = async () => {
 async function initKeycloak() {
     try {
         const authenticated = await keycloak.init({
-            onLoad: 'login-required',
-            checkLoginIframe: false
+            onLoad: 'check-sso',
+            checkLoginIframe: false,
+            silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html'
         });
 
         console.log(`User is ${authenticated ? 'authenticated' : 'not authenticated'}`);
+        if (!authenticated) {
+            // User genuinely has no session — now redirect to login
+            keycloak.login();
+        }
     } catch (error) {
         console.error('Failed to initialize adapter:', error);
     }
