@@ -46,6 +46,10 @@ let
 
   orca-audit = craneLib.cargoAudit {
     inherit src advisory-db;
+
+    # Temporarly disable failure on rand vunerability
+    # TODO: remove this once fix is out
+    cargoAuditExtraArgs = "--ignore RUSTSEC-2026-0097";
   };
 
   buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
