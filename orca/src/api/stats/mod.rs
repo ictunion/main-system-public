@@ -1,5 +1,5 @@
 use rocket::serde::json::Json;
-use rocket::{get, routes, serde::Serialize, Route, State};
+use rocket::{Route, State, get, routes, serde::Serialize};
 
 mod query;
 

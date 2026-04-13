@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use handlebars::Handlebars;
-use rocket::serde::json::{json, Json};
-use rocket::{delete, get, patch, post, routes, Route, State};
+use rocket::serde::json::{Json, json};
+use rocket::{Route, State, delete, get, patch, post, routes};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -10,8 +10,8 @@ pub mod query;
 
 use super::ApiError;
 use super::SuccessResponse;
-use crate::api::files::FileInfo;
 use crate::api::Response;
+use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest, Workplace};
 use crate::db::DbPool;
 use crate::processing::{Command, QueueSender};

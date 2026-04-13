@@ -1,7 +1,7 @@
 use log::{error, warn};
 use rocket::response::{self, Responder};
-use rocket::serde::{json::Json, Serialize};
-use rocket::{catchers, get, routes, Build, Request, Rocket, State};
+use rocket::serde::{Serialize, json::Json};
+use rocket::{Build, Request, Rocket, State, catchers, get, routes};
 use thiserror::Error;
 use tokio::task::JoinError;
 use validator::ValidationError;

@@ -11,9 +11,9 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
 use lettre::{
-    address, message::Attachment, message::Mailbox, message::MultiPart, message::SinglePart,
-    transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
-    Tokio1Executor,
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor, address, message::Attachment,
+    message::Mailbox, message::MultiPart, message::SinglePart,
+    transport::smtp::authentication::Credentials,
 };
 use log::{error, info};
 use std::process::Stdio;
@@ -21,8 +21,8 @@ use thiserror::Error;
 
 mod query;
 
-use crate::config::templates;
 use crate::config::Config;
+use crate::config::templates;
 use crate::data::{Id, RegistrationRequest};
 use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};

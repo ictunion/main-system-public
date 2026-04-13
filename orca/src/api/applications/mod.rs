@@ -1,17 +1,17 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use log::error;
 use rocket::serde::json::Json;
-use rocket::{delete, get, patch, post, routes, Route, State};
+use rocket::{Route, State, delete, get, patch, post, routes};
 use serde::{Deserialize, Serialize};
 
+use crate::api::Response;
 use crate::api::files::FileInfo;
 use crate::api::members;
-use crate::api::Response;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::{self, DbPool};
 use crate::processing::{Command, QueueSender};
-use crate::server::oid::{JwtToken, Provider, Role};
 use crate::server::IpAddress;
+use crate::server::oid::{JwtToken, Provider, Role};
 
 use super::{ApiError, SuccessResponse};
 

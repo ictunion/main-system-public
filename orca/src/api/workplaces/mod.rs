@@ -1,14 +1,14 @@
 use super::{ApiError, SuccessResponse};
-use crate::api::members::query::get_status_data;
-use crate::api::members::Summary;
 use crate::api::Response;
+use crate::api::members::Summary;
+use crate::api::members::query::get_status_data;
 use crate::data::{Id, Member, Workplace};
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider, Role};
 use crate::validation::Validated;
 use chrono::{DateTime, Utc};
 use rocket::serde::json::Json;
-use rocket::{delete, get, post, routes, Route, State};
+use rocket::{Route, State, delete, get, post, routes};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;

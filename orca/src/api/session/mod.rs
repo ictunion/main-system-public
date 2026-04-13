@@ -1,5 +1,5 @@
-use rocket::serde::{json::Json, Serialize};
-use rocket::{get, post, routes, Route, State};
+use rocket::serde::{Serialize, json::Json};
+use rocket::{Route, State, get, post, routes};
 
 use super::{ApiError, Response};
 use crate::data::{Id, Member};

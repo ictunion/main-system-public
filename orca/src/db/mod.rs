@@ -1,6 +1,6 @@
 use sqlx::{
-    postgres::{PgArguments, PgPoolOptions},
     PgPool, Postgres,
+    postgres::{PgArguments, PgPoolOptions},
 };
 use std::ops::Deref;
 

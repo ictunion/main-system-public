@@ -12,7 +12,7 @@
 //! ```
 
 use orca::config::Config;
-use orca::{start, StartupError};
+use orca::{StartupError, start};
 
 #[rocket::main]
 async fn main() -> Result<(), Box<StartupError>> {

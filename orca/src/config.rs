@@ -1,6 +1,6 @@
 use rocket::figment::{
-    providers::{Env, Format, Serialized, Toml},
     Figment, Profile,
+    providers::{Env, Format, Serialized, Toml},
 };
 
 use std::collections::HashMap;

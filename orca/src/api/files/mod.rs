@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use rocket::http::ContentType;
 use rocket::response::Responder;
 use rocket::serde::Serialize;
-use rocket::{get, routes, Route, State};
+use rocket::{Route, State, get, routes};
 
 use crate::api::Response;
 use crate::data::Id;

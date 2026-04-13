@@ -2,12 +2,12 @@ use chrono::NaiveDate;
 use log::{info, warn};
 use rocket::http::Status;
 use rocket::response::Redirect;
-use rocket::serde::{json::Json, Deserialize};
-use rocket::{get, post, routes, Route, State};
+use rocket::serde::{Deserialize, json::Json};
+use rocket::{Route, State, get, post, routes};
 use validator::Validate;
 
 mod query;
-use super::{validate_non_empty, Response, SuccessResponse};
+use super::{Response, SuccessResponse, validate_non_empty};
 use crate::config::Config;
 use crate::data::{self, Id};
 use crate::db::{self, DbPool};
