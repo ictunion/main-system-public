@@ -63,7 +63,7 @@ RETURNING id
     , email
     , created_at
     , keycloak_group_id
-    , 0 AS member_count
+    , 0::bigint AS member_count
 ",
     )
     .bind(&new_workplace.name)
