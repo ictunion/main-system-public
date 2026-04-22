@@ -5,6 +5,9 @@ use crate::api::members::Summary;
 use crate::data::{Id, Workplace};
 use crate::db::{Query, QueryAs};
 
+// member count includes also members, who have already left union
+// current process is to remove association between past members and workplaces manually
+// in the future, it should be done when clicking on "remove member" in member detail
 pub fn list_summaries() -> QueryAs<'static, WorkplaceSummary> {
     sqlx::query_as(
         "
@@ -121,7 +124,7 @@ SELECT m.id
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 LEFT JOIN members_workplaces mw ON mw.member_id = m.id 
-WHERE mw.workplace_id = $1
+WHERE mw.workplace_id = $1 AND left_at IS NULL
 GROUP BY m.id
     , m.member_number
     , m.first_name

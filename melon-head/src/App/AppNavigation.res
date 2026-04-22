@@ -69,7 +69,7 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             path="/workplaces"
             text="Workplaces"
             session
-            requiredRole=Some(Session.ListWorkplaces)
+            requiredRole=Some(Session.ManageWorkplaces)
           />
           /* <NavItem */
           /* key="8" */

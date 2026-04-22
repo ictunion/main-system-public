@@ -44,6 +44,12 @@
     }
 }
 
+.nav-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+}
+
 .occupations {
     background: var(--background-color);
     max-width: 1580px;

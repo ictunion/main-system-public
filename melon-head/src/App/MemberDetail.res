@@ -466,16 +466,35 @@ let make = (~api, ~id, ~modal) => {
           }}
         </span>
       </h1>
-      <Page.BackButton name="members" path={status->RemoteData.toOption->Members.tabToUrl} />
+      <div className={styles["navButtons"]}>
+        <SessionContext.RequireRole anyOf=[Session.ListMembers]>
+          <Page.BackButton name="members" path={status->RemoteData.toOption->Members.tabToUrl} />
+        </SessionContext.RequireRole>
+        <SessionContext.RequireRole anyOf=[Session.ListWorkplaces]>
+          <SessionContext.RequireRole anyOf=[Session.ViewMember]>
+            {switch detail {
+            | Success(d) =>
+              switch d.workplaceId {
+              | Some(wid) =>
+                <Page.BackButton name="workplace members" path={"/workplaces/" ++ Uuid.toString(wid)} />
+              | None => React.null
+              }
+            | _ => React.null
+            }}
+          </SessionContext.RequireRole>
+        </SessionContext.RequireRole>
+      </div>
       <dl className={styles["headerRow"]}>
         <dt> {React.string("Status:")} </dt>
         <dd>
           <Chip.MemberStatus value=status />
         </dd>
-        <dt> {React.string("Workplace:")} </dt>
-        <dd>
-          <MemberWorkplaceSelect api detail />
-        </dd>
+        <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
+          <dt> {React.string("Workplace:")} </dt>
+          <dd>
+            <MemberWorkplaceSelect api detail />
+          </dd>
+        </SessionContext.RequireRole>
       </dl>
     </header>
     <DataGrid layout data=detail />
