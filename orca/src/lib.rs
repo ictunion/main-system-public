@@ -43,7 +43,10 @@ pub async fn start(config: Config) -> Result<(), StartupError> {
     })
     .await?;
 
-    let queue = processing::start(&config, processing_db_pool);
+    let queue = processing::start(&config, processing_db_pool, &provider);
+
+    // This will not work, until we figure out how to provide JWT Token for Keycloak calls
+    processing::ensure_member_subs(&web_db_pool, &queue).await;
 
     api::build()
         .attach(server::cors::Cors)

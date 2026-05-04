@@ -23,9 +23,10 @@ mod query;
 
 use crate::config::Config;
 use crate::config::templates;
-use crate::data::{Id, RegistrationRequest};
+use crate::data::{Id, Member, RegistrationRequest};
 use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};
+use crate::server::oid::{JwtToken, Provider};
 
 #[derive(Debug)]
 pub enum Command {
@@ -33,6 +34,7 @@ pub enum Command {
     RegistrationRequestVerified(Id<RegistrationRequest>),
     ResentRegistrationEmail(Id<RegistrationRequest>),
     SendWelcomeEmail(String, String, String, String),
+    NewMemberCreated(Id<Member>, Option<String>),
 }
 
 impl std::fmt::Display for Command {
@@ -49,6 +51,9 @@ impl std::fmt::Display for Command {
             }
             Self::SendWelcomeEmail(_, _, email, _) => {
                 write!(f, "SendWelcomeEmail to member with email: {email}")
+            }
+            Self::NewMemberCreated(id, _) => {
+                write!(f, "NewMemberCreated id: {id}")
             }
         }
     }
@@ -68,16 +73,17 @@ impl QueueSender {
     }
 }
 
-pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
+pub fn start(config: &Config, db_pool: DbPool, oid_provider: &Provider) -> QueueSender {
     let (sender, mut receiver) = mpsc::channel::<Command>(config.processing_queue_size);
     let our_conf = config.clone();
+    let cloned_oid_provider = oid_provider.clone();
 
     info!("Starting processing queue");
     tokio::spawn(async move {
         while let Some(cmd) = receiver.recv().await {
             let cmd_info = cmd.to_string();
             info!("Processiong command: {cmd_info}");
-            match process(cmd, &our_conf, &db_pool).await {
+            match process(cmd, &our_conf, &db_pool, &cloned_oid_provider).await {
                 Ok(()) => info!("Command processed successfully"),
                 Err(err) => error!("Processing of cmd: {cmd_info} failed with: {:?}", err),
             }
@@ -85,6 +91,23 @@ pub fn start(config: &Config, db_pool: DbPool) -> QueueSender {
     });
 
     QueueSender(sender)
+}
+
+pub async fn ensure_member_subs(db_pool: &DbPool, queue: &QueueSender) {
+    match query::get_members_without_sub().fetch_all(db_pool).await {
+        Ok(members) => {
+            info!(
+                "Ensuring OID subs for {} member(s) without sub",
+                members.len()
+            );
+            for (member_id,) in members {
+                if let Err(e) = queue.send(Command::NewMemberCreated(member_id, None)).await {
+                    error!("Failed to enqueue NewMemberCreated for member {member_id}: {e}");
+                }
+            }
+        }
+        Err(e) => error!("Failed to load members without sub: {:?}", e),
+    }
 }
 
 #[derive(Debug, Error)]
@@ -107,12 +130,17 @@ enum ProcessingError {
     MjmlParse(String),
     #[error("Failed to render MJML template: {0}")]
     MjmlRender(String),
+    #[error("OID provider error: {0}")]
+    Oid(#[from] crate::server::oid::Error),
+    #[error("NewMemberCreated command is missing OID token")]
+    MissingOidToken,
 }
 
 async fn process(
     command: Command,
     config: &Config,
     db_pool: &DbPool,
+    oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
     use Command::*;
 
@@ -157,6 +185,17 @@ async fn process(
                 .subject(subject)
                 .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
             send_email(config, message).await?;
+        }
+        NewMemberCreated(member_id, token_opt) => {
+            let token_string = token_opt.ok_or(ProcessingError::MissingOidToken)?;
+            let token = JwtToken::new(&token_string);
+            let oid_user = query::get_member_for_oid(member_id)
+                .fetch_one(db_pool)
+                .await?;
+            let uuid = oid_provider.create_user(&token, &oid_user).await?;
+            query::assign_member_oid_sub(member_id, uuid)
+                .execute(db_pool)
+                .await?;
         }
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured

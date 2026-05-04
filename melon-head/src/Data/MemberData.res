@@ -53,6 +53,7 @@ type detail = {
   onboardingFinishAt: option<Js.Date.t>,
   workplaceId: option<Uuid.t>,
   createdAt: Js.Date.t,
+  sub: option<Uuid.t>,
 }
 
 type occupation = {
@@ -114,6 +115,7 @@ module Decode = {
     onboardingFinishAt: field.required(. "onboarding_finished_at", option(date)),
     workplaceId: field.required(. "workplace_id", option(Uuid.decode)),
     createdAt: field.required(. "created_at", date),
+    sub: field.required(. "sub", option(Uuid.decode)),
   })
 
   let occupation = object(field => {

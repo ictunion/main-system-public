@@ -1,7 +1,10 @@
+use uuid::Uuid;
+
 use crate::db::{Query, QueryAs};
+use crate::server::oid;
 
 use super::RegistrationDetails;
-use crate::data::{Id, RegistrationRequest};
+use crate::data::{Id, Member, RegistrationRequest};
 
 pub fn query_registration<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, RegistrationDetails> {
     sqlx::query_as(
@@ -57,6 +60,21 @@ WHERE id = $1
 ",
     )
     .bind(id)
+}
+
+pub fn get_members_without_sub() -> QueryAs<'static, (Id<Member>,)> {
+    sqlx::query_as("SELECT id FROM members WHERE sub IS NULL AND left_at IS NULL")
+}
+
+pub fn get_member_for_oid<'a>(id: Id<Member>) -> QueryAs<'a, oid::User> {
+    sqlx::query_as("SELECT NULL as id, first_name, last_name, email FROM members WHERE id = $1")
+        .bind(id)
+}
+
+pub fn assign_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> Query<'a> {
+    sqlx::query("UPDATE members SET sub = $2 WHERE id = $1")
+        .bind(id)
+        .bind(uuid)
 }
 
 pub fn fetch_registration_pdf(id: Id<RegistrationRequest>) -> QueryAs<'static, (Vec<u8>,)> {

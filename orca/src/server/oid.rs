@@ -31,6 +31,16 @@ pub struct JwtToken<'a> {
     string: &'a str,
 }
 
+impl<'a> JwtToken<'a> {
+    pub fn new(string: &'a str) -> Self {
+        JwtToken { string }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.string
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Role {
     ListApplications,
@@ -79,6 +89,7 @@ impl RealmManagementRole {
     }
 }
 
+#[derive(Clone)]
 enum ProviderState {
     Keycloak(Box<KeycloakProvider>),
     Disconnected,
@@ -125,6 +136,7 @@ trait OidProvider {
     ) -> Result<(), Error>;
 }
 
+#[derive(Clone)]
 pub struct Provider(ProviderState);
 
 impl Provider {

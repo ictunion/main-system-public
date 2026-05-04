@@ -4,7 +4,6 @@ use super::{Detail, MemberStatusData, NewMember, Note, Occupation, Summary, Upda
 use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::QueryAs;
-use crate::server::oid;
 
 pub fn list_summaries() -> QueryAs<'static, Summary> {
     sqlx::query_as(
@@ -201,6 +200,7 @@ SELECT id
     , onboarding_finished_at
     , created_at
     , mw.workplace_id
+    , sub
 FROM members
 LEFT JOIN members_workplaces mw ON mw.member_id = members.id
 WHERE id = $1
@@ -255,25 +255,13 @@ ORDER BY created_at DESC
     .bind(id)
 }
 
-pub fn get_new_oid_user<'a>(id: Id<Member>) -> QueryAs<'a, oid::User> {
-    sqlx::query_as(
-        "
-SELECT NULL as id, first_name, last_name, email
-FROM members
-WHERE id = $1
-",
-    )
-    .bind(id)
-}
-
 pub fn assign_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> QueryAs<'a, Detail> {
     sqlx::query_as(
         "
 UPDATE members
 SET sub = $2
-, onboarding_finished_at = NOW()
-WHERE id = $1
-RETURNING id
+WHERE members.id = $1
+RETURNING members.id
 , member_number
 , first_name
 , last_name
@@ -289,7 +277,7 @@ RETURNING id
 , left_at
 , onboarding_finished_at
 , created_at
-, null as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
 ",
     )
     .bind(id)
@@ -299,9 +287,37 @@ RETURNING id
 pub fn get_status_data<'a>(id: Id<Member>) -> QueryAs<'a, MemberStatusData> {
     sqlx::query_as(
         "
-SELECT sub, left_at
+SELECT sub, left_at, onboarding_finished_at
 FROM members
 WHERE id = $1
+",
+    )
+    .bind(id)
+}
+
+pub fn set_onboarding_finished<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
+    sqlx::query_as(
+        "
+UPDATE members
+SET onboarding_finished_at = NOW()
+WHERE members.id = $1
+RETURNING members.id
+, member_number
+, first_name
+, last_name
+, date_of_birth
+, email
+, phone_number
+, note
+, address
+, city
+, postal_code
+, language
+, registration_request_id as application_id
+, left_at
+, onboarding_finished_at
+, created_at
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
 ",
     )
     .bind(id)
@@ -312,8 +328,8 @@ pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<'_, Detail
         "
     UPDATE members
     SET note = $2
-    WHERE id = $1
-    RETURNING id
+    WHERE members.id = $1
+    RETURNING members.id
     , member_number
     , first_name
     , last_name
@@ -329,8 +345,8 @@ pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<'_, Detail
     , left_at
     , onboarding_finished_at
     , created_at
-    , null as workplace_id
-    ",
+    , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+",
     )
     .bind(id)
     .bind(new_note.note.as_deref())
@@ -350,8 +366,8 @@ SET first_name = $2
     , city = $9
     , postal_code = $10
     , language = $11
-WHERE id = $1
-RETURNING id
+WHERE members.id = $1
+RETURNING members.id
 , member_number
 , first_name
 , last_name
@@ -367,7 +383,7 @@ RETURNING id
 , left_at
 , onboarding_finished_at
 , created_at
-, null as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
 ",
     )
     .bind(id)
@@ -390,8 +406,8 @@ pub fn remove_member<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
         "
 UPDATE members
 SET left_at = NOW()
-WHERE id = $1
-RETURNING id
+WHERE members.id = $1
+RETURNING members.id
 , member_number
 , first_name
 , last_name
@@ -407,7 +423,7 @@ RETURNING id
 , left_at
 , onboarding_finished_at
 , created_at
-, null as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
 ",
     )
     .bind(id)

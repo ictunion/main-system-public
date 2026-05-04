@@ -293,45 +293,82 @@ module Actions = {
   }
 
   @react.component
-  let make = (~status, ~modal, ~api, ~id, ~setDetail) => {
-    switch status {
-    | NewMember =>
-      <Button.Panel>
-        <Button
-          variant=Button.Cta
-          onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
-          {React.string("Send welcome email")}
-        </Button>
-        <Button
-          variant=Button.Cta
-          onClick={_ =>
-            RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/workplacewelcome")}>
-          {React.string("Send workplace welcome email")}
-        </Button>
-        <Button
-          variant=Button.Cta
-          onClick={_ =>
-            modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
-          {React.string("Accept member")}
-        </Button>
-        <Button
-          variant=Button.Danger
-          onClick={_ =>
-            modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
-          {React.string("Remove member")}
-        </Button>
-      </Button.Panel>
-    | CurrentMember =>
-      <Button.Panel>
-        <Button
-          variant=Button.Danger
-          onClick={_ =>
-            modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
-          {React.string("Remove member")}
-        </Button>
-      </Button.Panel>
-    | PastMember => React.null
+  let make = (~status, ~modal, ~api, ~id, ~setDetail, ~hasSub) => {
+    let (oidError, setOidError) = React.useState(() => None)
+    let (oidScheduled, setOidScheduled) = React.useState(() => false)
+
+    let doCreateOidAccount = (_: JsxEvent.Mouse.t) => {
+      let req = api->Api.postJson(
+        ~path="/members/" ++ Uuid.toString(id) ++ "/create_oid_account",
+        ~decoder=Api.Decode.acceptedResponse,
+        ~body=Js.Json.null,
+      )
+      req->Future.get(res => {
+        switch res {
+        | Ok(_) => setOidScheduled(_ => true)
+        | Error(e) => setOidError(_ => Some(e))
+        }
+      })
     }
+
+    let createOidButton =
+      if hasSub || oidScheduled {
+        React.null
+      } else {
+        <Button variant=Button.Cta onClick=doCreateOidAccount>
+          {React.string("Create Keycloak Account")}
+        </Button>
+      }
+
+    <>
+      {switch oidError {
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      | None => React.null
+      }}
+      {switch status {
+      | NewMember =>
+        <Button.Panel>
+          <Button
+            variant=Button.Cta
+            onClick={_ =>
+              RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
+            {React.string("Send welcome email")}
+          </Button>
+          <Button
+            variant=Button.Cta
+            onClick={_ =>
+              RescriptReactRouter.push(
+                "/members/" ++ Uuid.toString(id) ++ "/workplacewelcome",
+              )}>
+            {React.string("Send workplace welcome email")}
+          </Button>
+          <Button
+            variant=Button.Cta
+            onClick={_ =>
+              modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
+            {React.string("Accept member")}
+          </Button>
+          createOidButton
+          <Button
+            variant=Button.Danger
+            onClick={_ =>
+              modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
+            {React.string("Remove member")}
+          </Button>
+        </Button.Panel>
+      | CurrentMember =>
+        <Button.Panel>
+          createOidButton
+          <Button
+            variant=Button.Danger
+            onClick={_ =>
+              modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
+            {React.string("Remove member")}
+          </Button>
+        </Button.Panel>
+      | PastMember => React.null
+      }}
+    </>
   }
 }
 
@@ -575,8 +612,9 @@ let make = (~api, ~id, ~modal) => {
     // <Tabbed.Content tab=Workplace handlers=tabHandlers>
     //   React.string("I work in this place (?)")
     // </Tabbed.Content>
-    {switch status {
-    | Success(s) => <Actions status=s modal api id setDetail />
+    {switch (status, detail) {
+    | (Success(s), Success(d)) =>
+      <Actions status=s modal api id setDetail hasSub={d.sub->Option.isSome} />
     | _ => React.null
     }}
   </Page>

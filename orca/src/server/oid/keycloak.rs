@@ -16,6 +16,7 @@ fn keycloak_url(host: &str, realm: &str) -> String {
     format!("{host}/realms/{realm}")
 }
 
+#[derive(Clone)]
 pub struct KeycloakProvider {
     key: DecodingKey,
     validation: Validation,

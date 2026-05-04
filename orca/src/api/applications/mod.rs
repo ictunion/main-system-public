@@ -477,6 +477,7 @@ async fn accept<'r>(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'r>,
+    queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
     new_member: Json<NewMember>,
 ) -> Response<Json<Detail>> {
@@ -534,6 +535,14 @@ async fn accept<'r>(
     let detail = query::get_application(id).fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
+
+    queue
+        .inner()
+        .send(Command::NewMemberCreated(
+            member_id,
+            Some(token.as_str().to_owned()),
+        ))
+        .await?;
 
     Ok(Json(detail))
 }

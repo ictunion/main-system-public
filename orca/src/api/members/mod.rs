@@ -253,6 +253,7 @@ pub struct Detail {
     onboarding_finished_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     workplace_id: Option<Id<Workplace>>,
+    sub: Option<Uuid>,
 }
 
 #[get("/<id>")]
@@ -273,6 +274,7 @@ async fn detail<'r>(
 pub struct MemberStatusData {
     sub: Option<Uuid>,
     left_at: Option<DateTime<Utc>>,
+    onboarding_finished_at: Option<DateTime<Utc>>,
 }
 
 impl MemberStatusData {
@@ -294,7 +296,7 @@ async fn accept<'r>(
         .fetch_one(db_pool.inner())
         .await?;
 
-    if status.sub.is_some() {
+    if status.onboarding_finished_at.is_some() {
         return Err(ApiError::data_conflict(
             "Member is accepted already".to_string(),
         ));
@@ -306,13 +308,7 @@ async fn accept<'r>(
         ));
     }
 
-    let user = query::get_new_oid_user(id)
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let uuid = oid_provider.create_user(&token, &user).await?;
-
-    let detail = query::assign_member_oid_sub(id, uuid)
+    let detail = query::set_onboarding_finished(id)
         .fetch_one(db_pool.inner())
         .await?;
 
@@ -472,6 +468,37 @@ struct PairRequest {
     sub: Uuid,
 }
 
+#[post("/<id>/create_oid_account")]
+async fn create_oid_account<'r>(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'r>,
+    queue: &State<QueueSender>,
+    id: Id<Member>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let status = query::get_status_data(id)
+        .fetch_one(db_pool.inner())
+        .await?;
+
+    if status.sub().is_some() {
+        return Err(ApiError::data_conflict(
+            "Member already has an OID account".to_string(),
+        ));
+    }
+
+    queue
+        .inner()
+        .send(Command::NewMemberCreated(
+            id,
+            Some(token.as_str().to_owned()),
+        ))
+        .await?;
+
+    Ok(SuccessResponse::Accepted)
+}
+
 #[patch("/<id>/pair_oid", format = "json", data = "<data>")]
 async fn pair_oid<'r>(
     db_pool: &State<DbPool>,
@@ -507,5 +534,6 @@ pub fn routes() -> Vec<Route> {
         remove_member,
         list_candidate_users,
         pair_oid,
+        create_oid_account,
     ]
 }
