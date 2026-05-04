@@ -89,7 +89,7 @@
         orca = orca-stuff.devShell;
         gray-whale = gray-whale-stuff.devShell;
         default = pkgs.mkShell {
-          packages = with pkgs; [ refinery-cli gnumake postgresql_15 docker ];
+          packages = with pkgs; [ refinery-cli gnumake postgresql_15 docker python3 wl-clipboard ];
         };
       };
 
