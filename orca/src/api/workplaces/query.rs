@@ -118,12 +118,13 @@ SELECT m.id
     , m.note
     , m.phone_number
     , m.city
+    , m.language
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
-LEFT JOIN members_workplaces mw ON mw.member_id = m.id 
+LEFT JOIN members_workplaces mw ON mw.member_id = m.id
 WHERE mw.workplace_id = $1 AND left_at IS NULL
 GROUP BY m.id
     , m.member_number

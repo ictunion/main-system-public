@@ -17,6 +17,7 @@ SELECT m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
@@ -30,6 +31,7 @@ GROUP BY m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , m.created_at
 ORDER BY m.member_number DESC
@@ -48,6 +50,7 @@ SELECT m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
@@ -61,6 +64,7 @@ GROUP BY m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , m.created_at
 ORDER BY m.member_number DESC
@@ -79,6 +83,7 @@ SELECT m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
@@ -92,6 +97,7 @@ GROUP BY m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , m.created_at
 ORDER BY m.member_number DESC
@@ -110,6 +116,7 @@ SELECT m.id
     , m.note
     , m.phone_number
     , m.city
+    , m.language
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
@@ -123,6 +130,7 @@ GROUP BY m.id
     , m.phone_number
     , m.note
     , m.city
+    , m.language
     , m.left_at
     , m.created_at
 ORDER BY m.member_number DESC
@@ -155,6 +163,7 @@ RETURNING id
     , phone_number
     , note
     , city
+    , language
     , left_at
     , created_at
     , ARRAY[]::text[] AS company_names

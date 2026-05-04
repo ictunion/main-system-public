@@ -100,7 +100,7 @@ let make = (~config: Config.t, ~keycloak: Keycloak.t): t => {
   }
 }
 
-let makeHeaders = api => {
+let makeJsonHeaders = api => {
   Js.Dict.fromList(list{
     ("Authorization", "Bearer " ++ api.keycloak->Keycloak.getToken),
     ("Accept", "application/json"),
@@ -108,22 +108,44 @@ let makeHeaders = api => {
   })
 }
 
-let fromRequest = (future, decoder) => {
+let makeTextHeaders = api => {
+  Js.Dict.fromList(list{
+    ("Authorization", "Bearer " ++ api.keycloak->Keycloak.getToken),
+    ("Accept", "text/csv"),
+  })
+}
+
+let fromJsonRequest = (future, decoder) => {
   future
   ->Future.mapError(~propagateCancel=true, fromRequestError)
   ->Future.mapResult(~propagateCancel=true, emptyToError)
   ->Future.mapResult(~propagateCancel=true, res => res->Json.decode(decoder)->mapDecodingError(res))
 }
 
+let fromTextRequest = future => {
+  future
+  ->Future.mapError(~propagateCancel=true, fromRequestError)
+  ->Future.mapResult(~propagateCancel=true, emptyToError)
+}
+
 type webData<'a> = RemoteData.t<'a, error>
+
+let getText = (api: t, ~path: string): Future.t<result<string, error>> => {
+  Request.make(
+    ~url=api.host ++ path,
+    ~responseType=Text,
+    (),
+    ~headers=makeTextHeaders(api),
+  )->fromTextRequest
+}
 
 let getJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<result<'a, error>> => {
   Request.make(
     ~url=api.host ++ path,
     ~responseType=Json,
     (),
-    ~headers=makeHeaders(api),
-  )->fromRequest(decoder)
+    ~headers=makeJsonHeaders(api),
+  )->fromJsonRequest(decoder)
 }
 
 let deleteJson = (
@@ -137,9 +159,9 @@ let deleteJson = (
     ~responseType=Json,
     ~method=#DELETE,
     (),
-    ~headers=makeHeaders(api),
+    ~headers=makeJsonHeaders(api),
     ~body=?body->Belt.Option.map(Js.Json.stringify),
-  )->fromRequest(decoder)
+  )->fromJsonRequest(decoder)
 }
 
 let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Json.t): Future.t<
@@ -150,10 +172,10 @@ let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Js
     ~url=api.host ++ path,
     ~responseType=Json,
     ~method=#POST,
-    ~headers=makeHeaders(api),
+    ~headers=makeJsonHeaders(api),
     ~body=Js.Json.stringify(body),
   )
-  ->fromRequest(decoder)
+  ->fromJsonRequest(decoder)
 }
 
 let patchJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Json.t): Future.t<
@@ -164,8 +186,8 @@ let patchJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.J
     ~url=api.host ++ path,
     ~responseType=Json,
     ~method=#PATCH,
-    ~headers=makeHeaders(api),
+    ~headers=makeJsonHeaders(api),
     ~body=Js.Json.stringify(body),
   )
-  ->fromRequest(decoder)
+  ->fromJsonRequest(decoder)
 }

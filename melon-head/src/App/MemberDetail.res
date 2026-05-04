@@ -476,7 +476,9 @@ let make = (~api, ~id, ~modal) => {
             | Success(d) =>
               switch d.workplaceId {
               | Some(wid) =>
-                <Page.BackButton name="workplace members" path={"/workplaces/" ++ Uuid.toString(wid)} />
+                <Page.BackButton
+                  name="workplace members" path={"/workplaces/" ++ Uuid.toString(wid)}
+                />
               | None => React.null
               }
             | _ => React.null
