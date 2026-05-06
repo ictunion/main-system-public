@@ -278,6 +278,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, sub
 ",
     )
     .bind(id)
@@ -318,6 +319,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, sub
 ",
     )
     .bind(id)
@@ -346,6 +348,7 @@ pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<'_, Detail
     , onboarding_finished_at
     , created_at
     , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+    , sub
 ",
     )
     .bind(id)
@@ -384,6 +387,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, sub
 ",
     )
     .bind(id)
@@ -424,6 +428,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, sub
 ",
     )
     .bind(id)
