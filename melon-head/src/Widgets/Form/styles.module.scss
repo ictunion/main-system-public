@@ -26,6 +26,51 @@
     @include vertical-container(6px)
 }
 
+.checkbox-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background .2s ease-in-out;
+    border: 1px solid var(--color4);
+    background: var(--color2);
+    color: var(--color4);
+    user-select: none;
+
+    input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        flex-shrink: 0;
+        width: 13px;
+        height: 13px;
+        border: 1.5px solid currentColor;
+        border-radius: 2px;
+        cursor: pointer;
+        position: relative;
+
+        &:checked::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            width: 7px;
+            height: 4px;
+            border-left: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: translateY(-1px) rotate(-45deg);
+        }
+    }
+
+    &:hover, &.checked {
+        background: var(--color4);
+        color: var(--color2);
+    }
+}
+
 .custom-member-number {
     background: var(--background-color);
     border: 1px solid var(--border-color);

@@ -20,6 +20,7 @@ SELECT m.id
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 GROUP BY m.id
@@ -53,6 +54,7 @@ SELECT m.id
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
 FROM members_past AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 GROUP BY m.id
@@ -86,6 +88,7 @@ SELECT m.id
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
 FROM members_new AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 GROUP BY m.id
@@ -119,6 +122,7 @@ SELECT m.id
     , m.left_at
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
 FROM members_current AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 GROUP BY m.id
@@ -166,6 +170,7 @@ RETURNING id
     , left_at
     , created_at
     , ARRAY[]::text[] AS company_names
+    , ARRAY[]::uuid[] AS workplace_ids
 ",
     )
     .bind(member_number)

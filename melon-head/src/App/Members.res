@@ -234,6 +234,14 @@ let columns: array<DataTable.column<MemberData.summary>> = [
   },
 ]
 
+module SectoralFilter = {
+  @react.component
+  let make = (~checked, ~onChange: unit => unit) =>
+    <Form.CheckboxButton checked onChange={_ => onChange()}>
+      {React.string("Sectoral Members only")}
+    </Form.CheckboxButton>
+}
+
 // We could use Functor module to generate these but would probably make it harder for people to understand what is going on
 
 module All = {
@@ -241,6 +249,14 @@ module All = {
   let make = (~api, ~modal) => {
     let (members, _, refreshMembers) =
       api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+
+    let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
+
+    let displayedMembers = if filterSectoral {
+      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+    } else {
+      members
+    }
 
     let openNewMembersTab = _ => {
       RescriptReactRouter.push(Some(MemberData.NewMember)->tabToUrl)
@@ -252,8 +268,12 @@ module All = {
         newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
       )
 
-    <DataTable
-      data=members
+    <div className={styles["membersTab"]}>
+      <Button.Panel>
+        <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
+      </Button.Panel>
+      <DataTable
+      data=displayedMembers
       columns=[
         {
           name: "ID",
@@ -324,6 +344,7 @@ module All = {
         </small>
       </p>
     </DataTable>
+    </div>
   }
 }
 
@@ -332,6 +353,14 @@ module New = {
   let make = (~api, ~modal) => {
     let (members, _, refreshMembers) =
       api->Hook.getData(~path="/members/new", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+
+    let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
+
+    let displayedMembers = if filterSectoral {
+      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+    } else {
+      members
+    }
 
     let openNewMemberModal = _ =>
       Modal.Interface.openModal(modal, newMemberModal(~api, ~modal, ~refreshMembers))
@@ -344,10 +373,13 @@ module New = {
 
     <div className={styles["membersTab"]}>
       <Button.Panel>
-        <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
+        <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
+          <Button onClick=openNewMemberModal> {React.string("Add New Member")} </Button>
+        </SessionContext.RequireRole>
+        <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
       <DataTable
-        data=members
+        data=displayedMembers
         columns=[
           {
             name: "ID",
@@ -407,14 +439,16 @@ module New = {
             view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
           },
         ]>
-        <p> {React.string("There are members who need to be onboarded.")} </p>
-        <p>
-          <small>
-            {React.string("Maybe you want to ")}
-            <a onClick=openNewMemberModal> {React.string("create a new one")} </a>
-            {React.string("?")}
-          </small>
-        </p>
+        <p> {React.string("There are no new members who need to be onboarded.")} </p>
+        <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
+          <p>
+            <small>
+              {React.string("Maybe you want to ")}
+              <a onClick=openNewMemberModal> {React.string("create a new one")} </a>
+              {React.string("?")}
+            </small>
+          </p>
+        </SessionContext.RequireRole>
       </DataTable>
     </div>
   }
@@ -429,6 +463,14 @@ module Current = {
         ~decoder=Json.Decode.array(MemberData.Decode.summary),
       )
 
+    let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
+
+    let displayedMembers = if filterSectoral {
+      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+    } else {
+      members
+    }
+
     let openNewMembersTab = _ => {
       RescriptReactRouter.push(Some(MemberData.NewMember)->tabToUrl)
     }
@@ -439,8 +481,12 @@ module Current = {
         newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
       )
 
-    <DataTable
-      data=members
+    <div className={styles["membersTab"]}>
+      <Button.Panel>
+        <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
+      </Button.Panel>
+      <DataTable
+      data=displayedMembers
       columns=[
         {
           name: "ID",
@@ -506,6 +552,7 @@ module Current = {
         </small>
       </p>
     </DataTable>
+    </div>
   }
 }
 
@@ -518,14 +565,26 @@ module Past = {
         ~decoder=Json.Decode.array(MemberData.Decode.summary),
       )
 
+    let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
+
+    let displayedMembers = if filterSectoral {
+      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+    } else {
+      members
+    }
+
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
         newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
       )
 
-    <DataTable
-      data=members
+    <div className={styles["membersTab"]}>
+      <Button.Panel>
+        <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
+      </Button.Panel>
+      <DataTable
+      data=displayedMembers
       columns=[
         {
           name: "ID",
@@ -587,6 +646,7 @@ module Past = {
       ]>
       <p> {React.string("There are no ex-members.")} </p>
     </DataTable>
+    </div>
   }
 }
 
