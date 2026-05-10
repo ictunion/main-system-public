@@ -32,10 +32,10 @@ pub struct Summary {
 }
 
 #[get("/")]
-async fn list<'r>(
+async fn list(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
@@ -60,10 +60,10 @@ pub struct UnverifiedSummary {
 }
 
 #[get("/unverified")]
-async fn list_unverified<'r>(
+async fn list_unverified(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<UnverifiedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
@@ -91,10 +91,10 @@ pub struct AcceptedSummary {
 }
 
 #[get("/accepted")]
-async fn list_accepted<'r>(
+async fn list_accepted(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<AcceptedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
@@ -121,10 +121,10 @@ pub struct RejectedSummary {
 }
 
 #[get("/rejected")]
-async fn list_rejected<'r>(
+async fn list_rejected(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<RejectedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
@@ -151,10 +151,10 @@ pub struct ProcessingSummary {
 }
 
 #[get("/processing")]
-async fn list_processing<'r>(
+async fn list_processing(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<ProcessingSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
@@ -181,10 +181,10 @@ pub struct InvalidSummary {
 }
 
 #[get("/invalid")]
-async fn list_invalid<'r>(
+async fn list_invalid(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<InvalidSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
@@ -222,10 +222,10 @@ pub struct Detail {
 }
 
 #[get("/<id>")]
-async fn detail<'r>(
+async fn detail(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_any_role(&token, &[Role::ViewApplication])?;
@@ -240,8 +240,10 @@ async fn detail<'r>(
 #[derive(Debug, sqlx::FromRow)]
 pub struct ApplicationStatusData {
     id: Id<RegistrationRequest>,
-    #[allow(dead_code)]
-    // we don't need it now but it seems like a good idea to collect such an important info
+    #[expect(
+        dead_code,
+        reason = "we don't need it now but it seems like a good idea to collect such an important info"
+    )]
     created_at: DateTime<Utc>,
     confirmed_at: Option<DateTime<Utc>>,
     rejected_at: Option<DateTime<Utc>>,
@@ -278,7 +280,7 @@ impl ApplicationStatusData {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ApplicationStatus {
     WaitingForConfirmation,
     InProcessing,
@@ -288,82 +290,52 @@ pub enum ApplicationStatus {
 }
 
 impl ApplicationStatus {
-    pub fn assert_waiting_for_confirmation(&self) -> Result<(), ApiError> {
-        match self {
-            Self::WaitingForConfirmation => Ok(()),
-            _ => {
-                let message = format!(
-                    "Application status must be `{:?}` but is `{:?}`.",
-                    ApplicationStatus::WaitingForConfirmation,
-                    self
-                );
-
-                Err(ApiError::data_conflict(message))
-            }
+    fn assert_status(self, status: Self) -> Result<(), ApiError> {
+        if self == status {
+            return Ok(());
         }
+        let message = format!("Application status must be `{status:?}` but is `{self:?}`.",);
+
+        Err(ApiError::data_conflict(&message))
     }
 
-    pub fn assert_in_proceesing(&self) -> Result<(), ApiError> {
-        match self {
-            Self::InProcessing => Ok(()),
-
-            _ => {
-                let message = format!(
-                    "Application status must be `{:?}` but is `{:?}`.",
-                    ApplicationStatus::InProcessing,
-                    self
-                );
-
-                Err(ApiError::data_conflict(message))
-            }
-        }
+    pub fn assert_waiting_for_confirmation(self) -> Result<(), ApiError> {
+        self.assert_status(Self::WaitingForConfirmation)
     }
 
-    pub fn assert_waiting_or_in_processing_or(&self) -> Result<(), ApiError> {
-        match self {
-            Self::InProcessing => Ok(()),
-            Self::WaitingForConfirmation => Ok(()),
-            _ => {
-                let message = format!(
-                    "Application status must be `{:?}` or `{:?} but is `{:?}`.",
-                    ApplicationStatus::WaitingForConfirmation,
-                    ApplicationStatus::InProcessing,
-                    self
-                );
-
-                Err(ApiError::data_conflict(message))
-            }
-        }
+    pub fn assert_in_proceesing(self) -> Result<(), ApiError> {
+        self.assert_status(Self::InProcessing)
     }
 
-    pub fn assert_rejected(&self) -> Result<(), ApiError> {
-        match self {
-            Self::Rejected => Ok(()),
-            _ => {
-                let message = format!("Application status must be `Rejected` but is `{:?}`.", self);
-
-                Err(ApiError::data_conflict(message))
-            }
+    pub fn assert_waiting_or_in_processing_or(self) -> Result<(), ApiError> {
+        if self.assert_in_proceesing().is_ok() || self.assert_waiting_for_confirmation().is_ok() {
+            return Ok(());
         }
+
+        let message = format!(
+            "Application status must be `{:?}` or `{:?} but is `{:?}`.",
+            ApplicationStatus::WaitingForConfirmation,
+            ApplicationStatus::InProcessing,
+            self
+        );
+
+        Err(ApiError::data_conflict(&message))
     }
 
-    pub fn assert_invalidated(&self) -> Result<(), ApiError> {
-        match self {
-            Self::Invalid => Ok(()),
-            _ => {
-                let message = format!("Application status must be `Invalid` but is `{:?}`.", self);
+    pub fn assert_rejected(self) -> Result<(), ApiError> {
+        self.assert_status(Self::Rejected)
+    }
 
-                Err(ApiError::data_conflict(message))
-            }
-        }
+    pub fn assert_invalidated(self) -> Result<(), ApiError> {
+        self.assert_status(Self::Invalid)
     }
 }
 
 #[delete("/<id>")]
-async fn reject<'r>(
+async fn reject(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
@@ -387,10 +359,10 @@ async fn reject<'r>(
 }
 
 #[patch("/<id>/invalidate")]
-async fn invalidate<'r>(
+async fn invalidate(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
@@ -413,10 +385,10 @@ async fn invalidate<'r>(
 }
 
 #[patch("/<id>/unreject")]
-async fn unreject<'r>(
+async fn unreject(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
@@ -440,10 +412,10 @@ async fn unreject<'r>(
 }
 
 #[patch("/<id>/uninvalidate")]
-async fn uninvalidate<'r>(
+async fn uninvalidate(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
@@ -473,10 +445,10 @@ struct NewMember {
 }
 
 #[post("/<id>/accept", format = "json", data = "<new_member>")]
-async fn accept<'r>(
+async fn accept(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
     new_member: Json<NewMember>,
@@ -495,14 +467,13 @@ async fn accept<'r>(
         .assert_in_proceesing()?;
 
     // Ensure member number for new member
-    let member_number = match new_member.member_number {
-        Some(v) => v,
-        None => {
-            let (new_num,) = members::query::get_next_member_number()
-                .fetch_one(&mut *tx)
-                .await?;
-            new_num
-        }
+    let member_number = if let Some(v) = new_member.member_number {
+        v
+    } else {
+        let (new_num,) = members::query::get_next_member_number()
+            .fetch_one(&mut *tx)
+            .await?;
+        new_num
     };
 
     // Inserting new member data
@@ -517,7 +488,7 @@ async fn accept<'r>(
             &member_number
         );
 
-        return Err(ApiError::data_conflict(message));
+        return Err(ApiError::data_conflict(&message));
     }
 
     let (member_id,) = result?;
@@ -548,10 +519,10 @@ async fn accept<'r>(
 }
 
 #[get("/<id>/files")]
-async fn list_files<'r>(
+async fn list_files(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Vec<FileInfo>>> {
     oid_provider.require_role(&token, Role::ViewApplication)?;
@@ -563,10 +534,10 @@ async fn list_files<'r>(
 }
 
 #[patch("/<id>/verify")]
-async fn verify<'r>(
+async fn verify(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
@@ -597,10 +568,10 @@ async fn verify<'r>(
 }
 
 #[post("/<id>/resend-email")]
-async fn resend_email<'r>(
+async fn resend_email(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<SuccessResponse> {
@@ -621,10 +592,10 @@ async fn resend_email<'r>(
 }
 
 #[delete("/<id>/hard")]
-async fn hard_delete<'r>(
+async fn hard_delete(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::SuperPowers)?;
@@ -657,10 +628,10 @@ pub struct Note {
 }
 
 #[patch("/<id>/note", format = "json", data = "<note>")]
-async fn update_note<'r>(
+async fn update_note(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
     note: Json<Note>,
 ) -> Response<Json<Detail>> {
@@ -673,6 +644,7 @@ async fn update_note<'r>(
     Ok(Json(detail))
 }
 
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![
         list,

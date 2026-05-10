@@ -1,5 +1,4 @@
 use jsonwebtoken::DecodingKey;
-use reqwest;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

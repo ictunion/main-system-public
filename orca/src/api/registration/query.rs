@@ -67,7 +67,7 @@ pub fn create_signature_file(
     image: &'_ ImageData,
 ) -> Query<'_> {
     sqlx::query(
-        r#"
+        r"
 WITH rows AS
 ( INSERT INTO files
     ( name
@@ -82,7 +82,7 @@ INSERT INTO registration_requests_files
     )
     SELECT $3 as registration_request_id, id
     FROM rows
-"#,
+",
     )
     .bind(&image.image_type)
     .bind(image.to_vec())

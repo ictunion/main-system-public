@@ -1,6 +1,5 @@
-use jsonwebtoken::{self, TokenData};
+use jsonwebtoken::TokenData;
 use log::warn;
-use reqwest;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::Deserialize;
@@ -115,22 +114,22 @@ trait OidProvider {
         roles: &[Role],
     ) -> Result<TokenData<JwtClaims>, Error>;
 
-    async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error>;
-    async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error>;
-    async fn get_matching_users<'a>(
+    async fn create_user(&self, token: &JwtToken<'_>, user: &User) -> Result<Uuid, Error>;
+    async fn remove_user(&self, token: &JwtToken<'_>, id: Uuid) -> Result<(), Error>;
+    async fn get_matching_users(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         email: String,
     ) -> Result<Vec<User>, Error>;
-    async fn connect_keycloak_user_and_group<'a>(
+    async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error>;
-    async fn remove_keycloak_user_from_group<'a>(
+    async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error>;
@@ -204,23 +203,23 @@ impl Provider {
         }
     }
 
-    pub async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error> {
+    pub async fn create_user(&self, token: &JwtToken<'_>, user: &User) -> Result<Uuid, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.create_user(token, user).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
-    pub async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error> {
+    pub async fn remove_user(&self, token: &JwtToken<'_>, id: Uuid) -> Result<(), Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.remove_user(token, id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
-    pub async fn connect_keycloak_user_and_group<'a>(
+    pub async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
@@ -233,9 +232,9 @@ impl Provider {
         }
     }
 
-    pub async fn remove_keycloak_user_from_group<'a>(
+    pub async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
@@ -248,9 +247,9 @@ impl Provider {
         }
     }
 
-    pub async fn get_matching_users<'a>(
+    pub async fn get_matching_users(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         email: String,
     ) -> Result<Vec<User>, Error> {
         match &self.0 {
@@ -305,8 +304,8 @@ pub enum NetworkResponse {
 impl<'r> FromRequest<'r> for JwtToken<'r> {
     type Error = NetworkResponse;
 
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        match req.headers().get_one("authorization") {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match request.headers().get_one("authorization") {
             None => Outcome::Error((
                 Status::Unauthorized,
                 NetworkResponse::Unauthorized("Expects authorization header".to_string()),

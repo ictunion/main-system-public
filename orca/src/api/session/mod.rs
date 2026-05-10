@@ -13,10 +13,10 @@ struct SessionInfo {
 }
 
 #[get("/current", format = "json")]
-async fn current<'r>(
+async fn current(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<SessionInfo>> {
     let token_data = oid_provider.inner().decode_jwt(&token)?;
 
@@ -34,10 +34,10 @@ async fn current<'r>(
 }
 
 #[post("/current/pair-by-email", format = "json")]
-async fn pair_by_email<'r>(
+async fn pair_by_email(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<SessionInfo>> {
     // TODO: should we require some role for this action?
     // in a way we're already trusting token so maybe we can also just
@@ -61,9 +61,7 @@ async fn pair_by_email<'r>(
 
         Ok(Json(session_info))
     } else {
-        Err(ApiError::data_conflict(
-            "Member id is already assigned".to_string(),
-        ))
+        Err(ApiError::data_conflict("Member id is already assigned"))
     }
 }
 
@@ -92,7 +90,7 @@ RETURNING id
     .bind(claims.sub)
     .bind(&claims.email)
 }
-
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![current, pair_by_email]
 }

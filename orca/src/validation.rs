@@ -35,8 +35,8 @@ pub(crate) enum ValidatorError {
 impl<'r, T: rocket::serde::Deserialize<'r> + Validate> FromData<'r> for Validated<Json<T>> {
     type Error = ValidatorError;
 
-    async fn from_data(request: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self, Self::Error> {
-        <Json<T> as FromData<'r>>::from_data(request, data)
+    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self, Self::Error> {
+        <Json<T> as FromData<'r>>::from_data(req, data)
             .await
             .map_error(|(s, e)| {
                 error!("Failed to parse request: {e}");
@@ -44,12 +44,12 @@ impl<'r, T: rocket::serde::Deserialize<'r> + Validate> FromData<'r> for Validate
             })
             .and_then(|value| {
                 if let Err(e) = value.validate() {
-                    request.local_cache(|| Some(e.to_owned()));
+                    req.local_cache(|| Some(e.clone()));
                     return Outcome::Error((
                         Status::UnprocessableEntity,
                         Self::Error::ValidationErrors(e),
                     ));
-                };
+                }
                 Outcome::Success(Self::new(value))
             })
     }

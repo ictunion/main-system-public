@@ -2,21 +2,19 @@
   pkg-config,
   openssl,
   stdenv,
-  callPackage,
   texlive,
   makeWrapper,
   nix-gitignore,
   buildFeatures ? [ ],
   rustPlatform,
   craneLib,
-  system,
   lib,
   darwin,
   advisory-db,
 }:
 let
   tex = import ./latex { inherit texlive; };
-  src = nix-gitignore.gitignoreSource [] ./.;
+  src = nix-gitignore.gitignoreSource [ ] ./.;
   nativeBuildInputs = [
     openssl
     pkg-config
@@ -52,24 +50,41 @@ let
     cargoAuditExtraArgs = "--ignore RUSTSEC-2026-0097";
   };
 
-  buildInputs = [ openssl ] ++ lib.optionals stdenv.isDarwin [
+  buildInputs = [
+    openssl
+  ]
+  ++ lib.optionals stdenv.isDarwin [
     darwin.apple_sdk.frameworks.Security
   ];
 
   postInstall = ''
     wrapProgram "$out/bin/orca" --suffix PATH : "${tex}/bin"
   '';
-in {
+in
+{
   orca = craneLib.buildPackage {
-    inherit cargoArtifacts src buildInputs postInstall nativeBuildInputs;
+    inherit
+      cargoArtifacts
+      src
+      buildInputs
+      postInstall
+      nativeBuildInputs
+      ;
     cargoExtraArgs =
-      if buildFeatures == []
-      then ""
-      else ''--features "${lib.strings.concatStringsSep " " buildFeatures}"'';
+      if buildFeatures == [ ] then
+        ""
+      else
+        ''--features "${lib.strings.concatStringsSep " " buildFeatures}"'';
   };
 
   orca-min = rustPlatform.buildRustPackage {
-    inherit src buildInputs postInstall nativeBuildInputs buildFeatures;
+    inherit
+      src
+      buildInputs
+      postInstall
+      nativeBuildInputs
+      buildFeatures
+      ;
     pname = "ict-union-orca-min";
     version = "0.1.0";
     cargoLock = {

@@ -32,9 +32,9 @@ impl From<sqlx::Error> for SqlError {
 impl<'r> Responder<'r, 'static> for SqlError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
         use rocket::http::Status;
-        use sqlx::error::Error::*;
+        use sqlx::error::Error::{PoolTimedOut, RowNotFound};
 
-        error!("SQL Error: {:?}", self);
+        error!("SQL Error: {self:?}");
 
         if db::is_conflict(&self.0) {
             return Err(Status::Conflict);
@@ -54,7 +54,7 @@ pub struct ThreadingError(#[from] JoinError);
 
 impl<'r> Responder<'r, 'static> for ThreadingError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        error!("Threading Error: {:?}", self);
+        error!("Threading Error: {self:?}");
 
         Err(rocket::http::Status::InternalServerError)
     }
@@ -62,7 +62,7 @@ impl<'r> Responder<'r, 'static> for ThreadingError {
 
 impl<'r> Responder<'r, 'static> for SenderError {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        error!("Sender Error: {:?}", self);
+        error!("Sender Error: {self:?}");
 
         Err(rocket::http::Status::InternalServerError)
     }
@@ -70,20 +70,20 @@ impl<'r> Responder<'r, 'static> for SenderError {
 
 impl<'r> Responder<'r, 'static> for oid::Error {
     fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        use oid::Error::*;
+        use oid::Error::{
+            BadKey, BadToken, Disabled, Http, MissingOneOfRoles, MissingRealmRole, MissingRole,
+            Parsing, Proxy,
+        };
         use rocket::http::Status;
 
-        warn!("JWT verification failed with {:?}", self);
+        warn!("JWT verification failed with {self:?}");
 
         match self {
             Disabled => Err(Status::NotFound),
-            BadKey(_) => Err(Status::InternalServerError),
-            MissingRole(_) => Err(Status::Forbidden),
-            MissingRealmRole(_) => Err(Status::Forbidden),
-            MissingOneOfRoles(_) => Err(Status::Forbidden),
+            BadKey(_) | Parsing(_) => Err(Status::InternalServerError),
+            MissingRole(_) | MissingRealmRole(_) | MissingOneOfRoles(_) => Err(Status::Forbidden),
             BadToken(_) => Err(Status::Unauthorized),
             Http(_) => Err(Status::BadGateway),
-            Parsing(_) => Err(Status::InternalServerError),
             Proxy(status_code) => Err(Status {
                 code: status_code.as_u16(),
             }),
@@ -127,7 +127,7 @@ pub enum ApiError {
 }
 
 impl ApiError {
-    pub fn data_conflict(description: String) -> ApiError {
+    pub fn data_conflict(description: &str) -> ApiError {
         use rocket::http::Status;
         use rocket::serde::json::json;
 
@@ -146,7 +146,7 @@ impl ApiError {
 
         Self::Custom(custom_error)
     }
-    pub fn keycloak_push(description: String) -> ApiError {
+    pub fn keycloak_push(description: &str) -> ApiError {
         use rocket::http::Status;
         use rocket::serde::json::json;
 
@@ -236,6 +236,7 @@ async fn status_api<'a>(
     })
 }
 
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn build() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![status_api])

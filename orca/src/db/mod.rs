@@ -2,7 +2,6 @@ use sqlx::{
     PgPool, Postgres,
     postgres::{PgArguments, PgPoolOptions},
 };
-use std::ops::Deref;
 
 pub struct Config<'a> {
     pub connection_url: &'a str,
@@ -17,17 +16,11 @@ pub async fn connect(config: Config<'_>) -> sqlx::Result<PgPool> {
 }
 
 /// Reference
-/// https://www.postgresql.org/docs/current/errcodes-appendix.html
+/// <https://www.postgresql.org/docs/current/errcodes-appendix.html>
 const UNIQUE_VIOLATION: &str = "23505";
 
 pub fn is_err_code(err: &sqlx::Error, code: &str) -> bool {
-    match err {
-        sqlx::Error::Database(db_error) => match db_error.code() {
-            Some(cow) => cow.deref() == code,
-            None => false,
-        },
-        _ => false,
-    }
+    matches!(err, sqlx::Error::Database(db_error) if db_error.code().is_some_and(|error_code| error_code == code))
 }
 
 pub fn is_conflict(err: &sqlx::Error) -> bool {
@@ -35,10 +28,7 @@ pub fn is_conflict(err: &sqlx::Error) -> bool {
 }
 
 pub fn fail_duplicated<T>(res: &Result<T, sqlx::Error>) -> bool {
-    match res {
-        Ok(_) => false,
-        Err(err) => is_conflict(err),
-    }
+    matches!(res, Err(err) if is_conflict(err))
 }
 
 pub type DbPool = PgPool;

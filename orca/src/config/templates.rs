@@ -1,5 +1,4 @@
 use handlebars::Handlebars;
-use mrml;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::str;
@@ -71,6 +70,7 @@ fn get_default_key(template: &Template) -> String {
 }
 
 impl<'a> Templates<'a> {
+    #[must_use]
     pub fn new() -> Self {
         Templates {
             handlebars: Handlebars::new(),
@@ -78,7 +78,7 @@ impl<'a> Templates<'a> {
         }
     }
 
-    pub fn preload_templates(&mut self, path: &str) -> Result<(), Error> {
+    pub(crate) fn preload_templates(&mut self, path: &str) -> Result<(), Error> {
         self.load_template(path, &EMAIL_VERIFICATION)?;
         self.load_template(path, &NEW_APPLICATION_NOTICE)?;
         Ok(())
@@ -111,12 +111,13 @@ impl<'a> Templates<'a> {
                 self.handlebars
                     .register_template_string(&get_default_key(template), rendered)?;
             }
-        };
+        }
 
         self.loaded.insert(template.clone());
         Ok(())
     }
 
+    #[must_use]
     pub fn renderer(&self, template: &Template, lang: &str) -> Renderer<'a> {
         let template_name = if self.handlebars.has_template(&get_key_for(template, lang)) {
             // If has template for specific language
@@ -129,7 +130,7 @@ impl<'a> Templates<'a> {
         Renderer::new(template_name)
     }
 
-    pub fn render(&self, renderer: &Renderer) -> Result<String, handlebars::RenderError> {
+    pub(crate) fn render(&self, renderer: &Renderer) -> Result<String, handlebars::RenderError> {
         self.handlebars.render(&renderer.template, &renderer.data)
     }
 }
@@ -139,6 +140,7 @@ impl Default for Templates<'_> {
     }
 }
 
+#[derive(Debug)]
 pub struct Renderer<'a> {
     template: String,
     // At the moment we don't really need more things than string
@@ -147,6 +149,7 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
+    #[must_use]
     pub fn new(template: String) -> Self {
         Self {
             template,
@@ -167,6 +170,6 @@ mod tests {
     #[test]
     fn it_can_load_templates() {
         let mut templates = Templates::new();
-        assert!(templates.preload_templates("templates/emails").is_ok());
+        templates.preload_templates("templates/emails").unwrap();
     }
 }

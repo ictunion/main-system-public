@@ -85,7 +85,7 @@ pub fn start(config: &Config, db_pool: DbPool, oid_provider: &Provider) -> Queue
             info!("Processiong command: {cmd_info}");
             match process(cmd, &our_conf, &db_pool, &cloned_oid_provider).await {
                 Ok(()) => info!("Command processed successfully"),
-                Err(err) => error!("Processing of cmd: {cmd_info} failed with: {:?}", err),
+                Err(err) => error!("Processing of cmd: {cmd_info} failed with: {err:?}"),
             }
         }
     });
@@ -106,7 +106,7 @@ pub async fn ensure_member_subs(db_pool: &DbPool, queue: &QueueSender) {
                 }
             }
         }
-        Err(e) => error!("Failed to load members without sub: {:?}", e),
+        Err(e) => error!("Failed to load members without sub: {e:?}"),
     }
 }
 
@@ -142,7 +142,10 @@ async fn process(
     db_pool: &DbPool,
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
-    use Command::*;
+    use Command::{
+        NewMemberCreated, NewRegistrationRequest, RegistrationRequestVerified,
+        ResentRegistrationEmail, SendWelcomeEmail,
+    };
 
     match command {
         NewRegistrationRequest(reg_id, signature) => {
@@ -169,18 +172,18 @@ async fn process(
 
             let sender_info: Mailbox = format!(
                 "{} <{}>",
-                config.email_sender_name.clone().unwrap_or("".to_string()),
+                config.email_sender_name.clone().unwrap_or_default(),
                 config.email_sender_email
             )
             .parse()?;
 
             let reply_info: Mailbox =
-                format!("{} <{}>", email_reply_name, email_reply_email).parse()?;
+                format!("{email_reply_name} <{email_reply_email}>").parse()?;
 
             let message = Message::builder()
                 .from(sender_info.clone())
                 .reply_to(reply_info.clone())
-                .to(format!("{} <{}>", full_name, email).parse()?)
+                .to(format!("{full_name} <{email}>").parse()?)
                 .bcc(reply_info.clone())
                 .subject(subject)
                 .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
@@ -202,7 +205,7 @@ async fn process(
             if let Some(notification_email) = &config.notification_email {
                 let sender_info: Mailbox = format!(
                     "{} <{}>",
-                    config.email_sender_name.clone().unwrap_or("".to_string()),
+                    config.email_sender_name.clone().unwrap_or_default(),
                     config.email_sender_email
                 )
                 .parse()?;
@@ -233,7 +236,7 @@ async fn process(
                 let message = Message::builder()
                     .from(sender_info.clone())
                     .reply_to(sender_info)
-                    .to(format!("Notifications <{}>", notification_email).parse()?)
+                    .to(format!("Notifications <{notification_email}>").parse()?)
                     .subject(email_subject)
                     .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
 
@@ -246,7 +249,7 @@ async fn process(
 }
 
 async fn send_email(config: &Config, message: Message) -> Result<(), ProcessingError> {
-    let creds = Credentials::new(config.smtp_user.to_owned(), config.smtp_password.to_owned());
+    let creds = Credentials::new(config.smtp_user.clone(), config.smtp_password.clone());
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
         AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)?
             .credentials(creds)
@@ -306,7 +309,7 @@ async fn send_verification_email(
 
     let sender_info: Mailbox = format!(
         "{} <{}>",
-        config.email_sender_name.clone().unwrap_or("".to_string()),
+        config.email_sender_name.clone().unwrap_or_default(),
         config.email_sender_email
     )
     .parse()?;
@@ -380,13 +383,13 @@ pub struct RegistrationDetails {
     pub registration_local: String,
 }
 
-async fn print_tex_header(details: &RegistrationDetails) -> Result<String, ProcessingError> {
+fn print_tex_header(details: &RegistrationDetails) -> String {
     let signature = format!(
         "{} {}",
         details.first_name.as_deref().unwrap_or(""),
         details.last_name.as_deref().unwrap_or("")
     );
-    Ok(format!(
+    format!(
         "\
 \\def\\Name{{{}}}
 \\def\\Surname{{{}}}
@@ -413,7 +416,7 @@ async fn print_tex_header(details: &RegistrationDetails) -> Result<String, Proce
         details.company_name.as_deref().escape_tex(),
         details.occupation.as_deref().escape_tex(),
         &signature.escape_tex()
-    ))
+    )
 }
 
 const DEFAULT_PDF_TRANSLATION: &str = include_str!("../../latex/lang.en.tex");
@@ -428,7 +431,7 @@ fn get_pdf_localization(lang: &str) -> &'static str {
         .unwrap_or(&DEFAULT_PDF_TRANSLATION)
 }
 
-/// Given a member id, directory and db_pool
+/// Given a member id, directory and `db_pool`
 /// This will generate registration PDF for
 /// application using xelatex and return path to the PDF file
 async fn print_pdf(
@@ -443,7 +446,7 @@ async fn print_pdf(
     let logo_png = include_bytes!("../../latex/logo.png");
 
     // Write data file for tex
-    let tex_header = print_tex_header(application_details).await?;
+    let tex_header = print_tex_header(application_details);
     let mut tex_file = fs::File::create(format!("{dir}/data.tex")).await?;
     tex_file.write_all(tex_header.as_bytes()).await?;
     tex_file.flush().await?;

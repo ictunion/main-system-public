@@ -26,10 +26,10 @@ pub struct WorkplaceSummary {
 }
 
 #[get("/")]
-async fn list_all<'r>(
+async fn list_all(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
     // We should restrict this only for Admins/Board (people with ManageWorkplaces), until we have permissions to ViewMember separated by workplace
     // If we allowed access to this EP to anyone with ListWorkplaces, reps could see members from other workplaces
@@ -42,10 +42,10 @@ async fn list_all<'r>(
 }
 
 #[get("/<workplace_id>")]
-async fn detail<'r>(
+async fn detail(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_any_role(&token, &[Role::ListWorkplaces])?;
@@ -68,10 +68,10 @@ pub struct NewWorkplace {
 }
 
 #[post("/", format = "json", data = "<new_workplace>")]
-async fn create_workplace<'r>(
+async fn create_workplace(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     new_workplace: Validated<Json<NewWorkplace>>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
@@ -96,10 +96,10 @@ impl From<NewWorkplaceMember> for Id<Member> {
 }
 
 #[post("/<workplace_id>", format = "json", data = "<new_workplace_member>")]
-async fn assign_member_to_workplace<'r>(
+async fn assign_member_to_workplace(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
     new_workplace_member: Json<NewWorkplaceMember>,
 ) -> Response<SuccessResponse> {
@@ -123,7 +123,7 @@ async fn assign_member_to_workplace<'r>(
         .await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
-        ApiError::keycloak_push(format!("keycloak ID for user {orca_user_id} not assigned"))
+        ApiError::keycloak_push(&format!("keycloak ID for user {orca_user_id} not assigned"))
     })?;
 
     oid_provider
@@ -149,10 +149,10 @@ impl From<RemovedWorkplaceMember> for Id<Member> {
     format = "json",
     data = "<removed_workplace_member>"
 )]
-async fn remove_member_from_workplace<'r>(
+async fn remove_member_from_workplace(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
     removed_workplace_member: Json<RemovedWorkplaceMember>,
 ) -> Response<SuccessResponse> {
@@ -176,7 +176,7 @@ async fn remove_member_from_workplace<'r>(
         .await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
-        ApiError::keycloak_push(format!("keycloak ID for user {orca_user_id} not assigned"))
+        ApiError::keycloak_push(&format!("keycloak ID for user {orca_user_id} not assigned"))
     })?;
 
     oid_provider
@@ -187,10 +187,10 @@ async fn remove_member_from_workplace<'r>(
 }
 
 #[get("/<workplace_id>/members")]
-async fn get_all_workplace_members<'r>(
+async fn get_all_workplace_members(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
@@ -203,6 +203,7 @@ async fn get_all_workplace_members<'r>(
     Ok(Json(summaries))
 }
 
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,

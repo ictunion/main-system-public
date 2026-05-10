@@ -7,7 +7,7 @@ pub fn setup_logger(level: rocket::config::LogLevel) -> Result<(), fern::InitErr
                 record.target(),
                 record.level(),
                 message
-            ))
+            ));
         })
         .level(level.into())
         .chain(std::io::stdout())

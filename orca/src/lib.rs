@@ -25,6 +25,11 @@ pub enum StartupError {
     Keycloak(#[from] server::oid::Error),
 }
 
+/// Start serving the Orca API
+///
+/// # Errors
+///
+/// When the initialization fails
 pub async fn start(config: Config) -> Result<(), StartupError> {
     // Configure logger
     logging::setup_logger(config.log_level)?;

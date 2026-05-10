@@ -4,7 +4,7 @@ use rocket::{Catcher, Request, catch, catchers};
 
 use crate::validation::ValidationErrorsCache;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum ErrorType {
     InternalError,
     NotFound,
@@ -14,7 +14,7 @@ enum ErrorType {
 }
 
 impl ErrorType {
-    fn to_status_code(&self) -> u16 {
+    fn to_status_code(self) -> u16 {
         match self {
             Self::InternalError => 500,
             Self::NotFound => 404,
@@ -77,6 +77,7 @@ pub(crate) fn validation_error(request: &Request) -> Value {
     })
 }
 
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn catchers() -> Vec<Catcher> {
     catchers![
         validation_error,

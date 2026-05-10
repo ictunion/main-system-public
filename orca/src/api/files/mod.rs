@@ -25,26 +25,25 @@ pub struct FileInfo {
 }
 
 impl<'r> Responder<'r, 'static> for File {
-    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+    fn respond_to(self, request: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
         let prefix = match self.file_type.as_str() {
-            "png" => "image",
-            "jpg" => "image",
+            "png" | "jpg" => "image",
             _ => "application",
         };
 
         let content_type = ContentType::new(prefix, self.file_type);
 
-        rocket::response::Response::build_from(self.data.respond_to(req)?)
+        rocket::response::Response::build_from(self.data.respond_to(request)?)
             .header(content_type)
             .ok()
     }
 }
 
 #[get("/<id>?<token..>")]
-async fn get<'r>(
+async fn get(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<File>,
 ) -> Response<File> {
     oid_provider.require_role(&token, Role::ViewApplication)?;
@@ -64,7 +63,7 @@ WHERE id = $1
     )
     .bind(id)
 }
-
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![get]
 }

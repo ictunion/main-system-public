@@ -55,12 +55,12 @@ pub struct RegistrationRequest<'r> {
 
 #[post("/join", format = "json", data = "<validated_user>")]
 /// Registration form request
-async fn api_join<'r>(
+async fn api_join(
     ip_addr: IpAddress,
     user_agent: UserAgent<'_>,
     db_pool: &State<DbPool>,
     queue: &State<QueueSender>,
-    validated_user: Validated<Json<RegistrationRequest<'r>>>,
+    validated_user: Validated<Json<RegistrationRequest<'_>>>,
 ) -> Response<SuccessResponse> {
     let user = validated_user.into_inner();
 
@@ -79,18 +79,17 @@ async fn api_join<'r>(
             // We won the loterry and generated confirmation token which already exists...
             // lets just try a new one
             continue;
-        } else {
-            match res {
-                Err(err) => {
-                    // Oh shoot some issue with DB query...
-                    return Err(err.into());
-                }
-                Ok((id,)) => {
-                    // All went well...
-                    // break the loop so we can respond with Ok
-                    reg_id = id;
-                    break;
-                }
+        }
+        match res {
+            Err(err) => {
+                // Oh shoot some issue with DB query...
+                return Err(err.into());
+            }
+            Ok((id,)) => {
+                // All went well...
+                // break the loop so we can respond with Ok
+                reg_id = id;
+                break;
             }
         }
     }
@@ -101,8 +100,8 @@ async fn api_join<'r>(
         .as_ref()
         .ok_or(Status::UnprocessableEntity) // Can't happen due to validator
         .and_then(|data| {
-            data.to_image_data().map_err(|_| {
-                warn!("Bad input image data"); // FIXME: Rethink the error output to expose this to API consumer
+            data.to_image_data().map_err(|e| {
+                warn!("Bad input image data: {e:?}"); // FIXME: Rethink the error output to expose this to API consumer
                 Status::UnprocessableEntity
             })
         })?;
@@ -111,7 +110,7 @@ async fn api_join<'r>(
     // it succeeds before we return OK status
     signature_data
         .resize(492, 192)
-        .map_err(|_| Status::UnprocessableEntity)?;
+        .map_err(|_e| Status::UnprocessableEntity)?;
 
     query::create_signature_file(reg_id, &signature_data)
         .execute(db_pool.inner())
@@ -123,10 +122,7 @@ async fn api_join<'r>(
         .send(Command::NewRegistrationRequest(reg_id, signature_data))
         .await?;
 
-    info!(
-        "IP: {} New registration request added to processing",
-        ip_addr
-    );
+    info!("IP: {ip_addr} New registration request added to processing");
     Ok(SuccessResponse::Accepted)
 }
 
@@ -138,7 +134,7 @@ async fn api_confirm(
     queue: &State<QueueSender>,
     code: &'_ str,
 ) -> Response<Redirect> {
-    use sqlx::error::Error::*;
+    use sqlx::error::Error::RowNotFound;
 
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {
         Ok((reg_id, local)) => {
@@ -167,6 +163,7 @@ async fn api_confirm(
     }
 }
 
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![api_join, api_confirm]
 }

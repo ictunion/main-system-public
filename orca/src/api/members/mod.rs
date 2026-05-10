@@ -36,10 +36,10 @@ pub struct Summary {
 }
 
 #[get("/")]
-async fn list_all<'r>(
+async fn list_all(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
@@ -48,10 +48,10 @@ async fn list_all<'r>(
 }
 
 #[get("/past")]
-async fn list_past<'r>(
+async fn list_past(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
@@ -62,10 +62,10 @@ async fn list_past<'r>(
 }
 
 #[get("/new")]
-async fn list_new<'r>(
+async fn list_new(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
@@ -76,10 +76,10 @@ async fn list_new<'r>(
 }
 
 #[get("/current")]
-async fn list_current<'r>(
+async fn list_current(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<Vec<Summary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
@@ -106,10 +106,10 @@ pub struct NewMember {
 }
 
 #[post("/", format = "json", data = "<new_member>")]
-async fn create_member<'r>(
+async fn create_member(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     new_member: Validated<Json<NewMember>>,
 ) -> Response<Json<Summary>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
@@ -118,12 +118,11 @@ async fn create_member<'r>(
     let member = new_member.into_inner();
 
     // ensure member number
-    let member_number = match member.member_number {
-        Some(num) => num,
-        None => {
-            let (new_num,) = query::get_next_member_number().fetch_one(&mut *tx).await?;
-            new_num
-        }
+    let member_number = if let Some(num) = member.member_number {
+        num
+    } else {
+        let (new_num,) = query::get_next_member_number().fetch_one(&mut *tx).await?;
+        new_num
     };
 
     // Create new member
@@ -143,11 +142,11 @@ pub struct EmailInfo {
 }
 
 #[post("/<id>/welcome_email", format = "json", data = "<request_email_info>")]
-async fn send_welcome_email<'r>(
+async fn send_welcome_email(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     queue: &State<QueueSender>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     request_email_info: Json<EmailInfo>,
     id: Id<Member>,
 ) -> Response<SuccessResponse> {
@@ -194,11 +193,11 @@ async fn send_welcome_email<'r>(
     format = "json",
     data = "<request_email_info>"
 )]
-async fn send_workplace_welcome_email<'r>(
+async fn send_workplace_welcome_email(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     queue: &State<QueueSender>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     request_email_info: Json<EmailInfo>,
     id: Id<Member>,
 ) -> Response<SuccessResponse> {
@@ -258,10 +257,10 @@ pub struct Detail {
 }
 
 #[get("/<id>")]
-async fn detail<'r>(
+async fn detail(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
@@ -279,16 +278,16 @@ pub struct MemberStatusData {
 }
 
 impl MemberStatusData {
-    pub(crate) fn sub(&self) -> &Option<Uuid> {
-        &self.sub
+    pub(crate) fn sub(&self) -> Option<Uuid> {
+        self.sub
     }
 }
 
 #[patch("/<id>/accept")]
-async fn accept<'r>(
+async fn accept(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_realm_role(&token, RealmManagementRole::ManageUsers)?;
@@ -298,15 +297,11 @@ async fn accept<'r>(
         .await?;
 
     if status.onboarding_finished_at.is_some() {
-        return Err(ApiError::data_conflict(
-            "Member is accepted already".to_string(),
-        ));
+        return Err(ApiError::data_conflict("Member is accepted already"));
     }
 
     if status.left_at.is_some() {
-        return Err(ApiError::data_conflict(
-            "Past members can't be activated".to_string(),
-        ));
+        return Err(ApiError::data_conflict("Past members can't be activated"));
     }
 
     let detail = query::set_onboarding_finished(id)
@@ -317,10 +312,10 @@ async fn accept<'r>(
 }
 
 #[get("/<id>/files")]
-async fn list_files<'r>(
+async fn list_files(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Vec<FileInfo>>> {
     oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewApplication])?;
@@ -341,10 +336,10 @@ pub struct Occupation {
 }
 
 #[get("/<id>/occupations")]
-async fn list_occupations<'r>(
+async fn list_occupations(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Vec<Occupation>>> {
     oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
@@ -363,10 +358,10 @@ pub struct Note {
 }
 
 #[patch("/<id>/note", format = "json", data = "<note>")]
-async fn update_note<'r>(
+async fn update_note(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
     note: Json<Note>,
 ) -> Response<Json<Detail>> {
@@ -397,10 +392,10 @@ pub struct UpdateMember {
 }
 
 #[patch("/<id>", format = "json", data = "<data>")]
-async fn update_member<'r>(
+async fn update_member(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
     data: Validated<Json<UpdateMember>>,
 ) -> Response<Json<Detail>> {
@@ -414,10 +409,10 @@ async fn update_member<'r>(
 }
 
 #[delete("/<id>", format = "json")]
-async fn remove_member<'r>(
+async fn remove_member(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
@@ -432,9 +427,8 @@ async fn remove_member<'r>(
     }
 
     if status.left_at.is_some() {
-        return Err(ApiError::data_conflict(format!(
-            "Id {} is no longer a member of organization",
-            id
+        return Err(ApiError::data_conflict(&format!(
+            "Id {id} is no longer a member of organization"
         )));
     }
 
@@ -447,10 +441,10 @@ async fn remove_member<'r>(
 }
 
 #[get("/<id>/list_candidate_users")]
-async fn list_candidate_users<'r>(
+async fn list_candidate_users(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Vec<oid::User>>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
@@ -470,10 +464,10 @@ struct PairRequest {
 }
 
 #[post("/<id>/create_oid_account")]
-async fn create_oid_account<'r>(
+async fn create_oid_account(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     queue: &State<QueueSender>,
     id: Id<Member>,
 ) -> Response<SuccessResponse> {
@@ -484,9 +478,7 @@ async fn create_oid_account<'r>(
         .await?;
 
     if status.sub().is_some() {
-        return Err(ApiError::data_conflict(
-            "Member already has an OID account".to_string(),
-        ));
+        return Err(ApiError::data_conflict("Member already has an OID account"));
     }
 
     queue
@@ -501,10 +493,10 @@ async fn create_oid_account<'r>(
 }
 
 #[patch("/<id>/pair_oid", format = "json", data = "<data>")]
-async fn pair_oid<'r>(
+async fn pair_oid(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
     id: Id<Member>,
     data: Json<PairRequest>,
 ) -> Response<Json<Detail>> {
@@ -517,6 +509,7 @@ async fn pair_oid<'r>(
     Ok(Json(detail))
 }
 
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,

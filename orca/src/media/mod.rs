@@ -104,11 +104,6 @@ impl ImageData {
         Ok(())
     }
 
-    #[allow(dead_code)]
-    pub fn to_base64(&self) -> String {
-        BASE64_STANDARD.encode(&self.image)
-    }
-
     pub fn to_vec(&self) -> &Vec<u8> {
         &self.image
     }
@@ -120,7 +115,7 @@ impl ImageData {
             let mut writter = io::BufWriter::new(file);
             writter.write_all(&self.image).await?;
             writter.flush().await?;
-        }
+        };
 
         Ok(())
     }
@@ -178,14 +173,14 @@ impl TexEscape for String {
 impl TexEscape for DateTime<Utc> {
     /// We can trust date not to contain any dangerous chars
     fn escape_tex(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 
 impl TexEscape for NaiveDate {
     /// We can trust date not to contain any dangerous chars
     fn escape_tex(&self) -> String {
-        format!("{}", self)
+        format!("{self}")
     }
 }
 
@@ -219,14 +214,14 @@ mod tests {
     fn empty_string() {
         let subj = RawBase64::from("");
 
-        assert_eq!(subj.to_image_data(), Err(Error::NotImage))
+        assert_eq!(subj.to_image_data(), Err(Error::NotImage));
     }
 
     #[test]
     fn no_metadata() {
         let subj = RawBase64::from("iVBORw0KGgoAAAANSUhEUgAAAewAAADACAYAAADGM1CZAAAc");
 
-        assert_eq!(subj.to_image_data(), Err(Error::NotImage))
+        assert_eq!(subj.to_image_data(), Err(Error::NotImage));
     }
 
     #[test]
@@ -235,37 +230,36 @@ mod tests {
             "data:video/png;base64,iVBORw0KGgoAAAANSUhEUgAAAewAAADACAYAAADGM1CZAAAc",
         );
 
-        assert_eq!(subj.to_image_data(), Err(Error::NotImage))
+        assert_eq!(subj.to_image_data(), Err(Error::NotImage));
     }
 
     #[test]
     fn incomplete_metadata() {
         let subj = RawBase64::from("data:image/pn");
 
-        assert_eq!(subj.to_image_data(), Err(Error::Malformed))
+        assert_eq!(subj.to_image_data(), Err(Error::Malformed));
     }
 
     #[test]
     fn incomplete_metadata_with_mime() {
         let subj = RawBase64::from("data:image/png;");
 
-        assert_eq!(subj.to_image_data(), Err(Error::Malformed))
+        assert_eq!(subj.to_image_data(), Err(Error::Malformed));
     }
 
     #[test]
     fn incomplete_metadata_with_mime_and_encoding() {
         let subj = RawBase64::from("data:image/png;base64");
 
-        assert_eq!(subj.to_image_data(), Err(Error::Malformed))
+        assert_eq!(subj.to_image_data(), Err(Error::Malformed));
     }
 
     #[test]
     fn parses_parts_correctly() {
         let subj = RawBase64::from("data:image/png;base64,iVBORw0=");
-
         let res = subj.to_image_data().unwrap();
         assert_eq!(res.image_type, "png");
-        assert_eq!(res.to_base64(), "iVBORw0=");
+        assert_eq!(BASE64_STANDARD.encode(&res.image), "iVBORw0=");
     }
 
     #[test]
@@ -291,18 +285,18 @@ mod tests {
     #[test]
     fn it_escapes_backslashes() {
         // uses raw string so we don't need to escape backslashes
-        let subj = r#"\LARGE"#;
+        let subj = r"\LARGE";
         let res = subj.escape_tex();
         assert_ne!(res, subj);
-        assert_eq!(res, r#"\textbackslash{}LARGE"#);
+        assert_eq!(res, r"\textbackslash{}LARGE");
     }
 
     #[test]
     fn it_escapes_double_backslashes_correctly() {
         // uses raw string so we don't need to escape backslashes
-        let subj = r#"\\LARGE"#;
+        let subj = r"\\LARGE";
         let res = subj.escape_tex();
         assert_ne!(res, subj);
-        assert_eq!(res, r#"\textbackslash{}\textbackslash{}LARGE"#);
+        assert_eq!(res, r"\textbackslash{}\textbackslash{}LARGE");
     }
 }

@@ -1,8 +1,7 @@
 /// These implementations are very keycloak specific
 /// We're not using keycloak library from crates io because we want these to work differently
-use jsonwebtoken::{self, Algorithm, DecodingKey, TokenData, Validation};
-use log::{debug, warn};
-use reqwest;
+use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
+use log::{debug, error, warn};
 use reqwest::Url;
 use rocket::serde::json::json;
 use uuid::Uuid;
@@ -28,7 +27,7 @@ pub struct KeycloakProvider {
 impl KeycloakProvider {
     pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Self, Error> {
         let url = keycloak_url(host, realm);
-        let key = jwk::fetch_jwk(&format!("{}/protocol/openid-connect/certs", url)).await?;
+        let key = jwk::fetch_jwk(&format!("{url}/protocol/openid-connect/certs")).await?;
 
         // Configure validations
         let mut validation = Validation::new(Algorithm::RS256);
@@ -44,6 +43,7 @@ impl KeycloakProvider {
         })
     }
 
+    // FIXME: Might be better either as a method on a newtype wrapping `TokenData`, or extension trait
     fn has_role(&self, claims: &JwtClaims, role: &str) -> bool {
         match claims.resource_access.get(&self.client_id) {
             Some(r) => r.roles.iter().any(|x| *x == role),
@@ -51,7 +51,7 @@ impl KeycloakProvider {
         }
     }
 
-    fn has_realm_role(&self, claims: &JwtClaims, role: &str) -> bool {
+    fn has_realm_role(claims: &JwtClaims, role: &str) -> bool {
         match claims.resource_access.get("realm-management") {
             Some(r) => r.roles.iter().any(|x| *x == role),
             None => false,
@@ -67,7 +67,7 @@ impl OidProvider for KeycloakProvider {
         let res = jsonwebtoken::decode::<JwtClaims>(token.string, &self.key, &self.validation);
         if let Err(err) = &res {
             warn!("Faild to decode JWT token {}", token.string);
-            warn!("Error: {:?}", err);
+            warn!("Error: {err:?}");
         }
 
         res
@@ -88,7 +88,7 @@ impl OidProvider for KeycloakProvider {
         role: RealmManagementRole,
     ) -> Result<TokenData<JwtClaims>, Error> {
         let token_data = self.decode_jwt(token)?;
-        if self.has_realm_role(&token_data.claims, role.to_json_val()) {
+        if Self::has_realm_role(&token_data.claims, role.to_json_val()) {
             Ok(token_data)
         } else {
             Err(Error::MissingRealmRole(role))
@@ -102,18 +102,17 @@ impl OidProvider for KeycloakProvider {
     ) -> Result<TokenData<JwtClaims>, Error> {
         let token_data = self.decode_jwt(token)?;
 
-        for role in roles {
-            if self.has_role(&token_data.claims, role.to_json_val()) {
-                return Ok(token_data);
-            } else {
-                continue;
-            }
+        if roles
+            .iter()
+            .any(|role| self.has_role(&token_data.claims, role.to_json_val()))
+        {
+            return Ok(token_data);
         }
 
         Err(Error::MissingOneOfRoles(roles.to_vec()))
     }
 
-    async fn create_user<'a>(&self, token: &JwtToken<'a>, user: &User) -> Result<Uuid, Error> {
+    async fn create_user(&self, token: &JwtToken<'_>, user: &User) -> Result<Uuid, Error> {
         // Keycloak expects json body with data about user
         let json = json!({
             "firstName": user.first_name,
@@ -134,8 +133,8 @@ impl OidProvider for KeycloakProvider {
             .await?;
 
         let status = response.status();
-        debug!("Keycloak response status: {}", status);
-        debug!("Keycloak response: {:?}", response);
+        debug!("Keycloak response status: {status}");
+        debug!("Keycloak response: {response:?}");
 
         if status.is_success() {
             // Keycloak responds with empty body but it includes `Location` with full
@@ -143,11 +142,12 @@ impl OidProvider for KeycloakProvider {
             // Last segment of this path is uuid identifying new user so we can parse it out of this header.
             match response.headers().get("Location") {
                 Some(header) => {
-                    let string = header
-                        .to_str()
-                        .map_err(|_| Error::Parsing(format!("Bad header {:?}", header)))?;
+                    let string = header.to_str().map_err(|e| {
+                        error!("Bad header {header:?}; {e:?}");
+                        Error::Parsing(format!("Bad header {header:?}"))
+                    })?;
                     let url = Url::parse(string)
-                        .map_err(|_| Error::Parsing(format!("Expected URL got {}", string)))?;
+                        .map_err(|_e| Error::Parsing(format!("Expected URL got {string}")))?;
                     let uuid = url
                         .path_segments()
                         .ok_or(Error::Parsing(format!("Bad url {url}")))?
@@ -155,7 +155,7 @@ impl OidProvider for KeycloakProvider {
                         .ok_or(Error::Parsing(format!("Bad url {url}")))?;
 
                     Uuid::parse_str(uuid)
-                        .map_err(|_| Error::Parsing(format!("Cannot parse UUID from {}", uuid)))
+                        .map_err(|_e| Error::Parsing(format!("Cannot parse UUID from {uuid}")))
                 }
                 None => Err(Error::Parsing("Missing Location header".to_string())),
             }
@@ -164,7 +164,7 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn remove_user<'a>(&self, token: &JwtToken<'a>, id: Uuid) -> Result<(), Error> {
+    async fn remove_user(&self, token: &JwtToken<'_>, id: Uuid) -> Result<(), Error> {
         // Send request to create a new user
         let client = reqwest::Client::new();
         let response = client
@@ -178,8 +178,8 @@ impl OidProvider for KeycloakProvider {
 
         let status = response.status();
 
-        debug!("Keycloak response status: {}", status);
-        debug!("Keycloak response: {:?}", response);
+        debug!("Keycloak response status: {status}");
+        debug!("Keycloak response: {response:?}");
 
         if status.is_success() {
             Ok(())
@@ -188,9 +188,9 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn get_matching_users<'a>(
+    async fn get_matching_users(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         email: String,
     ) -> Result<Vec<User>, Error> {
         // query keycloak for user using email filtering
@@ -204,14 +204,14 @@ impl OidProvider for KeycloakProvider {
             .send()
             .await?;
 
-        debug!("Keycloak response response {:?}", response);
+        debug!("Keycloak response response {response:?}");
 
         Ok(response.json::<Vec<User>>().await?)
     }
 
-    async fn connect_keycloak_user_and_group<'a>(
+    async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
@@ -227,8 +227,8 @@ impl OidProvider for KeycloakProvider {
 
         let status = response.status();
 
-        debug!("Keycloak response status: {}", status);
-        debug!("Keycloak response: {:?}", response);
+        debug!("Keycloak response status: {status}");
+        debug!("Keycloak response: {response:?}");
 
         if status.is_success() {
             Ok(())
@@ -237,9 +237,9 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn remove_keycloak_user_from_group<'a>(
+    async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken<'a>,
+        token: &JwtToken<'_>,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
@@ -255,8 +255,8 @@ impl OidProvider for KeycloakProvider {
 
         let status = response.status();
 
-        debug!("Keycloak response status: {}", status);
-        debug!("Keycloak response: {:?}", response);
+        debug!("Keycloak response status: {status}");
+        debug!("Keycloak response: {response:?}");
 
         if status.is_success() {
             Ok(())

@@ -96,8 +96,8 @@ pub struct Workplace;
 pub struct MemberNumber(i32);
 
 impl Display for MemberNumber {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        self.0.fmt(formatter)
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        self.0.fmt(f)
     }
 }
 

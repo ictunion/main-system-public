@@ -9,4 +9,5 @@
 result*
 *.envrc
 /.idea/
+/.zed/
 CLAUDE.md

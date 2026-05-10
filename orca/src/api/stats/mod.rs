@@ -17,10 +17,10 @@ struct ApplicationsBasicStats {
 }
 
 #[get("/applications/basic")]
-async fn applications_basic_stats<'r>(
+async fn applications_basic_stats(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<ApplicationsBasicStats>> {
     // Every authenticated user is able to see stats
     oid_provider.inner().decode_jwt(&token)?;
@@ -62,10 +62,10 @@ struct MembersBasicStats {
 }
 
 #[get("/members/basic")]
-async fn members_basic_stats<'r>(
+async fn members_basic_stats(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
-    token: JwtToken<'r>,
+    token: JwtToken<'_>,
 ) -> Response<Json<MembersBasicStats>> {
     // Every authenticated user is able to see stats
     oid_provider.inner().decode_jwt(&token)?;
@@ -84,7 +84,7 @@ async fn members_basic_stats<'r>(
 
     Ok(Json(MembersBasicStats { new, current, past }))
 }
-
+#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {
     routes![applications_basic_stats, members_basic_stats]
 }

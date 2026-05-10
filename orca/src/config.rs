@@ -34,6 +34,12 @@ pub struct Config {
 }
 
 impl Config {
+    /// Read configuration
+    ///
+    /// # Panics
+    ///
+    /// If one or more required configuration fields aren't present. It's pointless to continue execution.
+    #[must_use]
     pub fn get() -> Self {
         let figment = Figment::from(rocket::Config::default())
             .merge(Serialized::defaults(rocket::Config::default()))
@@ -126,25 +132,27 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn verify_redirect_for_local(&self, lang: &str) -> String {
         match self.verify_redirects_to.get(lang) {
-            Some(url) => url.to_string(),
+            Some(url) => url.clone(),
             None => self
                 .verify_redirects_to
                 .get("default")
                 .unwrap_or(&self.host)
-                .to_string(),
+                .clone(),
         }
     }
 
+    #[must_use]
     pub fn email_confirmation_subject_for_local(&self, lang: &str) -> String {
         match self.email_confirmation_subjects.get(lang) {
-            Some(sub) => sub.to_string(),
+            Some(sub) => sub.clone(),
             None => self
                 .email_confirmation_subjects
                 .get("default")
                 .unwrap_or(&"Verify Email Address".to_string())
-                .to_string(),
+                .clone(),
         }
     }
 }
