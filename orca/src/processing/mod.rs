@@ -164,6 +164,7 @@ async fn process(
             let opts = mrml::prelude::render::RenderOptions::default();
             let message_html = mrml::parse(&message_mjml)
                 .map_err(|e| ProcessingError::MjmlParse(e.to_string()))?
+                .element
                 .render(&opts)
                 .map_err(|e| ProcessingError::MjmlRender(e.to_string()))?;
 

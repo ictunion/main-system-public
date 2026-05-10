@@ -93,7 +93,7 @@ impl<'a> Templates<'a> {
                 for path in paths {
                     let file_path = path?;
                     let mrml_template: String = fs::read_to_string(file_path.path())?.parse()?;
-                    let rendered = mrml::parse(mrml_template)?.render(&opts)?;
+                    let rendered = mrml::parse(mrml_template)?.element.render(&opts)?;
                     self.handlebars.register_template_string(
                         &format!(
                             "{}/{}",
@@ -107,7 +107,7 @@ impl<'a> Templates<'a> {
             Err(_err) => {
                 let mrml_template: String =
                     fs::read_to_string(format!("{}/{}.mjml", path, template.name))?.parse()?;
-                let rendered = mrml::parse(mrml_template)?.render(&opts)?;
+                let rendered = mrml::parse(mrml_template)?.element.render(&opts)?;
                 self.handlebars
                     .register_template_string(&get_default_key(template), rendered)?;
             }

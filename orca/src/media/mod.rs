@@ -8,7 +8,7 @@ use tokio::io::AsyncWriteExt;
 // usage of this std lib functions means blocking
 use std::io::Cursor as BlockingCursor;
 
-use image::io::Reader as ImageReader;
+use image::ImageReader;
 use thiserror::Error;
 
 /// Manipulating Base64 images
@@ -95,7 +95,7 @@ impl ImageData {
         let mut buffer: Vec<u8> = Vec::new();
         img.write_to(
             &mut BlockingCursor::new(&mut buffer),
-            image::ImageOutputFormat::Png,
+            image::ImageFormat::Png,
         )?;
 
         self.image = buffer;
