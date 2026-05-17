@@ -298,11 +298,12 @@ module Actions = {
     let (oidScheduled, setOidScheduled) = React.useState(() => false)
 
     let doCreateOidAccount = (_: JsxEvent.Mouse.t) => {
-      let req = api->Api.postJson(
-        ~path="/members/" ++ Uuid.toString(id) ++ "/create_oid_account",
-        ~decoder=Api.Decode.acceptedResponse,
-        ~body=Js.Json.null,
-      )
+      let req =
+        api->Api.postJson(
+          ~path="/members/" ++ Uuid.toString(id) ++ "/create_oid_account",
+          ~decoder=Api.Decode.acceptedResponse,
+          ~body=Js.Json.null,
+        )
       req->Future.get(res => {
         switch res {
         | Ok(_) => setOidScheduled(_ => true)
@@ -311,14 +312,13 @@ module Actions = {
       })
     }
 
-    let createOidButton =
-      if hasSub || oidScheduled {
-        React.null
-      } else {
-        <Button variant=Button.Cta onClick=doCreateOidAccount>
-          {React.string("Create Keycloak Account")}
-        </Button>
-      }
+    let createOidButton = if hasSub || oidScheduled {
+      React.null
+    } else {
+      <Button variant=Button.Cta onClick=doCreateOidAccount>
+        {React.string("Create Keycloak Account")}
+      </Button>
+    }
 
     <>
       {switch oidError {
@@ -330,16 +330,13 @@ module Actions = {
         <Button.Panel>
           <Button
             variant=Button.Cta
-            onClick={_ =>
-              RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
+            onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
             {React.string("Send welcome email")}
           </Button>
           <Button
             variant=Button.Cta
             onClick={_ =>
-              RescriptReactRouter.push(
-                "/members/" ++ Uuid.toString(id) ++ "/workplacewelcome",
-              )}>
+              RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/workplacewelcome")}>
             {React.string("Send workplace welcome email")}
           </Button>
           <Button

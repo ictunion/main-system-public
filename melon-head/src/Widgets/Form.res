@@ -62,7 +62,11 @@ module CheckboxButton = {
   @react.component
   let make = (~checked, ~onChange, ~children): React.element => {
     let className =
-      styles["checkboxButton"] ++ if checked {" " ++ styles["checked"]} else {""}
+      styles["checkboxButton"] ++ if checked {
+        " " ++ styles["checked"]
+      } else {
+        ""
+      }
     <label className>
       <input type_="checkbox" checked onChange />
       children

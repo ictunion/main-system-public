@@ -34,7 +34,12 @@ type newMember = {
 }
 
 type newWorkplaceMember = {memberId: string}
-type emailInfo = {template: string}
+
+type emailInfo = {
+  body: string,
+  subject: string,
+  variables: Js.Dict.t<string>,
+}
 
 type detail = {
   id: Uuid.t,
@@ -158,7 +163,12 @@ module Encode = {
   let newWorkplaceMember = (newWorkplaceMember: newWorkplaceMember) =>
     object([("member_id", string(newWorkplaceMember.memberId))])
 
-  let newEmailInfo = (template: string) => object([("template", string(template))])
+  let dict = (encoder, d) => Js.Json.object_(Js.Dict.map((. v) => encoder(v), d))
 
-  let newEmailInfo2 = (emailInfo: emailInfo) => object([("template", string(emailInfo.template))])
+  let emailInfo = (emailInfo: emailInfo) =>
+    object([
+      ("body", string(emailInfo.body)),
+      ("subject", string(emailInfo.subject)),
+      ("variables", dict(string, emailInfo.variables)),
+    ])
 }

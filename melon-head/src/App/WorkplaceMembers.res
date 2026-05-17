@@ -65,8 +65,7 @@ let make = (~api: Api.t, ~id, ~modal) => {
         "{\"lang\": \"" ++
         Belt.Option.getWithDefault(m.language, "") ++
         "\", \"memberNumber\": \"" ++
-        Belt.Int.toString(m.memberNumber) ++
-        "\"}"
+        Belt.Int.toString(m.memberNumber) ++ "\"}"
       [email, name, attributes]
     })
     let csv = Papa.unparse(Belt.Array.concat([["email", "name", "attributes"]], rows))
@@ -84,7 +83,7 @@ let make = (~api: Api.t, ~id, ~modal) => {
     <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
       {switch workplaceMembers->RemoteData.toOption {
       | None => React.null
-      | Some(members) when Array.length(members) === 0 => React.null
+      | Some(members) if Array.length(members) === 0 => React.null
       | Some(members) =>
         <Button.Panel>
           <Button onClick={onExportCsv(members)}> {React.string("Export Listmonk CSV")} </Button>

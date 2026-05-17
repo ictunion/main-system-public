@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, NaiveDate, Utc};
 use handlebars::Handlebars;
-use rocket::serde::json::{Json, json};
+use rocket::serde::json::Json;
 use rocket::{Route, State, delete, get, patch, post, routes};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -138,11 +140,16 @@ async fn create_member(
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct EmailInfo {
-    template: String,
+    subject: String,
+    body: String,
+    variables: HashMap<String, String>,
 }
 
-#[post("/<id>/welcome_email", format = "json", data = "<request_email_info>")]
-async fn send_welcome_email(
+const WRAPPER_CS: &str = include_str!("../../../email_templates/member_email_cs.mjml");
+const WRAPPER_EN: &str = include_str!("../../../email_templates/member_email_en.mjml");
+
+#[post("/<id>/send_email", format = "json", data = "<request_email_info>")]
+async fn send_email(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     queue: &State<QueueSender>,
@@ -155,11 +162,14 @@ async fn send_welcome_email(
     let email_info = request_email_info.into_inner();
     let member_detail = query::detail(id).fetch_one(db_pool.inner()).await?;
 
-    let variable_symbol = member_detail.member_number.to_string();
-    let message_html = Handlebars::new()
+    let wrapper = match member_detail.language.as_deref() {
+        Some("cs") => WRAPPER_CS,
+        _ => WRAPPER_EN,
+    };
+    let message_mjml = Handlebars::new()
         .render_template(
-            &email_info.template,
-            &json!({ "variable_symbol": variable_symbol }),
+            &wrapper.replace("{body}", &email_info.body),
+            &email_info.variables,
         )
         .unwrap();
 
@@ -169,65 +179,14 @@ async fn send_welcome_email(
         member_detail.last_name.as_deref().unwrap_or("")
     );
     let email = member_detail.email.as_deref().unwrap_or("").to_string();
-    let subject = if member_detail.language.as_deref().unwrap_or("") == "cs" {
-        "Vítej v Odborové organizaci pracujících v ICT!"
-    } else {
-        "Welcome to the ICT Union!"
-    };
 
     queue
         .inner()
-        .send(Command::SendWelcomeEmail(
+        .send(Command::SendEmailAsTreasurer(
             full_name,
-            subject.to_string(),
+            email_info.subject,
             email,
-            message_html,
-        ))
-        .await?;
-
-    Ok(SuccessResponse::Accepted)
-}
-
-#[post(
-    "/<id>/workplace_welcome_email",
-    format = "json",
-    data = "<request_email_info>"
-)]
-async fn send_workplace_welcome_email(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    queue: &State<QueueSender>,
-    token: JwtToken<'_>,
-    request_email_info: Json<EmailInfo>,
-    id: Id<Member>,
-) -> Response<SuccessResponse> {
-    oid_provider.require_role(&token, Role::ManageMembers)?;
-
-    let email_info = request_email_info.into_inner();
-    let member_detail = query::detail(id).fetch_one(db_pool.inner()).await?;
-
-    // this email has no variables, we should just us mjml template as send by FE
-    let message_html = email_info.template;
-
-    let full_name = format!(
-        "{} {}",
-        member_detail.first_name.as_deref().unwrap_or(""),
-        member_detail.last_name.as_deref().unwrap_or("")
-    );
-    let email = member_detail.email.as_deref().unwrap_or("").to_string();
-    let subject = if member_detail.language.as_deref().unwrap_or("") == "cs" {
-        "Vítej v Odborové organizaci pracujících v ICT!"
-    } else {
-        "Welcome to the Trade union of workers in ICT!"
-    };
-
-    queue
-        .inner()
-        .send(Command::SendWelcomeEmail(
-            full_name,
-            subject.to_string(),
-            email,
-            message_html,
+            message_mjml,
         ))
         .await?;
 
@@ -517,8 +476,7 @@ pub fn routes() -> Vec<Route> {
         list_new,
         list_current,
         create_member,
-        send_welcome_email,
-        send_workplace_welcome_email,
+        send_email,
         list_files,
         list_occupations,
         detail,

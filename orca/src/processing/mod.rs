@@ -33,7 +33,7 @@ pub enum Command {
     NewRegistrationRequest(Id<RegistrationRequest>, ImageData),
     RegistrationRequestVerified(Id<RegistrationRequest>),
     ResentRegistrationEmail(Id<RegistrationRequest>),
-    SendWelcomeEmail(String, String, String, String),
+    SendEmailAsTreasurer(String, String, String, String),
     NewMemberCreated(Id<Member>, Option<String>),
 }
 
@@ -49,8 +49,8 @@ impl std::fmt::Display for Command {
             Self::ResentRegistrationEmail(id) => {
                 write!(f, "ResentRegistrationEmail id: {id}")
             }
-            Self::SendWelcomeEmail(_, _, email, _) => {
-                write!(f, "SendWelcomeEmail to member with email: {email}")
+            Self::SendEmailAsTreasurer(_, _, email, _) => {
+                write!(f, "SendEmailAsTreasurer to member with email: {email}")
             }
             Self::NewMemberCreated(id, _) => {
                 write!(f, "NewMemberCreated id: {id}")
@@ -144,7 +144,7 @@ async fn process(
 ) -> Result<(), ProcessingError> {
     use Command::{
         NewMemberCreated, NewRegistrationRequest, RegistrationRequestVerified,
-        ResentRegistrationEmail, SendWelcomeEmail,
+        ResentRegistrationEmail, SendEmailAsTreasurer,
     };
 
     match command {
@@ -160,16 +160,13 @@ async fn process(
 
             send_verification_email(config, db_pool, &application_details, pdf_data).await?;
         }
-        SendWelcomeEmail(full_name, subject, email, message_mjml) => {
+        SendEmailAsTreasurer(full_name, subject, email, message_mjml) => {
             let opts = mrml::prelude::render::RenderOptions::default();
             let message_html = mrml::parse(&message_mjml)
                 .map_err(|e| ProcessingError::MjmlParse(e.to_string()))?
                 .element
                 .render(&opts)
                 .map_err(|e| ProcessingError::MjmlRender(e.to_string()))?;
-
-            let email_reply_name = "";
-            let email_reply_email = "treasurer@ictunion.cz";
 
             let sender_info: Mailbox = format!(
                 "{} <{}>",
@@ -178,8 +175,11 @@ async fn process(
             )
             .parse()?;
 
-            let reply_info: Mailbox =
-                format!("{email_reply_name} <{email_reply_email}>").parse()?;
+            let reply_info: Mailbox = format!(
+                "{} <{}>",
+                config.treasurer_reply_name, config.treasurer_reply_email
+            )
+            .parse()?;
 
             let message = Message::builder()
                 .from(sender_info.clone())

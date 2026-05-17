@@ -12,6 +12,8 @@ pub mod templates;
 pub struct Config {
     pub email_sender_email: String,
     pub email_sender_name: Option<String>,
+    pub treasurer_reply_email: String,
+    pub treasurer_reply_name: String,
     pub host: String,
     pub admin_host: Option<String>,
     pub postgres: String,
@@ -51,6 +53,12 @@ impl Config {
             .extract_inner("email_sender_email")
             .unwrap_or("noreply@localhost".to_string());
         let email_sender_name = figment.extract_inner("email_sender_name").ok();
+        let treasurer_reply_email = figment
+            .extract_inner("treasurer_reply_email")
+            .unwrap_or("treasurer@ictunion.cz".to_string());
+        let treasurer_reply_name = figment
+            .extract_inner("treasurer_reply_name")
+            .unwrap_or("ICT Union Treasurer".to_string());
 
         let host = figment
             .extract_inner("host")
@@ -111,6 +119,8 @@ impl Config {
         Self {
             email_sender_email,
             email_sender_name,
+            treasurer_reply_email,
+            treasurer_reply_name,
             host,
             admin_host,
             postgres,
