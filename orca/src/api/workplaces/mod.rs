@@ -8,7 +8,7 @@ use crate::server::oid::{JwtToken, Provider, Role};
 use crate::validation::Validated;
 use chrono::{DateTime, Utc};
 use rocket::serde::json::Json;
-use rocket::{Route, State, delete, get, post, routes};
+use rocket::{Route, State, delete, get, post, put, routes};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -84,31 +84,17 @@ async fn create_workplace(
     Ok(Json(workplace))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewWorkplaceMember {
-    member_id: Uuid,
-}
-
-impl From<NewWorkplaceMember> for Id<Member> {
-    fn from(value: NewWorkplaceMember) -> Self {
-        Id::from(value.member_id)
-    }
-}
-
-#[post("/<workplace_id>", format = "json", data = "<new_workplace_member>")]
+#[put("/<workplace_id>/members/<member_id>")]
 async fn assign_member_to_workplace(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
-    new_workplace_member: Json<NewWorkplaceMember>,
+    member_id: Id<Member>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let workplace_member = new_workplace_member.into_inner();
-
-    // Create new connection
-    query::create_connection_between_member_and_workplace(workplace_id, workplace_member.member_id)
+    let result = query::create_connection_between_member_and_workplace(workplace_id, member_id)
         .execute(db_pool.inner())
         .await?;
 
@@ -116,74 +102,60 @@ async fn assign_member_to_workplace(
         .fetch_one(db_pool.inner())
         .await?;
 
-    let orca_user_id = workplace_member.into();
-
-    let user_data = get_status_data(orca_user_id)
+    let user_data = get_status_data(member_id)
         .fetch_one(db_pool.inner())
         .await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
-        ApiError::keycloak_push(&format!("keycloak ID for user {orca_user_id} not assigned"))
+        ApiError::keycloak_push(&format!("keycloak ID for user {member_id} not assigned"))
     })?;
 
     oid_provider
         .connect_keycloak_user_and_group(&token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
-    Ok(SuccessResponse::Accepted)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RemovedWorkplaceMember {
-    member_id: Uuid,
-}
-
-impl From<RemovedWorkplaceMember> for Id<Member> {
-    fn from(value: RemovedWorkplaceMember) -> Self {
-        Id::from(value.member_id)
+    if result.rows_affected() == 0 {
+        Ok(SuccessResponse::NoContent)
+    } else {
+        Ok(SuccessResponse::Created)
     }
 }
 
-#[delete(
-    "/<workplace_id>",
-    format = "json",
-    data = "<removed_workplace_member>"
-)]
+#[delete("/<workplace_id>/members/<member_id>")]
 async fn remove_member_from_workplace(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
-    removed_workplace_member: Json<RemovedWorkplaceMember>,
+    member_id: Id<Member>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let workplace_member = removed_workplace_member.into_inner();
+    let result = query::remove_connection_between_member_and_workplace(workplace_id, member_id)
+        .execute(db_pool.inner())
+        .await?;
 
     let workplace_details = query::detail(workplace_id)
         .fetch_one(db_pool.inner())
         .await?;
 
-    // Remove existing connection
-    query::remove_connection_between_member_and_workplace(workplace_id, workplace_member.member_id)
-        .execute(db_pool.inner())
-        .await?;
-
-    let orca_user_id = workplace_member.into();
-
-    let user_data = get_status_data(orca_user_id)
+    let user_data = get_status_data(member_id)
         .fetch_one(db_pool.inner())
         .await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
-        ApiError::keycloak_push(&format!("keycloak ID for user {orca_user_id} not assigned"))
+        ApiError::keycloak_push(&format!("keycloak ID for user {member_id} not assigned"))
     })?;
 
     oid_provider
         .remove_keycloak_user_from_group(&token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
-    Ok(SuccessResponse::Accepted)
+    if result.rows_affected() == 0 {
+        Ok(SuccessResponse::NoContent)
+    } else {
+        Ok(SuccessResponse::Accepted)
+    }
 }
 
 #[get("/<workplace_id>/members")]

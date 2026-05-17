@@ -400,13 +400,12 @@ module MemberWorkplaceSelect = {
           // remove current workplace -> workplaceID that is assigned before this change event
           let _ = workplaceId->Option.map(workplaceId => {
             let _ = api->Api.deleteJson(
-              ~path="/workplaces/" ++ Uuid.toString(workplaceId),
+              ~path="/workplaces/" ++
+              Uuid.toString(workplaceId) ++
+              "/members/" ++
+              Uuid.toString(detail.id),
               ~decoder=Api.Decode.acceptedResponse,
-              ~body=Some(
-                MemberData.Encode.newWorkplaceMember({
-                  memberId: detail.id->Uuid.toString,
-                }),
-              ),
+              ~body=None,
             )
           })
 
@@ -418,12 +417,12 @@ module MemberWorkplaceSelect = {
 
           // add new workplace if user selected valid workplace from menu
           let _ = newWorkplaceId->Option.map(newWorkplaceId =>
-            api->Api.postJson(
-              ~path="/workplaces/" ++ Uuid.toString(newWorkplaceId),
+            api->Api.put(
+              ~path="/workplaces/" ++
+              Uuid.toString(newWorkplaceId) ++
+              "/members/" ++
+              Uuid.toString(detail.id),
               ~decoder=Api.Decode.acceptedResponse,
-              ~body=MemberData.Encode.newWorkplaceMember({
-                memberId: detail.id->Uuid.toString,
-              }),
             )
           )
 

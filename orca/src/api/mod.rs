@@ -264,6 +264,8 @@ pub type Response<T> = Result<T, ApiError>;
 #[derive(Debug)]
 pub enum SuccessResponse {
     Accepted,
+    Created,
+    NoContent,
 }
 
 #[derive(Debug, Serialize)]
@@ -276,12 +278,21 @@ impl<'r> Responder<'r, 'static> for SuccessResponse {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
         use rocket::response::status;
 
-        match &self {
+        match self {
             Self::Accepted => status::Accepted(Some(Json(OkResponse {
                 status: 202,
                 message: "Accepted",
             })))
             .respond_to(request),
+            Self::Created => status::Custom(
+                rocket::http::Status::Created,
+                Json(OkResponse {
+                    status: 201,
+                    message: "Created",
+                }),
+            )
+            .respond_to(request),
+            Self::NoContent => status::NoContent.respond_to(request),
         }
     }
 }

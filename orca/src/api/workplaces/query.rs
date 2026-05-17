@@ -1,8 +1,6 @@
-use uuid::Uuid;
-
 use super::{NewWorkplace, WorkplaceSummary};
 use crate::api::members::Summary;
-use crate::data::{Id, Workplace};
+use crate::data::{Id, Member, Workplace};
 use crate::db::{Query, QueryAs};
 
 // member count includes also members, who have already left union
@@ -76,7 +74,7 @@ RETURNING id
 
 pub fn create_connection_between_member_and_workplace<'a>(
     workplace_id: Id<Workplace>,
-    member_id: Uuid,
+    member_id: Id<Member>,
 ) -> Query<'a> {
     sqlx::query(
         "
@@ -86,6 +84,7 @@ INSERT INTO members_workplaces
     )
 VALUES
     ( $1, $2 )
+ON CONFLICT DO NOTHING
 ",
     )
     .bind(workplace_id)
@@ -94,7 +93,7 @@ VALUES
 
 pub fn remove_connection_between_member_and_workplace<'a>(
     workplace_id: Id<Workplace>,
-    member_id: Uuid,
+    member_id: Id<Member>,
 ) -> Query<'a> {
     sqlx::query(
         "
