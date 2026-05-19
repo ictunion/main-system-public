@@ -191,15 +191,7 @@ async fn process(
             send_email(config, message).await?;
         }
         NewMemberCreated(member_id, token_opt) => {
-            let token_string = token_opt.ok_or(ProcessingError::MissingOidToken)?;
-            let token = JwtToken::new(&token_string);
-            let oid_user = query::get_member_for_oid(member_id)
-                .fetch_one(db_pool)
-                .await?;
-            let uuid = oid_provider.create_user(&token, &oid_user).await?;
-            query::assign_member_oid_sub(member_id, uuid)
-                .execute(db_pool)
-                .await?;
+            process_new_member_created(member_id, token_opt, db_pool, oid_provider).await?;
         }
         RegistrationRequestVerified(reg_id) => {
             // We do this only if notification email is configured
@@ -245,6 +237,41 @@ async fn process(
             }
         }
     }
+
+    Ok(())
+}
+
+async fn process_new_member_created(
+    member_id: Id<Member>,
+    token_opt: Option<String>,
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+) -> Result<(), ProcessingError> {
+    let token_string = token_opt.ok_or(ProcessingError::MissingOidToken)?;
+    let token = JwtToken::new(&token_string);
+    let oid_user = query::get_member_for_oid(member_id)
+        .fetch_one(db_pool)
+        .await?;
+
+    let uuid = match oid_provider.create_user(&token, &oid_user).await {
+        Ok(uuid) => uuid,
+        Err(crate::server::oid::Error::Proxy(status)) if status.as_u16() == 409 => {
+            info!("Keycloak user already exists for member {member_id}, looking up by email");
+            let matching = oid_provider
+                .get_matching_users(&token, oid_user.email.clone())
+                .await?;
+            matching.into_iter().find_map(|u| u.uuid()).ok_or_else(|| {
+                crate::server::oid::Error::Parsing(format!(
+                    "No Keycloak user found for email of member {member_id}"
+                ))
+            })?
+        }
+        Err(e) => return Err(e.into()),
+    };
+
+    query::assign_member_oid_sub(member_id, uuid)
+        .execute(db_pool)
+        .await?;
 
     Ok(())
 }

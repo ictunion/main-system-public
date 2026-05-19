@@ -122,6 +122,7 @@ SELECT m.id
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
     , m.created_at
     , ARRAY(SELECT wp.workplace_id FROM members_workplaces wp WHERE wp.member_id = m.id) AS workplace_ids
+    , m.sub
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
 LEFT JOIN members_workplaces mw ON mw.member_id = m.id
@@ -137,6 +138,7 @@ GROUP BY m.id
     , m.language
     , m.left_at
     , m.created_at
+    , m.sub
 ORDER BY m.member_number DESC
 ",
     )

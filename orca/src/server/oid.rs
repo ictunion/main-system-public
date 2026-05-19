@@ -19,9 +19,15 @@ use keycloak::KeycloakProvider;
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct User {
     id: Option<String>,
-    email: String,
+    pub email: String,
     first_name: Option<String>,
     last_name: Option<String>,
+}
+
+impl User {
+    pub fn uuid(&self) -> Option<Uuid> {
+        self.id.as_ref().and_then(|s| Uuid::parse_str(s).ok())
+    }
 }
 
 #[derive(Debug, Clone, FromForm)]

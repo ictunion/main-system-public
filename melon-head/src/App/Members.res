@@ -148,17 +148,6 @@ let newNoteModal = (
   content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
 }
 
-let viewPaddedNumber = (n: int): React.element => {
-  let stringified = Int.toString(n)
-  let prefix = "0000000"
-  let shortenedPrefix = prefix->Js.String.slice(~from=0, ~to_=7 - String.length(stringified))
-
-  <span>
-    <span className={styles["numberPrefix"]}> {React.string(shortenedPrefix)} </span>
-    {React.string(stringified)}
-  </span>
-}
-
 let urlToTab = (url: RescriptReactRouter.url): option<MemberData.status> => {
   open MemberData
 
@@ -180,59 +169,6 @@ let tabToUrl = (tab: option<MemberData.status>): string => {
   | Some(PastMember) => "/members#past"
   }
 }
-
-let columns: array<DataTable.column<MemberData.summary>> = [
-  {
-    name: "ID",
-    minMax: ("100px", "1fr"),
-    view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-  },
-  {
-    name: "Member Number",
-    minMax: ("200px", "1fr"),
-    view: r => viewPaddedNumber(r.memberNumber),
-  },
-  {
-    name: "Left On",
-    minMax: ("150px", "1fr"),
-    view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
-  },
-  {
-    name: "First Name",
-    minMax: ("150px", "2fr"),
-    view: r => r.firstName->View.option(React.string),
-  },
-  {
-    name: "Last Name",
-    minMax: ("150px", "2fr"),
-    view: r => r.lastName->View.option(React.string),
-  },
-  {
-    name: "Email",
-    minMax: ("250px", "2fr"),
-    view: r => r.email->View.option(email => <Link.Email email />),
-  },
-  {
-    name: "Phone",
-    minMax: ("220px", "2fr"),
-    view: r => r.phoneNumber->View.option(phoneNumber => <Link.Tel phoneNumber />),
-  },
-  {
-    name: "Last Company",
-    minMax: ("220px", "2fr"),
-    view: r => r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
-  },
-  {
-    name: "City",
-    minMax: ("250px", "1fr"),
-    view: r => r.city->View.option(React.string),
-  },
-  {
-    name: "Created On",
-    minMax: ("150px", "1fr"),
-    view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-  },
-]
 
 module SectoralFilter = {
   @react.component
@@ -272,67 +208,7 @@ module All = {
       <Button.Panel>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <DataTable
-        data=displayedMembers
-        columns=[
-          {
-            name: "ID",
-            minMax: ("100px", "1fr"),
-            view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-          },
-          {
-            name: "Member Number",
-            minMax: ("200px", "1fr"),
-            view: r => viewPaddedNumber(r.memberNumber),
-          },
-          {
-            name: "Left On",
-            minMax: ("150px", "1fr"),
-            view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
-          },
-          {
-            name: "First Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.firstName->View.option(React.string),
-          },
-          {
-            name: "Last Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.lastName->View.option(React.string),
-          },
-          {
-            name: "Note",
-            minMax: ("250px", "10fr"),
-            view: r =>
-              <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-                {
-                  let note = if Option.getWithDefault(r.note, "Add note") == "" {
-                    "Add note"
-                  } else {
-                    Option.getWithDefault(r.note, "Add note")
-                  }
-
-                  React.string(note)
-                }
-              </a>,
-          },
-          {
-            name: "Last Company",
-            minMax: ("220px", "2fr"),
-            view: r =>
-              r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
-          },
-          {
-            name: "City",
-            minMax: ("250px", "1fr"),
-            view: r => r.city->View.option(React.string),
-          },
-          {
-            name: "Created On",
-            minMax: ("150px", "1fr"),
-            view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-          },
-        ]>
+      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)} showLeftOn=true>
         <p> {React.string("Currently there are no member.")} </p>
         <p>
           <small>
@@ -343,7 +219,7 @@ module All = {
             {React.string(".")}
           </small>
         </p>
-      </DataTable>
+      </MemberSummaryTable>
     </div>
   }
 }
@@ -378,67 +254,7 @@ module New = {
         </SessionContext.RequireRole>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <DataTable
-        data=displayedMembers
-        columns=[
-          {
-            name: "ID",
-            minMax: ("100px", "1fr"),
-            view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-          },
-          {
-            name: "Member Number",
-            minMax: ("200px", "1fr"),
-            view: r => viewPaddedNumber(r.memberNumber),
-          },
-          {
-            name: "Left On",
-            minMax: ("150px", "1fr"),
-            view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
-          },
-          {
-            name: "First Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.firstName->View.option(React.string),
-          },
-          {
-            name: "Last Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.lastName->View.option(React.string),
-          },
-          {
-            name: "Note",
-            minMax: ("250px", "10fr"),
-            view: r =>
-              <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-                {
-                  let note = if Option.getWithDefault(r.note, "Add note") == "" {
-                    "Add note"
-                  } else {
-                    Option.getWithDefault(r.note, "Add note")
-                  }
-
-                  React.string(note)
-                }
-              </a>,
-          },
-          {
-            name: "Last Company",
-            minMax: ("220px", "2fr"),
-            view: r =>
-              r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
-          },
-          {
-            name: "City",
-            minMax: ("250px", "1fr"),
-            view: r => r.city->View.option(React.string),
-          },
-          {
-            name: "Created On",
-            minMax: ("150px", "1fr"),
-            view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-          },
-        ]>
+      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
         <p> {React.string("There are no new members who need to be onboarded.")} </p>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
           <p>
@@ -449,7 +265,7 @@ module New = {
             </small>
           </p>
         </SessionContext.RequireRole>
-      </DataTable>
+      </MemberSummaryTable>
     </div>
   }
 }
@@ -485,62 +301,7 @@ module Current = {
       <Button.Panel>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <DataTable
-        data=displayedMembers
-        columns=[
-          {
-            name: "ID",
-            minMax: ("100px", "1fr"),
-            view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-          },
-          {
-            name: "Member Number",
-            minMax: ("200px", "1fr"),
-            view: r => viewPaddedNumber(r.memberNumber),
-          },
-          {
-            name: "First Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.firstName->View.option(React.string),
-          },
-          {
-            name: "Last Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.lastName->View.option(React.string),
-          },
-          {
-            name: "Note",
-            minMax: ("250px", "10fr"),
-            view: r =>
-              <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-                {
-                  let note = if Option.getWithDefault(r.note, "Add note") == "" {
-                    "Add note"
-                  } else {
-                    Option.getWithDefault(r.note, "Add note")
-                  }
-
-                  React.string(note)
-                }
-              </a>,
-          },
-          {
-            name: "Last Company",
-            minMax: ("220px", "2fr"),
-            view: r =>
-              r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
-          },
-          {
-            name: "City",
-            minMax: ("250px", "1fr"),
-            view: r => r.city->View.option(React.string),
-          },
-          {
-            name: "Created On",
-            minMax: ("150px", "1fr"),
-            view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-          },
-        ]>
+      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
         <p> {React.string("There are no members yet.")} </p>
         <p>
           <small>
@@ -551,7 +312,7 @@ module Current = {
             {React.string(".")}
           </small>
         </p>
-      </DataTable>
+      </MemberSummaryTable>
     </div>
   }
 }
@@ -567,11 +328,25 @@ module Past = {
 
     let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
 
-    let displayedMembers = if filterSectoral {
-      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
-    } else {
-      members
-    }
+    let sortByLeftAt = (arr: array<MemberData.summary>) =>
+      arr->Array.copy->Js.Array2.sortInPlaceWith((a, b) =>
+        switch (a.leftAt, b.leftAt) {
+        | (Some(da), Some(db)) => Js.Date.getTime(db) -. Js.Date.getTime(da) > 0.0 ? 1 : -1
+        | (Some(_), None) => -1
+        | (None, Some(_)) => 1
+        | (None, None) => 0
+        }
+      )
+
+    let displayedMembers =
+      members->RemoteData.map(arr => {
+        let filtered = if filterSectoral {
+          arr->Array.keep(m => Array.length(m.workplaceIds) == 0)
+        } else {
+          arr
+        }
+        sortByLeftAt(filtered)
+      })
 
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
@@ -583,69 +358,9 @@ module Past = {
       <Button.Panel>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <DataTable
-        data=displayedMembers
-        columns=[
-          {
-            name: "ID",
-            minMax: ("100px", "1fr"),
-            view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-          },
-          {
-            name: "Member Number",
-            minMax: ("200px", "1fr"),
-            view: r => viewPaddedNumber(r.memberNumber),
-          },
-          {
-            name: "Left On",
-            minMax: ("150px", "1fr"),
-            view: r => r.leftAt->View.option(a => React.string(Js.Date.toLocaleDateString(a))),
-          },
-          {
-            name: "First Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.firstName->View.option(React.string),
-          },
-          {
-            name: "Last Name",
-            minMax: ("150px", "2fr"),
-            view: r => r.lastName->View.option(React.string),
-          },
-          {
-            name: "Note",
-            minMax: ("250px", "10fr"),
-            view: r =>
-              <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-                {
-                  let note = if Option.getWithDefault(r.note, "Add note") == "" {
-                    "Add note"
-                  } else {
-                    Option.getWithDefault(r.note, "Add note")
-                  }
-
-                  React.string(note)
-                }
-              </a>,
-          },
-          {
-            name: "Last Company",
-            minMax: ("220px", "2fr"),
-            view: r =>
-              r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
-          },
-          {
-            name: "City",
-            minMax: ("250px", "1fr"),
-            view: r => r.city->View.option(React.string),
-          },
-          {
-            name: "Created On",
-            minMax: ("150px", "1fr"),
-            view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-          },
-        ]>
+      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)} showLeftOn=true>
         <p> {React.string("There are no ex-members.")} </p>
-      </DataTable>
+      </MemberSummaryTable>
     </div>
   }
 }

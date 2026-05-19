@@ -15,6 +15,7 @@ type summary = {
   companyNames: array<option<string>>,
   createdAt: Js.Date.t,
   workplaceIds: array<Uuid.t>,
+  sub: option<Uuid.t>,
 }
 
 type newMember = {
@@ -102,6 +103,7 @@ module Decode = {
     companyNames: field.required(. "company_names", array(option(string))),
     createdAt: field.required(. "created_at", date),
     workplaceIds: field.required(. "workplace_ids", array(Uuid.decode)),
+    sub: field.required(. "sub", option(Uuid.decode)),
   })
 
   let detail = object(field => {

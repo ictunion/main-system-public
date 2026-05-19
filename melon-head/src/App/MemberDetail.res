@@ -11,7 +11,7 @@ let layout: DataGrid.t<MemberData.detail> = [
     cells: [
       {
         label: "Member Number",
-        view: d => Members.viewPaddedNumber(d.memberNumber),
+        view: d => MemberSummaryTable.viewPaddedNumber(d.memberNumber),
         minmax: ("250px", "690px"),
       },
       {

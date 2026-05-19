@@ -35,6 +35,7 @@ pub struct Summary {
     company_names: Vec<Option<String>>,
     created_at: DateTime<Utc>,
     workplace_ids: Vec<Uuid>,
+    sub: Option<Uuid>,
 }
 
 #[get("/")]

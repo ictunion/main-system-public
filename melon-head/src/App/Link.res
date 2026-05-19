@@ -38,10 +38,12 @@ module Uuid = {
   @react.component
   let make = (~uuid: Data.Uuid.t, ~toPath: string => string) => {
     let shorten = uuid->Data.Uuid.toString->Js.String.substrAtMost(~from=0, ~length=7) ++ "..."
-    let openPath = (_: JsxEvent.Mouse.t) => {
-      RescriptReactRouter.push(toPath(uuid->Data.Uuid.toString))
+    let path = toPath(uuid->Data.Uuid.toString)
+    let openPath = (e: JsxEvent.Mouse.t) => {
+      e->JsxEvent.Mouse.preventDefault
+      RescriptReactRouter.push(path)
     }
-    <a className={styles["uuid"]} onClick={openPath}>
+    <a className={styles["uuid"]} href={path} onClick={openPath}>
       {React.string(shorten)}
       <span className={styles["uuidFull"]}> {React.string(Data.Uuid.toString(uuid))} </span>
     </a>
