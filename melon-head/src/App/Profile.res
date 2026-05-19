@@ -12,7 +12,7 @@ let make = (
   ~closeProfile: JsxEvent.Mouse.t => unit,
   ~session: Api.webData<Session.t>,
   ~config: Config.t,
-  ~keycloak: Keycloak.t,
+  ~userManager: Oidc.userManager,
 ) =>
   <div className={styles["root"]}>
     <div onClick={closeProfile} />
@@ -81,14 +81,9 @@ let make = (
           <li key="1">
             <a href={config.profileUrl} target="_blank"> {React.string("Profile")} </a>
           </li>
-          <li key="2">
-            <a href={Config.keycloakAccountLink(config)} target="_blank">
-              {React.string("Account Settings")}
-            </a>
-          </li>
-          <li key="3" className={styles["navDivider"]} />
-          <li key="4" className={styles["centeredLi"]}>
-            <Button variant=Button.Danger onClick={_ => Keycloak.logout(keycloak)}>
+          <li key="2" className={styles["navDivider"]} />
+          <li key="3" className={styles["centeredLi"]}>
+            <Button variant=Button.Danger onClick={_ => Oidc.signinOutRedirect(userManager)}>
               {React.string("Sign Out")}
             </Button>
           </li>

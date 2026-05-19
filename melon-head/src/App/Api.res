@@ -90,29 +90,30 @@ let mapDecodingError = (res: result<'a, string>, response): result<'a, error> =>
 
 type t = {
   host: string,
-  keycloak: Keycloak.t,
+  oidcUser: Oidc.User.t,
 }
 
-let make = (~config: Config.t, ~keycloak: Keycloak.t): t => {
+let getToken = (api: t) => {
+  api.oidcUser->Oidc.User.getToken
+}
+
+let make = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
   {
     host: config.apiUrl,
-    keycloak,
+    oidcUser,
   }
 }
 
 let makeJsonHeaders = api => {
   Js.Dict.fromList(list{
-    ("Authorization", "Bearer " ++ api.keycloak->Keycloak.getToken),
+    ("Authorization", "Bearer " ++ getToken(api)),
     ("Accept", "application/json"),
     ("Content-Type", "application/json"),
   })
 }
 
 let makeTextHeaders = api => {
-  Js.Dict.fromList(list{
-    ("Authorization", "Bearer " ++ api.keycloak->Keycloak.getToken),
-    ("Accept", "text/csv"),
-  })
+  Js.Dict.fromList(list{("Authorization", "Bearer " ++ getToken(api)), ("Accept", "text/csv")})
 }
 
 let fromJsonRequest = (future, decoder) => {

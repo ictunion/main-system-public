@@ -120,7 +120,7 @@ let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
           "/files/" ++
           file.id->Uuid.toString ++
           "?token=" ++
-          api.keycloak->Keycloak.getToken
+          api.oidcUser->Oidc.User.getToken
         <img alt="signature" src />
       }
     | None => React.string("Not Found")

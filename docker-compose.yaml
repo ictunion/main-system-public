@@ -18,6 +18,7 @@ services:
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_USER}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASSWORD}
+      KC_HOSTNAME: http://localhost:8180
     command: [
       "--verbose",
       "start-dev",

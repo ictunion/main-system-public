@@ -11,7 +11,7 @@ module.exports = (env, argv) => {
 
     return {
         mode,
-        entry: path.resolve(__dirname, './src/index.js'),
+        entry: path.resolve(__dirname, './src/index.ts'),
         module: {
             rules: [
                 {
@@ -43,6 +43,11 @@ module.exports = (env, argv) => {
                     ],
                 },
                 {
+                    test: /\.ts$/,
+                    use: "ts-loader",
+                    exclude: /node_modules/,
+                },
+                {
                     test: /\.(png|jpg|gif|svg)$/,
                     use: [{
                         loader: 'file-loader',
@@ -55,7 +60,7 @@ module.exports = (env, argv) => {
             ],
         },
         resolve: {
-            extensions: ['.js', '.bs.js'],
+            extensions: ['.js', '.bs.js', '.ts'],
         },
         output: {
             filename: 'bundle-[contenthash].js',

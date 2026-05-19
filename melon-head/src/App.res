@@ -2,8 +2,8 @@
 
 module ConfiguredApp = {
   @react.component
-  let make = (~keycloak: Keycloak.t, ~config: Config.t) => {
-    let api = Api.make(~config, ~keycloak)
+  let make = (~oidcUser: Oidc.User.t, ~userManager: Oidc.userManager, ~config: Config.t) => {
+    let api = Api.make(~config, ~oidcUser)
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
 
@@ -22,7 +22,7 @@ module ConfiguredApp = {
         setSessionState(_ => RemoteData.fromResult(res))
       })
       Some(() => Future.cancel(req))
-    }, [keycloak])
+    }, [oidcUser])
 
     <SessionContext.Provider value=sessionState>
       <div className={styles["root"]}>
@@ -57,7 +57,7 @@ module ConfiguredApp = {
         </div>
         {if isProfileOpen {
           <Profile
-            closeProfile={_ => setIsProfileOpen(_ => false)} session=sessionState config keycloak
+            closeProfile={_ => setIsProfileOpen(_ => false)} session=sessionState config userManager
           />
         } else {
           React.null
@@ -76,9 +76,9 @@ module ConfiguredApp = {
 
 module App = {
   @react.component
-  let make = (~keycloak: Keycloak.t, ~config: Js.Json.t) => {
+  let make = (~oidcUser: Oidc.User.t, ~userManager: Oidc.userManager, ~config: Js.Json.t) => {
     switch Config.make(config) {
-    | Ok(config) => <ConfiguredApp keycloak={keycloak} config={config} />
+    | Ok(config) => <ConfiguredApp oidcUser userManager config={config} />
     | Error(err) =>
       <div className={styles["root"]}>
         <div className={styles["appError"]}>

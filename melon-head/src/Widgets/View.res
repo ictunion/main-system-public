@@ -16,12 +16,7 @@ let fileRow = (~api: Api.t, file: Data.file): React.element => {
   let fileName = file.name ++ "." ++ file.fileType
 
   let openFile = _ => {
-    let fileUrl =
-      api.host ++
-      "/files/" ++
-      file.id->Uuid.toString ++
-      "?token=" ++
-      api.keycloak->Keycloak.getToken
+    let fileUrl = api.host ++ "/files/" ++ file.id->Uuid.toString ++ "?token=" ++ Api.getToken(api)
 
     window_open(fileUrl, "_blank")
   }
