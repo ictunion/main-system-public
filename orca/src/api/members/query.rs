@@ -424,6 +424,7 @@ pub fn remove_member<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
         "
 UPDATE members
 SET left_at = NOW()
+  , sub = NULL
 WHERE members.id = $1
 RETURNING members.id
 , member_number

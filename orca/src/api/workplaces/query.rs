@@ -72,6 +72,16 @@ RETURNING id
     .bind(new_workplace.keycloak_group_id)
 }
 
+pub fn remove_member_workplace_associations<'a>(id: Id<Member>) -> Query<'a> {
+    sqlx::query(
+        "
+DELETE FROM members_workplaces
+WHERE member_id = $1
+",
+    )
+    .bind(id)
+}
+
 pub fn create_connection_between_member_and_workplace<'a>(
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,

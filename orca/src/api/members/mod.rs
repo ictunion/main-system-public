@@ -392,7 +392,10 @@ async fn remove_member(
         )));
     }
 
-    // Mark in database
+    // Mark in database and remove workplace associations
+    super::workplaces::query::remove_member_workplace_associations(id)
+        .execute(&mut *tx)
+        .await?;
     let detail = query::remove_member(id).fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
