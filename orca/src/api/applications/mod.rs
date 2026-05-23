@@ -538,7 +538,6 @@ async fn verify(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-    queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
 ) -> Response<Json<Detail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
@@ -555,12 +554,6 @@ async fn verify(
         .assert_waiting_for_confirmation()?;
 
     let detail = query::verify_application(id).fetch_one(&mut *tx).await?;
-
-    // Trigger event to send a notification out
-    queue
-        .inner()
-        .send(Command::RegistrationRequestVerified(id))
-        .await?;
 
     tx.commit().await?;
 

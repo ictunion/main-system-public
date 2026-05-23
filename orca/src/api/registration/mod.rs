@@ -131,19 +131,12 @@ async fn api_join(
 async fn api_confirm(
     db_pool: &State<DbPool>,
     config: &State<Config>,
-    queue: &State<QueueSender>,
     code: &'_ str,
 ) -> Response<Redirect> {
     use sqlx::error::Error::RowNotFound;
 
     match query::confirm_email(code).fetch_one(db_pool.inner()).await {
-        Ok((reg_id, local)) => {
-            // notify about new registration
-            queue
-                .inner()
-                .send(Command::RegistrationRequestVerified(reg_id))
-                .await?;
-
+        Ok((_reg_id, local)) => {
             info!("Registration request verified.");
             // redirect user to the right place
             Ok(Redirect::found(

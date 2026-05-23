@@ -117,6 +117,7 @@
               python3
               wl-clipboard
               nixd
+              jq
             ];
           };
         };

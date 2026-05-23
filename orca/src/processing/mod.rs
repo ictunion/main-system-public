@@ -31,7 +31,6 @@ use crate::server::oid::{JwtToken, Provider};
 #[derive(Debug)]
 pub enum Command {
     NewRegistrationRequest(Id<RegistrationRequest>, ImageData),
-    RegistrationRequestVerified(Id<RegistrationRequest>),
     ResentRegistrationEmail(Id<RegistrationRequest>),
     SendEmailAsTreasurer(String, String, String, String),
     NewMemberCreated(Id<Member>, Option<String>),
@@ -42,9 +41,6 @@ impl std::fmt::Display for Command {
         match self {
             Self::NewRegistrationRequest(id, _) => {
                 write!(f, "NewRegistrationRequest id: {id}")
-            }
-            Self::RegistrationRequestVerified(id) => {
-                write!(f, "RegistrationRequestVerified id: {id}")
             }
             Self::ResentRegistrationEmail(id) => {
                 write!(f, "ResentRegistrationEmail id: {id}")
@@ -143,8 +139,7 @@ async fn process(
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
     use Command::{
-        NewMemberCreated, NewRegistrationRequest, RegistrationRequestVerified,
-        ResentRegistrationEmail, SendEmailAsTreasurer,
+        NewMemberCreated, NewRegistrationRequest, ResentRegistrationEmail, SendEmailAsTreasurer,
     };
 
     match command {
@@ -192,49 +187,6 @@ async fn process(
         }
         NewMemberCreated(member_id, token_opt) => {
             process_new_member_created(member_id, token_opt, db_pool, oid_provider).await?;
-        }
-        RegistrationRequestVerified(reg_id) => {
-            // We do this only if notification email is configured
-            if let Some(notification_email) = &config.notification_email {
-                let sender_info: Mailbox = format!(
-                    "{} <{}>",
-                    config.email_sender_name.clone().unwrap_or_default(),
-                    config.email_sender_email
-                )
-                .parse()?;
-
-                let mut renderer = config
-                    .templates
-                    .renderer(&templates::NEW_APPLICATION_NOTICE, "default");
-
-                // We need member details because we want to customize email subject/pdf name
-                let application_details =
-                    query::query_registration(reg_id).fetch_one(db_pool).await?;
-
-                let application_detail_url = format!(
-                    "{}/applications/{}",
-                    config.admin_host.as_deref().unwrap_or(""),
-                    application_details.id
-                );
-
-                renderer.bind("application_detail_url", &application_detail_url);
-
-                let message_html = config.templates.render(&renderer)?;
-
-                let email_subject = format!(
-                    "New Application from {}",
-                    application_details.company_name.as_deref().unwrap_or("")
-                );
-
-                let message = Message::builder()
-                    .from(sender_info.clone())
-                    .reply_to(sender_info)
-                    .to(format!("Notifications <{notification_email}>").parse()?)
-                    .subject(email_subject)
-                    .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
-
-                send_email(config, message).await?;
-            }
         }
     }
 
@@ -314,10 +266,62 @@ async fn process_new_registration(
 
     send_verification_email(config, db_pool, &application_details, pdf_data).await?;
 
+    // We do this only if notification email is configured
+    if let Some(notification_email) = &config.notification_email {
+        let message = prepare_new_application_notification_message(
+            config,
+            notification_email,
+            &application_details,
+        )?;
+        send_email(config, message).await?;
+    }
+
     // Remove directory containing data for processing
     fs::remove_dir_all(processing_dir).await?;
 
     Ok(())
+}
+
+fn prepare_new_application_notification_message(
+    config: &Config,
+    notification_email: &str,
+    application_details: &RegistrationDetails,
+) -> Result<Message, ProcessingError> {
+    let sender_info: Mailbox = format!(
+        "{} <{}>",
+        config.email_sender_name.clone().unwrap_or_default(),
+        config.email_sender_email
+    )
+    .parse()?;
+
+    let mut renderer = config
+        .templates
+        .renderer(&templates::NEW_APPLICATION_NOTICE, "default");
+
+    let application_detail_url = format!(
+        "{}/applications/{}",
+        config.admin_host.as_deref().unwrap_or_default(),
+        application_details.id
+    );
+
+    renderer.bind("application_detail_url", &application_detail_url);
+
+    let message_html = config.templates.render(&renderer)?;
+
+    let email_subject = format!(
+        "New Application from {}",
+        application_details
+            .company_name
+            .as_deref()
+            .unwrap_or_default()
+    );
+
+    Ok(Message::builder()
+        .from(sender_info.clone())
+        .reply_to(sender_info)
+        .to(format!("Notifications <{notification_email}>").parse()?)
+        .subject(email_subject)
+        .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?)
 }
 
 async fn send_verification_email(
@@ -480,7 +484,6 @@ async fn print_pdf(
     tex_file.flush().await?;
 
     // Write static content to directory
-    fs::write(format!("{dir}/registration.tex"), form_tex).await?;
     fs::write(format!("{dir}/registration.tex"), form_tex).await?;
     fs::write(
         format!("{dir}/lang.tex"),
