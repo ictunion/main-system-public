@@ -11,6 +11,10 @@ pub const NEW_APPLICATION_NOTICE: Template = Template {
     name: "new_application_notice",
 };
 
+pub const TREASURER_NOTIFICATION: Template = Template {
+    name: "treasurer_notification",
+};
+
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Template {
     name: &'static str,
@@ -81,6 +85,7 @@ impl<'a> Templates<'a> {
     pub(crate) fn preload_templates(&mut self, path: &str) -> Result<(), Error> {
         self.load_template(path, &EMAIL_VERIFICATION)?;
         self.load_template(path, &NEW_APPLICATION_NOTICE)?;
+        self.load_template(path, &TREASURER_NOTIFICATION)?;
         Ok(())
     }
 

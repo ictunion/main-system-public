@@ -34,6 +34,7 @@ pub enum Command {
     ResentRegistrationEmail(Id<RegistrationRequest>),
     SendEmailAsTreasurer(String, String, String, String),
     NewMemberCreated(Id<Member>, Option<String>),
+    SendNotificationToTreasurer,
 }
 
 impl std::fmt::Display for Command {
@@ -50,6 +51,9 @@ impl std::fmt::Display for Command {
             }
             Self::NewMemberCreated(id, _) => {
                 write!(f, "NewMemberCreated id: {id}")
+            }
+            Self::SendNotificationToTreasurer => {
+                write!(f, "SendNotificationToTreasurer")
             }
         }
     }
@@ -140,6 +144,7 @@ async fn process(
 ) -> Result<(), ProcessingError> {
     use Command::{
         NewMemberCreated, NewRegistrationRequest, ResentRegistrationEmail, SendEmailAsTreasurer,
+        SendNotificationToTreasurer,
     };
 
     match command {
@@ -187,6 +192,9 @@ async fn process(
         }
         NewMemberCreated(member_id, token_opt) => {
             process_new_member_created(member_id, token_opt, db_pool, oid_provider).await?;
+        }
+        SendNotificationToTreasurer => {
+            process_confirmation_email_for_treasurer(config).await?;
         }
     }
 
@@ -278,6 +286,42 @@ async fn process_new_registration(
 
     // Remove directory containing data for processing
     fs::remove_dir_all(processing_dir).await?;
+
+    Ok(())
+}
+
+async fn process_confirmation_email_for_treasurer(config: &Config) -> Result<(), ProcessingError> {
+    info!("Send notification email to the treasurer",);
+
+    let sender_info: Mailbox = format!(
+        "{} <{}>",
+        config.email_sender_name.clone().unwrap_or_default(),
+        config.email_sender_email
+    )
+    .parse()?;
+
+    let to_info: Mailbox = format!(
+        "{} <{}>",
+        config.treasurer_reply_name, config.treasurer_reply_email
+    )
+    .parse()?;
+
+    let subject = "New members to be processed";
+
+    let renderer = config
+        .templates
+        .renderer(&templates::TREASURER_NOTIFICATION, "default");
+
+    let message_html = config.templates.render(&renderer)?;
+
+    let message = Message::builder()
+        .from(sender_info.clone())
+        .reply_to(sender_info)
+        .to(to_info)
+        .subject(subject)
+        .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
+
+    send_email(config, message).await?;
 
     Ok(())
 }

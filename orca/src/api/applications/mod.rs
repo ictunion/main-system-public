@@ -515,6 +515,11 @@ async fn accept(
         ))
         .await?;
 
+    queue
+        .inner()
+        .send(Command::SendNotificationToTreasurer)
+        .await?;
+
     Ok(Json(detail))
 }
 
