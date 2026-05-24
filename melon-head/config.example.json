@@ -3,5 +3,6 @@
   "keycloak_realm": "members",
   "keycloak_client_id": "orca",
   "api_url": "/api",
-  "profile_url": "https://member.ictunion.cz"
+  "profile_url": "https://member.ictunion.cz",
+  "keycloak_members_group_id": "3e08328e-b29e-446c-a06e-7591fddaabcc"
 }

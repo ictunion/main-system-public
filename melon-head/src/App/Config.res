@@ -4,6 +4,7 @@ type t = {
   keycloakRealm: string,
   keycloakClietId: string,
   profileUrl: string,
+  keycloakMembersGroupId: option<Data.Uuid.t>,
 }
 
 module Decode = {
@@ -15,6 +16,7 @@ module Decode = {
     keycloakRealm: field.required(. "keycloak_realm", string),
     keycloakClietId: field.required(. "keycloak_client_id", string),
     profileUrl: field.required(. "profile_url", string),
+    keycloakMembersGroupId: field.optional(. "keycloak_members_group_id", Data.Uuid.decode),
   })
 }
 

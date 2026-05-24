@@ -54,18 +54,66 @@ type tabs =
   | Permissions
   | DataVerification
 
+type detailView =
+  | Overview
+  | MissingSubView
+  | MissingGroupView
+
+let oidGroupMemberDecoder = Json.Decode.array(
+  Json.Decode.object(field => field.required(. "id", Data.Uuid.decode)),
+)
+
 module DataVerificationContent = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~membersGroupId: option<Data.Uuid.t>) => {
     let (members, _, reloadMembers) =
       api->Hook.getData(~path="/members/", ~decoder=Json.Decode.array(MemberData.Decode.summary))
-    let (showMissingSub, setShowMissingSub) = React.useState(_ => false)
+    let (detailView, setDetailView) = React.useState(_ => Overview)
+
+    let (groupMembers: Api.webData<array<Data.Uuid.t>>, setGroupMembers) = React.useState(
+      RemoteData.init,
+    )
+    let (groupMembersKey, setGroupMembersKey) = React.useState(_ => 0)
+    let reloadGroupMembers = () => setGroupMembersKey(k => k + 1)
+
+    React.useEffect2(() => {
+      switch membersGroupId {
+      | None => None
+      | Some(groupId) =>
+        setGroupMembers(RemoteData.setLoading)
+        let req = api->Api.getJson(
+          ~path="/members/oidc/" ++ Data.Uuid.toString(groupId),
+          ~decoder=oidGroupMemberDecoder,
+        )
+        req->Future.get(res => setGroupMembers(_ => RemoteData.fromResult(res)))
+        Some(() => Future.cancel(req))
+      }
+    }, (membersGroupId, groupMembersKey))
 
     let membersWithoutSub = members->RemoteData.map(ms =>
       ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
     )
 
-    let missingSub = membersWithoutSub->RemoteData.map(ms => ms->Array.length)
+    let missingSub = membersWithoutSub->RemoteData.map(Array.length)
+
+    let membersNotInGroup = switch (members, groupMembers) {
+    | (Success(ms), Success(groupIds)) =>
+      let groupIdSet =
+        groupIds->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
+      RemoteData.Success(
+        ms->Array.keep(m =>
+          m.leftAt->Option.isNone &&
+            m.sub->Option.mapWithDefault(false, sub =>
+              not (groupIdSet->Belt.Set.String.has(Data.Uuid.toString(sub)))
+            )
+        ),
+      )
+    | (Failure(e), _) | (_, Failure(e)) => RemoteData.Failure(e)
+    | (Loading, _) | (_, Loading) => RemoteData.Loading
+    | _ => RemoteData.Idle
+    }
+
+    let missingGroup = membersNotInGroup->RemoteData.map(Array.length)
 
     let pollUntilResolved = (~maxAttempts: int) => {
       let attempt = ref(0)
@@ -112,30 +160,72 @@ module DataVerificationContent = {
       }
     }
 
+    let doFixAllGroup = () => {
+      switch (membersGroupId, membersNotInGroup) {
+      | (Some(groupId), Success(ms)) =>
+        let rec processNext = (members: list<MemberData.summary>) =>
+          switch members {
+          | list{} => reloadGroupMembers()
+          | list{m, ...rest} =>
+            let _ =
+              api
+              ->Api.put(
+                ~path="/members/" ++
+                Data.Uuid.toString(m.id) ++
+                "/oidc_groups/" ++
+                Data.Uuid.toString(groupId),
+                ~decoder=Api.Decode.acceptedResponse,
+              )
+              ->Future.get(_ => processNext(rest))
+          }
+        processNext(ms->Belt.List.fromArray)
+      | _ => ()
+      }
+    }
+
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
         Members.newNoteModal(~api, ~modal, ~refreshMembers=reloadMembers, uuid, ~isApplication=false, note),
       )
 
-    if showMissingSub {
+    switch detailView {
+    | MissingSubView =>
       <div className={styles["missingSubView"]}>
         <div className={styles["backButton"]}>
-          <Button onClick={_ => setShowMissingSub(_ => false)}>
+          <Button onClick={_ => setDetailView(_ => Overview)}>
             {React.string("← Back")}
           </Button>
         </div>
-        <MemberSummaryTable data=membersWithoutSub onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+        <MemberSummaryTable data=membersWithoutSub onNoteClick=openNewNoteModal>
           {React.null}
         </MemberSummaryTable>
       </div>
-    } else {
+    | MissingGroupView =>
+      <div className={styles["missingSubView"]}>
+        <div className={styles["backButton"]}>
+          <Button onClick={_ => setDetailView(_ => Overview)}>
+            {React.string("← Back")}
+          </Button>
+        </div>
+        <MemberSummaryTable
+          data=membersNotInGroup onNoteClick=openNewNoteModal>
+          {React.null}
+        </MemberSummaryTable>
+      </div>
+    | Overview =>
       <div className={styles["verificationRows"]}>
         <VerificationRow
           label="Members without Keycloak connected"
           count={missingSub->RemoteData.toOption}
           onFixAll={doFixAll}
-          onNavigate={() => setShowMissingSub(_ => true)}
+          onNavigate={() => setDetailView(_ => MissingSubView)}
+        />
+        <VerificationRow
+          label="Members not in Keycloak members group"
+          count={missingGroup->RemoteData.toOption}
+          onFixAll={doFixAllGroup}
+          onNavigate={() => setDetailView(_ => MissingGroupView)}
         />
       </div>
     }
@@ -143,7 +233,7 @@ module DataVerificationContent = {
 }
 
 @react.component
-let make = (~api: Api.t, ~session: Api.webData<Session.t>, ~modal: Modal.Interface.t) => {
+let make = (~api: Api.t, ~session: Api.webData<Session.t>, ~modal: Modal.Interface.t, ~config: Config.t) => {
   let (status, _, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
   let tabHandlers = Tabbed.make(Permissions)
 
@@ -218,7 +308,7 @@ let make = (~api: Api.t, ~session: Api.webData<Session.t>, ~modal: Modal.Interfa
     </Tabbed.Content>
     <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
       <Tabbed.Content tab=DataVerification handlers=tabHandlers>
-        <DataVerificationContent api modal />
+        <DataVerificationContent api modal membersGroupId=config.keycloakMembersGroupId />
       </Tabbed.Content>
     </SessionContext.RequireRole>
   </Page>

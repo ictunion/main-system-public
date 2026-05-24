@@ -264,4 +264,35 @@ impl OidProvider for KeycloakProvider {
             Err(Error::Proxy(status))
         }
     }
+
+    async fn get_group_members(
+        &self,
+        token: &JwtToken<'_>,
+        group_id: Uuid,
+    ) -> Result<Vec<Uuid>, Error> {
+        #[derive(serde::Deserialize)]
+        struct GroupMember {
+            id: Uuid,
+        }
+
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!(
+                "{}/admin/realms/{}/groups/{}/members?first=0&max=10000",
+                self.host, self.realm, group_id
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .send()
+            .await?;
+
+        let status = response.status();
+        debug!("Keycloak response status: {status}");
+
+        if status.is_success() {
+            let members = response.json::<Vec<GroupMember>>().await?;
+            Ok(members.into_iter().map(|m| m.id).collect())
+        } else {
+            Err(Error::Proxy(status))
+        }
+    }
 }

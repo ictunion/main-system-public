@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, NaiveDate, Utc};
 use handlebars::Handlebars;
 use rocket::serde::json::Json;
-use rocket::{Route, State, delete, get, patch, post, routes};
+use rocket::{Route, State, delete, get, patch, post, put, routes};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -455,6 +455,51 @@ async fn create_oid_account(
     Ok(SuccessResponse::Accepted)
 }
 
+#[derive(Debug, Serialize)]
+pub struct OidGroupMember {
+    id: Uuid,
+}
+
+#[get("/oidc/<group_id>")]
+async fn list_oid_group_members(
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    group_id: &str,
+) -> Response<Json<Vec<OidGroupMember>>> {
+    oid_provider.require_role(&token, Role::SuperPowers)?;
+
+    let group_id = Uuid::parse_str(group_id).map_err(|_err| rocket::http::Status::BadRequest)?;
+    let ids = oid_provider.get_group_members(&token, group_id).await?;
+    let members = ids.into_iter().map(|id| OidGroupMember { id }).collect();
+    Ok(Json(members))
+}
+
+#[put("/<id>/oidc_groups/<group_id>")]
+async fn add_to_oid_group(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    id: Id<Member>,
+    group_id: &str,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::SuperPowers)?;
+
+    let group_id = Uuid::parse_str(group_id).map_err(|_err| rocket::http::Status::BadRequest)?;
+
+    let status = query::get_status_data(id)
+        .fetch_one(db_pool.inner())
+        .await?;
+    let sub = status
+        .sub()
+        .ok_or_else(|| ApiError::data_conflict("Member has no OID account"))?;
+
+    oid_provider
+        .connect_keycloak_user_and_group(&token, sub, group_id)
+        .await?;
+
+    Ok(SuccessResponse::Accepted)
+}
+
 #[patch("/<id>/pair_oid", format = "json", data = "<data>")]
 async fn pair_oid(
     db_pool: &State<DbPool>,
@@ -489,6 +534,8 @@ pub fn routes() -> Vec<Route> {
         update_member,
         remove_member,
         list_candidate_users,
+        list_oid_group_members,
+        add_to_oid_group,
         pair_oid,
         create_oid_account,
     ]

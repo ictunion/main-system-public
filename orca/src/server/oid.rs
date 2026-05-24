@@ -139,6 +139,11 @@ trait OidProvider {
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error>;
+    async fn get_group_members(
+        &self,
+        token: &JwtToken<'_>,
+        group_id: Uuid,
+    ) -> Result<Vec<Uuid>, Error>;
 }
 
 #[derive(Clone)]
@@ -260,6 +265,17 @@ impl Provider {
     ) -> Result<Vec<User>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.get_matching_users(token, email).await,
+            ProviderState::Disconnected => Err(Error::Disabled),
+        }
+    }
+
+    pub async fn get_group_members(
+        &self,
+        token: &JwtToken<'_>,
+        group_id: Uuid,
+    ) -> Result<Vec<Uuid>, Error> {
+        match &self.0 {
+            ProviderState::Keycloak(k) => k.get_group_members(token, group_id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
