@@ -10,6 +10,7 @@ mod applications;
 mod errors;
 mod files;
 mod members;
+mod oidc;
 mod registration;
 mod session;
 mod stats;
@@ -250,6 +251,8 @@ pub fn build() -> Rocket<Build> {
         .register("/stats", errors::catchers())
         .mount("/members", members::routes())
         .register("/members", errors::catchers())
+        .mount("/oidc", oidc::routes())
+        .register("/oidc", errors::catchers())
         .mount("/workplaces", workplaces::routes())
         .register("/workplaces", errors::catchers())
         // Files use default catchers

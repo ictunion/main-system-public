@@ -17,7 +17,7 @@ use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest, Workplace};
 use crate::db::DbPool;
 use crate::processing::{Command, QueueSender};
-use crate::server::oid::{self, JwtToken, Provider, RealmManagementRole, Role};
+use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role, User};
 use crate::validation::Validated;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -409,7 +409,7 @@ async fn list_candidate_users(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<Member>,
-) -> Response<Json<Vec<oid::User>>> {
+) -> Response<Json<Vec<User>>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
     let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
@@ -453,25 +453,6 @@ async fn create_oid_account(
         .await?;
 
     Ok(SuccessResponse::Accepted)
-}
-
-#[derive(Debug, Serialize)]
-pub struct OidGroupMember {
-    id: Uuid,
-}
-
-#[get("/oidc/<group_id>")]
-async fn list_oid_group_members(
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    group_id: &str,
-) -> Response<Json<Vec<OidGroupMember>>> {
-    oid_provider.require_role(&token, Role::SuperPowers)?;
-
-    let group_id = Uuid::parse_str(group_id).map_err(|_err| rocket::http::Status::BadRequest)?;
-    let ids = oid_provider.get_group_members(&token, group_id).await?;
-    let members = ids.into_iter().map(|id| OidGroupMember { id }).collect();
-    Ok(Json(members))
 }
 
 #[put("/<id>/oidc_groups/<group_id>")]
@@ -534,7 +515,6 @@ pub fn routes() -> Vec<Route> {
         update_member,
         remove_member,
         list_candidate_users,
-        list_oid_group_members,
         add_to_oid_group,
         pair_oid,
         create_oid_account,

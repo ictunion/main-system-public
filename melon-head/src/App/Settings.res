@@ -82,7 +82,7 @@ module DataVerificationContent = {
       | Some(groupId) =>
         setGroupMembers(RemoteData.setLoading)
         let req = api->Api.getJson(
-          ~path="/members/oidc/" ++ Data.Uuid.toString(groupId),
+          ~path="/oidc/" ++ Data.Uuid.toString(groupId),
           ~decoder=oidGroupMemberDecoder,
         )
         req->Future.get(res => setGroupMembers(_ => RemoteData.fromResult(res)))

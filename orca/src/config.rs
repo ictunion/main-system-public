@@ -46,7 +46,7 @@ impl Config {
         let figment = Figment::from(rocket::Config::default())
             .merge(Serialized::defaults(rocket::Config::default()))
             .merge(Toml::file("Rocket.toml").nested())
-            .merge(Env::prefixed("ROCKET_").global())
+            .merge(Env::prefixed("ROCKET_").split("__").global())
             .select(Profile::from_env_or("ROCKET_PROFILE", "default"));
 
         let email_sender_email = figment
@@ -83,7 +83,7 @@ impl Config {
 
         let notification_email = figment.extract_inner("notification_email").ok();
 
-        let email_confirmation_subjects = figment
+        let email_confirmation_subjects: HashMap<String, String> = figment
             .extract_inner("email_confirmation_subjects")
             .unwrap_or_default();
 

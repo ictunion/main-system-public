@@ -39,7 +39,12 @@ keycloak_client_id = "orca"
 # Business logic configuration
 processing_queue_size = 16
 
-    # Confirmation api redirect urls
-    [global.verify_redirects_to]
-    default = "http://localhost:1313/en/confirmed"
-    cs = "http://localhost:1313/cs/schvaleno"
+# Confirmation api redirect urls
+[global.verify_redirects_to]
+default = "http://localhost:1313/en/confirmed"
+cs = "http://localhost:1313/cs/schvaleno"
+
+# Confirmation email subjects
+[global.email_confirmation_subjects]
+default = "Verify Email Address"
+cs = "Potvrď e-mail"
