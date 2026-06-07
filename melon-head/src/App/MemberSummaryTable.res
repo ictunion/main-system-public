@@ -28,11 +28,11 @@ let make = (
   ~showLeftOn: bool=false,
   ~children=React.null,
 ) => {
-  let noteColumn = onNoteClick->Option.map(handler => ({
+  let noteColumn = onNoteClick->Option.map((handler): DataTable.column<MemberData.summary> => {
     name: "Note",
     minMax: ("250px", "10fr"),
     view: r => viewNote(r, handler),
-  }: DataTable.column<MemberData.summary>))
+  })
 
   let leftOnColumn: option<DataTable.column<MemberData.summary>> = if showLeftOn {
     Some({

@@ -43,6 +43,6 @@ window.addEventListener("load", async () => {
         }));
     } catch (error) {
         console.error("Initialization error", error);
-        oidc.signOut();
+        oidc.signIn();
     }
 });

@@ -147,6 +147,47 @@ impl ApiError {
 
         Self::Custom(custom_error)
     }
+
+    pub fn invalid_group_id() -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let custom_error = CustomError {
+            status: Status::BadRequest,
+            json: json!(
+            {
+                "error": {
+                    "code": 400,
+                    "reason": "Bad Request",
+                    "description": "Group ID needs to be valid UUID"
+                }
+            }
+            ),
+        };
+
+        Self::Custom(custom_error)
+    }
+
+    pub fn oidc_group_not_found() -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let custom_error = CustomError {
+            status: Status::BadRequest,
+            json: json!(
+            {
+                "error": {
+                    "code": 400,
+                    "reason": "Bad Request",
+                    "description": "OIDC group not found"
+                }
+            }
+            ),
+        };
+
+        Self::Custom(custom_error)
+    }
+
     pub fn keycloak_push(description: &str) -> ApiError {
         use rocket::http::Status;
         use rocket::serde::json::json;

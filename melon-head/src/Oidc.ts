@@ -43,6 +43,10 @@ class Oidc {
         return this.user;
     }
 
+    signIn(): void {
+        this.manager.signinRedirect();
+    }
+
     signOut(): void {
         this.manager.signoutRedirect();
     }

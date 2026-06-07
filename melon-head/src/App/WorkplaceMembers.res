@@ -90,7 +90,8 @@ let make = (~api: Api.t, ~id, ~modal) => {
         </Button.Panel>
       }}
     </SessionContext.RequireRole>
-    <MemberSummaryTable data=workplaceMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+    <MemberSummaryTable
+      data=workplaceMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
       <p> {React.string("There are no members yet.")} </p>
     </MemberSummaryTable>
   </Page>

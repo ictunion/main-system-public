@@ -20,31 +20,37 @@ let statusRows: array<RowBasedTable.row<Api.status>> = [
 
 module VerificationRow = {
   @react.component
-  let make = (~label: string, ~count: option<int>, ~onFixAll: unit => unit, ~onNavigate: unit => unit) => {
+  let make = (
+    ~label: string,
+    ~count: option<int>,
+    ~onFixAll: unit => unit,
+    ~onNavigate: unit => unit,
+    ~error: option<Api.error>=?,
+  ) => {
     <div className={styles["verificationRow"]}>
       <span className={styles["verificationRowLabel"]}> {React.string(label)} </span>
-      {switch count {
-      | None => <span className={styles["verificationRowCell"]}> {React.string("…")} </span>
-      | Some(0) =>
-        <span className={styles["verificationAllGood"]}>
-          {React.string("✓ All good")}
-        </span>
-      | Some(n) =>
-        <>
-          <span className={styles["verificationRowCell"]}>
-            {React.string(n->Belt.Int.toString)}
-          </span>
-          <span className={styles["verificationRowActions"]}>
-            <Button variant=Button.Cta onClick={_ => onFixAll()}>
-              {React.string("Fix all")}
-            </Button>
-            <button
-              className={styles["verificationButton"]}
-              onClick={_ => onNavigate()}>
-              {React.string("→")}
-            </button>
-          </span>
-        </>
+      {switch error {
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      | None =>
+        switch count {
+        | None => <span className={styles["verificationRowCell"]}> {React.string("…")} </span>
+        | Some(0) =>
+          <span className={styles["verificationAllGood"]}> {React.string("✓ All good")} </span>
+        | Some(n) =>
+          <>
+            <span className={styles["verificationRowCell"]}>
+              {React.string(n->Belt.Int.toString)}
+            </span>
+            <span className={styles["verificationRowActions"]}>
+              <Button variant=Button.Cta onClick={_ => onFixAll()}>
+                {React.string("Fix all")}
+              </Button>
+              <button className={styles["verificationButton"]} onClick={_ => onNavigate()}>
+                {React.string("→")}
+              </button>
+            </span>
+          </>
+        }
       }}
     </div>
   }
@@ -81,30 +87,31 @@ module DataVerificationContent = {
       | None => None
       | Some(groupId) =>
         setGroupMembers(RemoteData.setLoading)
-        let req = api->Api.getJson(
-          ~path="/oidc/" ++ Data.Uuid.toString(groupId),
-          ~decoder=oidGroupMemberDecoder,
-        )
+        let req =
+          api->Api.getJson(
+            ~path="/oidc/" ++ Data.Uuid.toString(groupId),
+            ~decoder=oidGroupMemberDecoder,
+          )
         req->Future.get(res => setGroupMembers(_ => RemoteData.fromResult(res)))
         Some(() => Future.cancel(req))
       }
     }, (membersGroupId, groupMembersKey))
 
-    let membersWithoutSub = members->RemoteData.map(ms =>
-      ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
-    )
+    let membersWithoutSub =
+      members->RemoteData.map(ms =>
+        ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
+      )
 
     let missingSub = membersWithoutSub->RemoteData.map(Array.length)
 
     let membersNotInGroup = switch (members, groupMembers) {
     | (Success(ms), Success(groupIds)) =>
-      let groupIdSet =
-        groupIds->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
+      let groupIdSet = groupIds->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
       RemoteData.Success(
         ms->Array.keep(m =>
           m.leftAt->Option.isNone &&
             m.sub->Option.mapWithDefault(false, sub =>
-              not (groupIdSet->Belt.Set.String.has(Data.Uuid.toString(sub)))
+              !(groupIdSet->Belt.Set.String.has(Data.Uuid.toString(sub)))
             )
         ),
       )
@@ -123,7 +130,8 @@ module DataVerificationContent = {
           let req = reloadMembers()
           req->Future.get(res => {
             let stillMissing = switch res {
-            | Ok(ms) => ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)->Array.length
+            | Ok(ms) =>
+              ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)->Array.length
             | Error(_) => 0
             }
 
@@ -186,16 +194,21 @@ module DataVerificationContent = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        Members.newNoteModal(~api, ~modal, ~refreshMembers=reloadMembers, uuid, ~isApplication=false, note),
+        Members.newNoteModal(
+          ~api,
+          ~modal,
+          ~refreshMembers=reloadMembers,
+          uuid,
+          ~isApplication=false,
+          note,
+        ),
       )
 
     switch detailView {
     | MissingSubView =>
       <div className={styles["missingSubView"]}>
         <div className={styles["backButton"]}>
-          <Button onClick={_ => setDetailView(_ => Overview)}>
-            {React.string("← Back")}
-          </Button>
+          <Button onClick={_ => setDetailView(_ => Overview)}> {React.string("← Back")} </Button>
         </div>
         <MemberSummaryTable data=membersWithoutSub onNoteClick=openNewNoteModal>
           {React.null}
@@ -204,12 +217,9 @@ module DataVerificationContent = {
     | MissingGroupView =>
       <div className={styles["missingSubView"]}>
         <div className={styles["backButton"]}>
-          <Button onClick={_ => setDetailView(_ => Overview)}>
-            {React.string("← Back")}
-          </Button>
+          <Button onClick={_ => setDetailView(_ => Overview)}> {React.string("← Back")} </Button>
         </div>
-        <MemberSummaryTable
-          data=membersNotInGroup onNoteClick=openNewNoteModal>
+        <MemberSummaryTable data=membersNotInGroup onNoteClick=openNewNoteModal>
           {React.null}
         </MemberSummaryTable>
       </div>
@@ -220,12 +230,20 @@ module DataVerificationContent = {
           count={missingSub->RemoteData.toOption}
           onFixAll={doFixAll}
           onNavigate={() => setDetailView(_ => MissingSubView)}
+          error=?{switch members {
+          | Failure(err) => Some(err)
+          | _ => None
+          }}
         />
         <VerificationRow
           label="Members not in Keycloak members group"
           count={missingGroup->RemoteData.toOption}
           onFixAll={doFixAllGroup}
           onNavigate={() => setDetailView(_ => MissingGroupView)}
+          error=?{switch groupMembers {
+          | Failure(err) => Some(err)
+          | _ => None
+          }}
         />
       </div>
     }
@@ -233,7 +251,12 @@ module DataVerificationContent = {
 }
 
 @react.component
-let make = (~api: Api.t, ~session: Api.webData<Session.t>, ~modal: Modal.Interface.t, ~config: Config.t) => {
+let make = (
+  ~api: Api.t,
+  ~session: Api.webData<Session.t>,
+  ~modal: Modal.Interface.t,
+  ~config: Config.t,
+) => {
   let (status, _, _) = api->Hook.getData(~path="/status", ~decoder=Api.Decode.status)
   let tabHandlers = Tabbed.make(Permissions)
 
@@ -287,7 +310,9 @@ let make = (~api: Api.t, ~session: Api.webData<Session.t>, ~modal: Modal.Interfa
   <Page>
     <Page.Title> {React.string("Settings")} </Page.Title>
     <Tabbed.Tabs>
-      <Tabbed.Tab value=Permissions handlers=tabHandlers> {React.string("Permissions")} </Tabbed.Tab>
+      <Tabbed.Tab value=Permissions handlers=tabHandlers>
+        {React.string("Permissions")}
+      </Tabbed.Tab>
       <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
         <Tabbed.Tab value=DataVerification handlers=tabHandlers>
           {React.string("Data Verification")}

@@ -208,7 +208,10 @@ module All = {
       <Button.Panel>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)} showLeftOn=true>
+      <MemberSummaryTable
+        data=displayedMembers
+        onNoteClick={(id, note) => openNewNoteModal(id, note)}
+        showLeftOn=true>
         <p> {React.string("Currently there are no member.")} </p>
         <p>
           <small>
@@ -254,7 +257,8 @@ module New = {
         </SessionContext.RequireRole>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+      <MemberSummaryTable
+        data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
         <p> {React.string("There are no new members who need to be onboarded.")} </p>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
           <p>
@@ -301,7 +305,8 @@ module Current = {
       <Button.Panel>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+      <MemberSummaryTable
+        data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
         <p> {React.string("There are no members yet.")} </p>
         <p>
           <small>
@@ -329,7 +334,9 @@ module Past = {
     let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
 
     let sortByLeftAt = (arr: array<MemberData.summary>) =>
-      arr->Array.copy->Js.Array2.sortInPlaceWith((a, b) =>
+      arr
+      ->Array.copy
+      ->Js.Array2.sortInPlaceWith((a, b) =>
         switch (a.leftAt, b.leftAt) {
         | (Some(da), Some(db)) => Js.Date.getTime(db) -. Js.Date.getTime(da) > 0.0 ? 1 : -1
         | (Some(_), None) => -1
@@ -338,15 +345,14 @@ module Past = {
         }
       )
 
-    let displayedMembers =
-      members->RemoteData.map(arr => {
-        let filtered = if filterSectoral {
-          arr->Array.keep(m => Array.length(m.workplaceIds) == 0)
-        } else {
-          arr
-        }
-        sortByLeftAt(filtered)
-      })
+    let displayedMembers = members->RemoteData.map(arr => {
+      let filtered = if filterSectoral {
+        arr->Array.keep(m => Array.length(m.workplaceIds) == 0)
+      } else {
+        arr
+      }
+      sortByLeftAt(filtered)
+    })
 
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
@@ -358,7 +364,10 @@ module Past = {
       <Button.Panel>
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
-      <MemberSummaryTable data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)} showLeftOn=true>
+      <MemberSummaryTable
+        data=displayedMembers
+        onNoteClick={(id, note) => openNewNoteModal(id, note)}
+        showLeftOn=true>
         <p> {React.string("There are no ex-members.")} </p>
       </MemberSummaryTable>
     </div>
