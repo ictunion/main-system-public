@@ -12,7 +12,7 @@ let make = (
   ~closeProfile: JsxEvent.Mouse.t => unit,
   ~session: Api.webData<Session.t>,
   ~config: Config.t,
-  ~userManager: Oidc.userManager,
+  ~oidc: Oidc.t,
 ) =>
   <div className={styles["root"]}>
     <div onClick={closeProfile} />
@@ -83,7 +83,7 @@ let make = (
           </li>
           <li key="2" className={styles["navDivider"]} />
           <li key="3" className={styles["centeredLi"]}>
-            <Button variant=Button.Danger onClick={_ => Oidc.signinOutRedirect(userManager)}>
+            <Button variant=Button.Danger onClick={_ => Oidc.signinOut(oidc)}>
               {React.string("Sign Out")}
             </Button>
           </li>

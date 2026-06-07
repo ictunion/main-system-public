@@ -2,79 +2,47 @@ import { App } from './App.bs';
 import { createRoot } from 'react-dom/client';
 import * as React from "react";
 import config from "../config.json";
-import { UserManager, Log, User } from 'oidc-client-ts';
+import { UserManager, User, WebStorageStateStore } from 'oidc-client-ts';
+import Oidc from "./Oidc";
 
 require("../static/css/main.css");
 
 const authorityUrl = `${config.keycloak_url}/realms/${config.keycloak_realm}`;
-Log.setLogger(console);
 
 const oidcManager = new UserManager({
     authority: authorityUrl,
     client_id: config.keycloak_client_id,
     redirect_uri: `${window.location.origin}/`,
     scope: "openid profile email",
-    automaticSilentRenew: true
+    automaticSilentRenew: true,
+    // Use local storage instead of default session storage
+    // This is to support workflows with multiple tabs.
+    //
+    // Unfortunetely cookies are not supported by the library
+    // which is a bummer because localStorage has more relaxed origin policy and
+    // data from it could be extracted by any script which means in case of XSS they can get compromised.
+    // Ideally  we would keep session storage and make sure keycloak automatically authorizes the 2nd tab without requiring login there.
+    // This is the case with developement keycloak but unfortunetely it's NOT the case with production instance which always requires new login
+    userStore: new WebStorageStateStore({ store: window.localStorage })
 });
-
-async function initOidc(): Promise<User | undefined> {
-    const currentUrl = new window.URL(window.location.href);
-
-    // when redirecting from login
-    if (currentUrl.searchParams.has("code") && currentUrl.searchParams.has("state")) {
-        try {
-            const user = await oidcManager.signinRedirectCallback();
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            if (user && !user.expired) {
-                return user;
-            } else {
-                throw ("user expired");
-            }
-
-        } catch (error) {
-            console.error("Error handling signin callback", error);
-        }
-    }
-
-    // Read persistent session
-    try {
-        const user = await oidcManager.getUser();
-        if (user && !user.expired) {
-            // Session is alive and valid
-            return user;
-        } else {
-            // No active session found, redirect to local Keycloak
-            console.log("No active session. Redirecting to Keycloak...");
-            await oidcManager.signinRedirect();
-        }
-    } catch (error) {
-        console.error("Error checking session:", error);
-    }
-}
 
 window.addEventListener("load", async () => {
     // create application root
     const container = document.getElementById('app');
     const root = createRoot((container as HTMLElement));
+    const oidc = new Oidc(oidcManager);
 
-    const renderApp = (user: User) => {
+    // authenticate via oidc
+    try {
+        await oidc.authenticate();
+
+        // start application
         root.render(React.createElement(App.make, {
             config,
-            oidcUser: user, // Pass the fresh user object reference here
-            userManager: oidcManager
+            oidc,
         }));
-    };
-
-    // init keycloak and start app
-    const oidcUser = await initOidc();
-
-    // if undefined we're waiting for login redirect - skipp the app initialization
-    if (!oidcUser) return;
-    renderApp(oidcUser);
-
-    // refresh user in app after token refresh
-    oidcManager.events.addUserLoaded((newUser) => {
-        renderApp(newUser)
-    });
+    } catch (error) {
+        console.error("Initialization error", error);
+        oidc.signOut();
+    }
 });

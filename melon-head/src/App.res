@@ -2,7 +2,8 @@
 
 module ConfiguredApp = {
   @react.component
-  let make = (~oidcUser: Oidc.User.t, ~userManager: Oidc.userManager, ~config: Config.t) => {
+  let make = (~oidc: Oidc.t, ~config: Config.t) => {
+    let oidcUser = Oidc.getUser(oidc)
     let api = Api.make(~config, ~oidcUser)
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
@@ -57,7 +58,7 @@ module ConfiguredApp = {
         </div>
         {if isProfileOpen {
           <Profile
-            closeProfile={_ => setIsProfileOpen(_ => false)} session=sessionState config userManager
+            closeProfile={_ => setIsProfileOpen(_ => false)} session=sessionState config oidc
           />
         } else {
           React.null
@@ -76,9 +77,9 @@ module ConfiguredApp = {
 
 module App = {
   @react.component
-  let make = (~oidcUser: Oidc.User.t, ~userManager: Oidc.userManager, ~config: Js.Json.t) => {
+  let make = (~oidc: Oidc.t, ~config: Js.Json.t) => {
     switch Config.make(config) {
-    | Ok(config) => <ConfiguredApp oidcUser userManager config={config} />
+    | Ok(config) => <ConfiguredApp oidc config={config} />
     | Error(err) =>
       <div className={styles["root"]}>
         <div className={styles["appError"]}>

@@ -20,12 +20,11 @@ module User = {
   let getToken = (user: t) => user.access_token
 }
 
-// We construct this from the type script initializer so there is no need
-// for binding constructor in rescript
-type userManager
+// referenence to Oidc class
+type t
 
 @send
-external getUser: userManager => promise<Js.nullable<User.t>> = "getUser"
+external getUser: t => User.t = "getCurrentUser"
 
 @send
-external signinOutRedirect: userManager => unit = "sigignoutRedirect"
+external signinOut: t => unit = "signOut"
