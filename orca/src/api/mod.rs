@@ -208,6 +208,26 @@ impl ApiError {
         Self::Custom(custom_error)
     }
 
+    pub fn listmonk_error(description: &str) -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let custom_error = CustomError {
+            status: Status::InternalServerError,
+            json: json!(
+            {
+                "error": {
+                    "code": 500,
+                    "reason": "Listmonk error",
+                    "description": description
+                }
+            }
+            ),
+        };
+
+        Self::Custom(custom_error)
+    }
+
     pub fn config_missing(item: &'static str) -> ApiError {
         use rocket::http::Status;
         use rocket::serde::json::json;

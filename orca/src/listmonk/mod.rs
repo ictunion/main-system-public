@@ -14,8 +14,13 @@ use log::{debug, error};
 mod query;
 
 #[derive(Deserialize)]
+struct ListmonkResponseData {
+    id: i32,
+}
+
+#[derive(Deserialize)]
 struct ListmonkResponse {
-    id: i32, // Or String, depending on your API
+    data: ListmonkResponseData,
 }
 
 #[derive(Serialize)]
@@ -151,14 +156,16 @@ pub(crate) async fn subscribe_to_listmonk(
     let res_status = res.status();
     let text: String = res.text().await?;
 
-    let listmonk_id: i32 = json::from_str::<ListmonkResponse>(&text)
-        .map(|data: ListmonkResponse| data.id)
-        .map_err(|_ignored| ApiError::data_missing("Listmonk.Id"))?;
+    debug!("Status: {res_status}");
 
     if !res_status.is_success() {
         error!("Error subscribing user to Listmonk: {text}");
+        return Err(ApiError::listmonk_error(&text));
     }
-    debug!("Status: {res_status}");
+
+    let listmonk_id: i32 = json::from_str::<ListmonkResponse>(&text)
+        .map(|r| r.data.id)
+        .map_err(|_ignored| ApiError::data_missing("Listmonk.Id"))?;
 
     let status = "enabled";
 
