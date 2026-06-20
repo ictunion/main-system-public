@@ -509,7 +509,18 @@ async fn accept(
     // let's just do an extra query for application detail
     let detail: Detail = query::get_application(id).fetch_one(&mut *tx).await?;
 
-    subscribe_to_listmonk(&detail, member_number, config, tx, member_id).await?;
+    // if config file doesn't contain listmonk_host value, let's skip listmonk subscribe step.
+    // DEV environment will be probably missing listmonk_host, unless devs setup their own testing listmonk instance.
+    // We don't want to call production listmonk during development
+    if config
+        .listmonk_host
+        .as_deref()
+        .is_some_and(|h| !h.is_empty())
+    {
+        subscribe_to_listmonk(&detail, member_number, config, tx, member_id).await?;
+    } else {
+        tx.commit().await?;
+    }
 
     queue
         .inner()

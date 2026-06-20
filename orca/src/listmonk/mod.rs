@@ -98,7 +98,7 @@ pub(crate) async fn subscribe_to_listmonk(
         .as_ref()
         .ok_or_else(|| ApiError::config_missing("listmonk_host"))?;
 
-    let url: String = format!("https://{host}/api/subscribers");
+    let url: String = format!("{host}/api/subscribers");
 
     let client = Client::new();
 

@@ -154,7 +154,7 @@ SELECT rr.id
 , rr.rejected_at
 , rr.invalidated_at
 , rr.created_at
-, rr.language
+, rr.registration_local AS language
 , m.created_at AS accepted_at
 FROM registration_requests AS rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
