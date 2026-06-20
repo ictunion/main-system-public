@@ -23,6 +23,11 @@ treasurer_reply_email = "treasurer@ictunion.cz"
 treasurer_reply_name = "ICT Union Treasurer"
 templates_dir = "./templates/emails"
 
+# Linkmonk configuration
+Listmonk_password = ""
+Listmonk_username = ""
+Listmonk_host = ""
+
 # Database
 postgres = "postgres://orca@localhost/ictunion"
 web_db_pool = 5

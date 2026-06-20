@@ -4,6 +4,8 @@ use rocket::serde::json::Json;
 use rocket::{Route, State, delete, get, patch, post, routes};
 use serde::{Deserialize, Serialize};
 
+use crate::config::Config;
+
 use crate::api::Response;
 use crate::api::files::FileInfo;
 use crate::api::members;
@@ -12,6 +14,8 @@ use crate::db::{self, DbPool};
 use crate::processing::{Command, QueueSender};
 use crate::server::IpAddress;
 use crate::server::oid::{JwtToken, Provider, Role};
+
+use crate::listmonk::subscribe_to_listmonk;
 
 use super::{ApiError, SuccessResponse};
 
@@ -198,13 +202,13 @@ async fn list_invalid(
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Detail {
     id: Id<RegistrationRequest>,
-    email: Option<String>,
-    first_name: Option<String>,
-    last_name: Option<String>,
+    pub(crate) email: Option<String>,
+    pub(crate) first_name: Option<String>,
+    pub(crate) last_name: Option<String>,
     date_of_birth: Option<NaiveDate>,
     phone_number: Option<String>,
     note: Option<String>,
-    city: Option<String>,
+    pub(crate) city: Option<String>,
     address: Option<String>,
     postal_code: Option<String>,
     occupation: Option<String>,
@@ -219,6 +223,7 @@ pub struct Detail {
     invalidated_at: Option<DateTime<Utc>>,
     accepted_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
+    pub(crate) language: Option<String>,
 }
 
 #[get("/<id>")]
@@ -406,8 +411,6 @@ async fn unreject(
 
     let detail = query::unreject_application(id).fetch_one(&mut *tx).await?;
 
-    tx.commit().await?;
-
     Ok(Json(detail))
 }
 
@@ -446,6 +449,7 @@ struct NewMember {
 
 #[post("/<id>/accept", format = "json", data = "<new_member>")]
 async fn accept(
+    config: &State<Config>,
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
@@ -467,7 +471,7 @@ async fn accept(
         .assert_in_proceesing()?;
 
     // Ensure member number for new member
-    let member_number = if let Some(v) = new_member.member_number {
+    let member_number: MemberNumber = if let Some(v) = new_member.member_number {
         v
     } else {
         let (new_num,) = members::query::get_next_member_number()
@@ -503,9 +507,9 @@ async fn accept(
 
     // Since we return just member_id from the insert query
     // let's just do an extra query for application detail
-    let detail = query::get_application(id).fetch_one(&mut *tx).await?;
+    let detail: Detail = query::get_application(id).fetch_one(&mut *tx).await?;
 
-    tx.commit().await?;
+    subscribe_to_listmonk(&detail, member_number, config, tx, member_id).await?;
 
     queue
         .inner()
@@ -549,7 +553,7 @@ async fn verify(
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = db_pool.inner().begin().await?;
 
     // check that the application status is in processing
     query::get_application_status_data(id)

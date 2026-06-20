@@ -3,6 +3,7 @@ pub mod config;
 mod data;
 mod db;
 mod generate;
+mod listmonk;
 mod logging;
 mod media;
 mod processing;

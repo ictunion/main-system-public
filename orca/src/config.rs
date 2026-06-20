@@ -33,6 +33,9 @@ pub struct Config {
     pub keycloak_realm: Option<String>,
     pub keycloak_client_id: Option<String>,
     pub templates: Templates<'static>,
+    pub listmonk_password: Option<String>,
+    pub listmonk_username: Option<String>,
+    pub listmonk_host: Option<String>,
 }
 
 impl Config {
@@ -116,6 +119,12 @@ impl Config {
 
         let keycloak_client_id: Option<String> = figment.extract_inner("keycloak_client_id").ok();
 
+        let listmonk_password: Option<String> = figment.extract_inner("listmonk_password").ok();
+
+        let listmonk_username: Option<String> = figment.extract_inner("listmonk_username").ok();
+
+        let listmonk_host: Option<String> = figment.extract_inner("listmonk_host").ok();
+
         Self {
             email_sender_email,
             email_sender_name,
@@ -139,6 +148,9 @@ impl Config {
             keycloak_realm,
             keycloak_client_id,
             templates,
+            listmonk_password,
+            listmonk_username,
+            listmonk_host,
         }
     }
 

@@ -6,7 +6,7 @@ use thiserror::Error;
 use tokio::task::JoinError;
 use validator::ValidationError;
 
-mod applications;
+pub(crate) mod applications;
 mod errors;
 mod files;
 mod members;
@@ -207,11 +207,73 @@ impl ApiError {
 
         Self::Custom(custom_error)
     }
-}
 
+    pub fn config_missing(item: &'static str) -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let description = format!("Missing {item}");
+
+        let custom_error = CustomError {
+            status: Status::Conflict,
+            json: json!(
+            {
+                "error": {
+                    "code": 500,
+                    "reason": "Config Missing",
+                    "description": description
+                }
+            }
+            ),
+        };
+        Self::Custom(custom_error)
+    }
+    pub fn data_missing(item: &'static str) -> ApiError {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+
+        let description = format!("Missing {item}");
+
+        let custom_error = CustomError {
+            status: Status::Conflict,
+            json: json!(
+            {
+                "error": {
+                    "code": 500,
+                    "reason": "Data Missing",
+                    "description": description
+                }
+            }
+            ),
+        };
+        Self::Custom(custom_error)
+    }
+}
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         Self::DbErr(err.into())
+    }
+}
+
+impl From<reqwest::Error> for ApiError {
+    fn from(err: reqwest::Error) -> Self {
+        use rocket::http::Status;
+        use rocket::serde::json::json;
+        let description = format!("Got {err}");
+
+        let custom_error = CustomError {
+            status: Status::ServiceUnavailable,
+            json: json!(
+            {
+                "error": {
+                    "code": 503,
+                    "reason": "Third party API call Failed",
+                    "description": description
+                }
+            }
+            ),
+        };
+        Self::Custom(custom_error)
     }
 }
 
