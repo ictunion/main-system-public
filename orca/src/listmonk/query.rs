@@ -9,8 +9,8 @@ pub(crate) fn create_email_subscription<'a>(
 ) -> Query<'a> {
     sqlx::query(
         "
-        INSERT INTO email_subscriptions (member_number, list, listmonk_status, listmonk_id, created_at, updated_at)
-        VALUES (member_number FROM members WHERE member_number = $1, $2, $3, $4,   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        INSERT INTO email_subscriptions (member_id, list, listmonk_status, listmonk_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ",
     )
     .bind(member_id)
