@@ -208,6 +208,7 @@ RETURNING id
 , rejected_at
 , invalidated_at
 , created_at
+, registration_local AS language
 , NULL AS accepted_at
 ",
     )
@@ -242,6 +243,7 @@ RETURNING id
 , rejected_at
 , invalidated_at
 , created_at
+, registration_local AS language
 , NULL AS accepted_at
 ",
     )
@@ -275,6 +277,7 @@ RETURNING id
 , rejected_at
 , invalidated_at
 , created_at
+, registration_local AS language
 , NULL AS accepted_at
 ",
     )
@@ -308,6 +311,7 @@ RETURNING id
 , rejected_at
 , invalidated_at
 , created_at
+, registration_local AS language
 , NULL AS accepted_at
 ",
     )
@@ -342,6 +346,7 @@ RETURNING id
 , rejected_at
 , invalidated_at
 , created_at
+, registration_local AS language
 , NULL AS accepted_at
 ",
     )
@@ -505,6 +510,7 @@ RETURNING id
 , rejected_at
 , invalidated_at
 , created_at
+, registration_local AS language
 , NULL AS accepted_at
 ",
     )
