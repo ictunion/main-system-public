@@ -64,6 +64,7 @@ type detailView =
   | Overview
   | MissingSubView
   | MissingGroupView
+  | MissingWorkplaceGroupView
 
 let oidGroupMemberDecoder = Json.Decode.array(
   Json.Decode.object(field => field.required(. "id", Data.Uuid.decode)),
@@ -74,6 +75,11 @@ module DataVerificationContent = {
   let make = (~api: Api.t, ~modal: Modal.Interface.t, ~membersGroupId: option<Data.Uuid.t>) => {
     let (members, _, reloadMembers) =
       api->Hook.getData(~path="/members/", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+    let (workplaces, _, _) =
+      api->Hook.getData(
+        ~path="/workplaces/",
+        ~decoder=Json.Decode.array(WorkplaceData.Decode.summary),
+      )
     let (detailView, setDetailView) = React.useState(_ => Overview)
 
     let (groupMembers: Api.webData<array<Data.Uuid.t>>, setGroupMembers) = React.useState(
@@ -81,6 +87,56 @@ module DataVerificationContent = {
     )
     let (groupMembersKey, setGroupMembersKey) = React.useState(_ => 0)
     let reloadGroupMembers = () => setGroupMembersKey(k => k + 1)
+
+    let (
+      workplaceGroupMembersMap: Api.webData<Belt.Map.String.t<Belt.Set.String.t>>,
+      setWorkplaceGroupMembersMap,
+    ) = React.useState(RemoteData.init)
+    let (workplaceGroupKey, setWorkplaceGroupKey) = React.useState(_ => 0)
+    let reloadWorkplaceGroups = () => setWorkplaceGroupKey(k => k + 1)
+
+    React.useEffect2(() => {
+      switch workplaces {
+      | Success(wps) =>
+        if wps->Array.length == 0 {
+          setWorkplaceGroupMembersMap(_ => RemoteData.Success(Belt.Map.String.empty))
+          None
+        } else {
+          setWorkplaceGroupMembersMap(RemoteData.setLoading)
+          let remaining = ref(wps->Array.length)
+          let failed = ref(false)
+          let acc = ref(Belt.Map.String.empty)
+          let requests = wps->Array.map((wp: WorkplaceData.summary) =>
+            api->Api.getJson(
+              ~path="/oidc/" ++ Data.Uuid.toString(wp.keycloakGroupId),
+              ~decoder=oidGroupMemberDecoder,
+            )
+          )
+          requests->Array.forEachWithIndex((i, req) => {
+            let wp = wps->Array.getUnsafe(i)
+            req->Future.get(res => {
+              remaining := remaining.contents - 1
+              switch res {
+              | Error(e) =>
+                if !failed.contents {
+                  failed := true
+                  setWorkplaceGroupMembersMap(_ => RemoteData.Failure(e))
+                }
+              | Ok(subs) =>
+                let subSet = subs->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
+                acc :=
+                  acc.contents->Belt.Map.String.set(Data.Uuid.toString(wp.id), subSet)
+                if remaining.contents === 0 && !failed.contents {
+                  setWorkplaceGroupMembersMap(_ => RemoteData.Success(acc.contents))
+                }
+              }
+            })
+          })
+          Some(() => requests->Array.forEach(req => Future.cancel(req)))
+        }
+      | _ => None
+      }
+    }, (workplaces, workplaceGroupKey))
 
     React.useEffect2(() => {
       switch membersGroupId {
@@ -121,6 +177,32 @@ module DataVerificationContent = {
     }
 
     let missingGroup = membersNotInGroup->RemoteData.map(Array.length)
+
+    let membersWithMissingWorkplaceGroup = switch (members, workplaces, workplaceGroupMembersMap) {
+    | (Success(ms), Success(_), Success(groupMap)) =>
+      RemoteData.Success(
+        ms->Array.keep(m =>
+          m.leftAt->Option.isNone &&
+            m.workplaceIds->Array.length > 0 &&
+            m.sub->Option.mapWithDefault(false, sub => {
+              let subStr = Data.Uuid.toString(sub)
+              m.workplaceIds
+              ->Array.keep(wpId =>
+                switch groupMap->Belt.Map.String.get(Data.Uuid.toString(wpId)) {
+                | None => false
+                | Some(subSet) => !(subSet->Belt.Set.String.has(subStr))
+                }
+              )
+              ->Array.length > 0
+            })
+        ),
+      )
+    | (Failure(e), _, _) | (_, Failure(e), _) | (_, _, Failure(e)) => RemoteData.Failure(e)
+    | (Loading, _, _) | (_, Loading, _) | (_, _, Loading) => RemoteData.Loading
+    | _ => RemoteData.Idle
+    }
+
+    let missingWorkplaceGroup = membersWithMissingWorkplaceGroup->RemoteData.map(Array.length)
 
     let pollUntilResolved = (~maxAttempts: int) => {
       let attempt = ref(0)
@@ -191,6 +273,52 @@ module DataVerificationContent = {
       }
     }
 
+    let doFixAllWorkplaceGroup = () => {
+      switch (membersWithMissingWorkplaceGroup, workplaces, workplaceGroupMembersMap) {
+      | (Success(ms), Success(wps), Success(groupMap)) =>
+        let workplaceKeycloakGroupMap = wps->Array.reduce(Belt.Map.String.empty, (acc, wp) =>
+          acc->Belt.Map.String.set(Data.Uuid.toString(wp.id), wp.keycloakGroupId)
+        )
+        let pairs = ref(list{})
+        ms->Array.forEach(m =>
+          switch m.sub {
+          | None => ()
+          | Some(sub) =>
+            let subStr = Data.Uuid.toString(sub)
+            m.workplaceIds->Array.forEach(wpId => {
+              let wpIdStr = Data.Uuid.toString(wpId)
+              switch (
+                groupMap->Belt.Map.String.get(wpIdStr),
+                workplaceKeycloakGroupMap->Belt.Map.String.get(wpIdStr),
+              ) {
+              | (Some(subSet), Some(keycloakGroupId))
+                when !(subSet->Belt.Set.String.has(subStr)) =>
+                pairs := list{(m.id, keycloakGroupId), ...pairs.contents}
+              | _ => ()
+              }
+            })
+          }
+        )
+        let rec processNext = (pairs: list<(Data.Uuid.t, Data.Uuid.t)>) =>
+          switch pairs {
+          | list{} => reloadWorkplaceGroups()
+          | list{(memberId, keycloakGroupId), ...rest} =>
+            let _ =
+              api
+              ->Api.put(
+                ~path="/members/" ++
+                Data.Uuid.toString(memberId) ++
+                "/oidc_groups/" ++
+                Data.Uuid.toString(keycloakGroupId),
+                ~decoder=Api.Decode.acceptedResponse,
+              )
+              ->Future.get(_ => processNext(rest))
+          }
+        processNext(pairs.contents)
+      | _ => ()
+      }
+    }
+
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
@@ -223,6 +351,15 @@ module DataVerificationContent = {
           {React.null}
         </MemberSummaryTable>
       </div>
+    | MissingWorkplaceGroupView =>
+      <div className={styles["missingSubView"]}>
+        <div className={styles["backButton"]}>
+          <Button onClick={_ => setDetailView(_ => Overview)}> {React.string("← Back")} </Button>
+        </div>
+        <MemberSummaryTable data=membersWithMissingWorkplaceGroup onNoteClick=openNewNoteModal>
+          {React.null}
+        </MemberSummaryTable>
+      </div>
     | Overview =>
       <div className={styles["verificationRows"]}>
         <VerificationRow
@@ -242,6 +379,16 @@ module DataVerificationContent = {
           onNavigate={() => setDetailView(_ => MissingGroupView)}
           error=?{switch groupMembers {
           | Failure(err) => Some(err)
+          | _ => None
+          }}
+        />
+        <VerificationRow
+          label="Members with missing Workplace Group in Keycloak"
+          count={missingWorkplaceGroup->RemoteData.toOption}
+          onFixAll={doFixAllWorkplaceGroup}
+          onNavigate={() => setDetailView(_ => MissingWorkplaceGroupView)}
+          error=?{switch (workplaces, workplaceGroupMembersMap) {
+          | (Failure(err), _) | (_, Failure(err)) => Some(err)
           | _ => None
           }}
         />
