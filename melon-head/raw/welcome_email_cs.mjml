@@ -5,42 +5,98 @@
 <mj-text>
     vítej do Odborové organizace pracujících v ICT. Jsem moc rád, že jsi součástí odborů!
 </mj-text>
-<mj-text>
-    Tento email se týká pouze členských příspěvků, buď se ti už někdo ozval ohledně toho jak fungujeme a nebo se brzy ozve. Určitě ti také dojde email se základními informacemi. V případě jakýchkoliv dotazů, klidně piš na tento email (<a href='mailto:info@ictunion.cz'>info@ictunion.cz</a>) nebo na +420 775 319 271.
+
+<mj-text font-size="20px">
+    Informace o členských příspěvcích
 </mj-text>
 
 <mj-text>
-    Základní informace o členských příspěvcích<br/>
-    Standardní výše členského poplatku (vyplývající z pravidel odborového svazu) je 1% z čisté mzdy do max. výše <b>300 Kč za měsíc</b>. Pro studenty, důchodce, nezaměstnané a členy na mateřské/rodičovské dovolené je poplatek snížen na 25 Kč/měsíc.
-    Můžeš také posílat solidární členský příspěvek. K maximální výši příspěvku, tedy 300 Kč, můžeš přidat až 100% tohoto příspěvku, tzn. posílat až 600 Kč.
-    Poznámka: čistá mzda je mzda se všemi bonusy - vypočítat ji můžeš jako průměr z posledních 3 mezd.
+    Členský příspěvek je měsíční a má minimální a maximální výši.
+    Maximální výše členského příspěvku je 680 Kč.
+    Minimální výše se liší podle toho jaký je součet tvých hrubých měsíčních příjmů.
+</mj-text>
+
+<mj-table font-size="12px">
+    <tr style="border-bottom:1px solid #237fa8;text-align:left;padding:15px 0;">
+        <th style="padding: 5px 15px;text-align:right;">součet hrubých příjmů je</th>
+        <th style="padding: 5px 15px;">minimální výše<br> členského příspěvku</th>
+    </tr>
+    <tr style="border-bottom:1px solid #237fa8;">
+        <td style="padding: 5px 15px;text-align:right">větší nebo roven 48.860 Kč</td>
+        <td style="padding: 5px 15px;">340 Kč</td>
+    </tr>
+    <tr  style="border-bottom:1px solid #237fa8;">
+        <td style="padding: 5px 15px;text-align:right">menší než 48.860 Kč a<br>
+    větší nebo roven 24.430 Kč</td>
+        <td style="padding: 5px 15px;">238 Kč</td>
+    </tr>
+    <tr>
+        <td style="padding: 5px 15px;text-align:right">menší než 24.430 Kč</td>
+        <td style="padding: 5px 15px">34 Kč</td>
+    </tr>
+</mj-table>
+
+<mj-text>
+    Tedy pokud je Váš měsíční hrubý příjem z jedné práce 30.000 Kč a z druhé 5.000 Kč,
+    spadáte do druhé kategorie a musíte každý měsíc platit alespoň 238 Kč, maximálně však 680 Kč.
+    Více informací můžeš najít na <a href='https://ictunion.cz/cs/caste-dotazy/#09-union-fees'>webu v sekci FAQ</a>.
+</mj-text>
+
+<mj-text font-size="20px">
+    Proč jsou příspěvky důležité
 </mj-text>
 
 <mj-text>
-    Proč jsou příspěvky důležité<br/>
-    20% všech členských poplatků posíláme OS PPP, jejichž jsme členskou organizací. Z členských poplatků pak platí odborového právníka, na kterého má v případě potřeby každý/á z nás nárok. 80% poplatků zůstává v naší odborové organizaci a můžeme jimi financovat naší činnost.
+    <b>Příspěvky jsou způsob, jak mít odbory nezávislé a samostatné.</b>
+    Z příspěvků platíme naše organizátory*ky a právníky*čky.
+    Dále také věci jako letáky a plakáty na kolektivní akce.
+    Také díky nim organizujeme odborové akce za účelem zvýšení povědomí a náboru nových členů*ek.
+    Všechna rozhodnutí ohledně peněz se provádějí kolektivně.
+</mj-text>
+
+<mj-text font-size="20px">
+    Specifické informace pro tebe
 </mj-text>
 
 <mj-text>
-    Specifické informace pro tebe<br/>
-    Prosím o zasílání členských poplatků na bankovní účet naší odborové organizace a to vždy do 20. dne měsíce: <b>2802034324 / 2010</b>. Doporučuju nastavit trvalý příkaz na tuto platbu.
+    Prosím o zasílání členských poplatků na bankovní účet naší odborové organizace
+    a to vždy do 20. dne měsíce: <b>2802034324 / 2010</b>.
+    Doporučuju nastavit trvalý příkaz na tuto platbu.
 </mj-text>
 
 <mj-text>
-    Pro jednodušší administraci členských poplatků dostává každý člen a každá členka svůj variabilní symbol. Platbu členského poplatku posílej pod tímto variabilním symbolem: <b>{{variable_symbol}}</b> a konstantním symbolem: <b>4710</b>
+    Pro jednodušší administraci členských poplatků dostává každý člen a
+    každá členka svůj variabilní symbol.
+    Platbu členského poplatku posílej pod tímto variabilním symbolem: <b>{{variable_symbol}}</b>
+    a konstantním symbolem: <b>4710</b>
 </mj-text>
 
 <mj-text>
     Pokud máš otázky nebo potřebuješ více informací, neváhej se na mě obrátit.
 </mj-text>
 
-<mj-text>
-    Přihláška do Signal kanálu:<br/>
-    <a href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu</a>
+<mj-text font-size="20px">
+    Další informace
+</mj-text>
+
+<mj-text font-size="16px">
+    Signal
 </mj-text>
 
 <mj-text>
-    Odborová wiki:<br/>
+    V odborech používáme na komunikaci převážně aplikaci Signal.
+    Tlačítkem níže se můžeš přidat do Signalové skupiny, která slouží pro distribuci informací.
+</mj-text>
+
+<mj-button href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>
+    Přidej se na Signalu
+</mj-button>
+
+<mj-text font-size="16px">
+    Odborová wiki
+</mj-text>
+
+<mj-text>
     Taky jsme spustili odborovou wiki stránku <a href='https://wiki.ictunion.cz'>wiki.ictunion.cz</a>. Přihlásit do wiki se můžeš pomocí Keycloak účtu. Tvoje uživatelské jméno je email uvedený na přihlášce do odborů. Heslo si nastavíš pomocí funkce "Zapomenuté heslo".
 </mj-text>
 

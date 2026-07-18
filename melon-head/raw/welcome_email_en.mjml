@@ -5,43 +5,99 @@
 <mj-text>
     Welcome to the Trade Union of Workers in ICT. I'm so glad you've joined us!
 </mj-text>
-<mj-text>
-    This email is for membership dues only, either you've already heard from someone about how we operate or you'll hear from them soon. I'm sure you will also receive an email with basic information. If you have any questions, feel free to email this email (<a href='mailto:info@ictunion.cz'>info@ictunion.cz</a>) or call +420 775 319 271.
+
+<mj-text font-size="20px">
+    Information about membership fees
 </mj-text>
 
 <mj-text>
-    Basic information about membership fees<br/>
-    The standard membership fee (based on union rules) is 1% of net pay up to a maximum of <b>300 CZK per month</b>. For students, pensioners, unemployed, and members on maternity/parental leave the fee is reduced to 25 CZK/month.
-    You can also send a solidarity membership fee. You can send an additional amount up to 100% of the maximum contribution, i.e. up to CZK 600.
-    Note: net salary is the salary with all bonuses - you can calculate it as the average of the last 3 salaries.
+    The membership fee is paid monthly and has minimum and maximum.
+    The maximum membership fee is 680 CZK.
+    The minimum amount varies depending on the sum of your gross monthly incomes.
+</mj-text>
+
+<mj-table font-size="12px">
+    <tr style="border-bottom:1px solid #237fa8;text-align:left;padding:15px 0;">
+        <th style="padding: 5px 15px;text-align:right;">sum of gross incomes is</th>
+        <th style="padding: 5px 15px;">membership fee minimum</th>
+    </tr>
+    <tr style="border-bottom:1px solid #237fa8;">
+        <td style="padding: 5px 15px;text-align:right">greater than or equal to 48,860 CZK</td>
+        <td style="padding: 5px 15px;">340 CZK</td>
+    </tr>
+    <tr  style="border-bottom:1px solid #237fa8;">
+        <td style="padding: 5px 15px;text-align:right">less than 48,860 CZK and<br>
+    greater than or equal to 24,430 CZK</td>
+        <td style="padding: 5px 15px;">238 CZK</td>
+    </tr>
+    <tr>
+        <td style="padding: 5px 15px;text-align:right">less than 24,430 CZK</td>
+        <td style="padding: 5px 15px">34 CZK</td>
+    </tr>
+</mj-table>
+
+<mj-text>
+    So if your monthly gross income from one job is 30,000 CZK and
+    from another is 5,000 CZK, you fall into the second category and must pay at least 238 CZK each month,
+    but you can pay up to maximum of 680 CZK.
+    You can find more information at <a href='https://ictunion.cz/en/faq/#09-union-fees'>website in FAQ</a>.
+</mj-text>
+
+<mj-text font-size="20px">
+    Why are fees important
 </mj-text>
 
 <mj-text>
-    Why dues are important<br/>
-    We send 20% of all membership dues to the OS PPP, of which we are a member organisation. The membership dues then pay for a union lawyer, which each of us is entitled to if needed. 80% of the dues stay with our union and can fund our activities.
+    <b>The membership fees are what makes the union independent and sustainable.</b>
+    We use the fees to pay our organizers and lawyers. Then things such as leaflets or posters for collective actions. We also use those funds to organize our union events aimed at raising awareness, recruiting new members, and creating change.
+    We make all the decisions about the the allocation of these funds collectively.
+</mj-text>
+
+<mj-text font-size="20px">
+    Unique information for you
 </mj-text>
 
 <mj-text>
-    Specific information for you<br/>
-    Please send your membership dues to our union's bank account by the 20th of the month: <b>2802034324 / 2010</b>. I recommend that you set up a repeating order for this payment.
+    Please send your membership dues to our union's bank account by the 20th of the month:
+    <b>2802034324 / 2010</b>. I recommend that you set up a repeating order for this payment.
 </mj-text>
 
 <mj-text>
-    For easier administration of membership dues, each member receives a variable symbol. Please send your membership fee payment under this variable symbol: <b>{{variable_symbol}}</b> and constant symbol: <b>4710</b>
+    For easier administration of membership dues, each member receives a variable symbol.
+    Please send your membership fee payment under this variable symbol: <b>{{variable_symbol}}</b>
+    and constant symbol: <b>4710</b>
 </mj-text>
 
 <mj-text>
     If you have any questions or need more information, feel free to contact me.
 </mj-text>
 
-<mj-text>
-    Invitation to signal channel:<br/>
-    <a href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu</a>
+<mj-text font-size="20px">
+    Other information
+</mj-text>
+
+<mj-text font-size="16px">
+    Signal
 </mj-text>
 
 <mj-text>
-    Trade union wiki:<br/>
-    We have also launched a trade union wiki page <a href='https://wiki.ictunion.cz'>wiki.ictunion.cz</a>. You can log in to the wiki with your Keycloak account. Your username is the email under which you submitted your application to join the union. You can set a password using the "Forgotten password" function.
+    In the union, we mainly use the Signal app for communication.
+    You can join the Signal group, which is used for information distribution, by clicking the button below.
+</mj-text>
+
+<mj-button href='https://signal.group/#CjQKILmAKt_H0ndPmr31v6IOPqG5c36dNPp0L-3xGnJDpq2nEhAaoddgIDylajThnT21XKHu'>
+   Join us at Signal
+</mj-button>
+
+<mj-text font-size="16px">
+    Union wiki
+</mj-text>
+
+<mj-text>
+    We have also launched a trade union wiki page <a href='https://wiki.ictunion.cz'>wiki.ictunion.cz</a>.
+    You can log in to the wiki with your Keycloak account.
+    Your username is the email under which you submitted your application to join the union.
+    You can set a password using the "Forgotten password" function.
 </mj-text>
 
 <mj-text>
