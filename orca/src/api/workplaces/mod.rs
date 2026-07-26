@@ -22,6 +22,11 @@ pub struct WorkplaceSummary {
     email: String,
     created_at: DateTime<Utc>,
     keycloak_group_id: Uuid,
+    keycloak_executive_group_id: Option<Uuid>,
+    announced_at: Option<DateTime<Utc>>,
+    established_at: Option<DateTime<Utc>>,
+    cancelled_at: Option<DateTime<Utc>>,
+    newsletter_id: Option<i32>,
     member_count: i64,
 }
 
@@ -36,7 +41,33 @@ async fn list_all(
     // We still need to be careful when sharing links to specific workplaces, because every rep will have combination of ListWorkplaces and ViewMember, which allow them to open link to list of members of any workplace
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
+    let summaries = query::list_summaries(db_pool.inner()).await?;
+
+    Ok(Json(summaries))
+}
+
+#[get("/active")]
+async fn list_active(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+) -> Response<Json<Vec<WorkplaceSummary>>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let summaries = query::list_active_summaries(db_pool.inner()).await?;
+
+    Ok(Json(summaries))
+}
+
+#[get("/inactive")]
+async fn list_inactive(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+) -> Response<Json<Vec<WorkplaceSummary>>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let summaries = query::list_inactive_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
@@ -50,9 +81,7 @@ async fn detail(
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_any_role(&token, &[Role::ListWorkplaces])?;
 
-    let detail = query::detail(workplace_id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let detail = query::detail(db_pool.inner(), workplace_id).await?;
 
     Ok(Json(detail))
 }
@@ -77,9 +106,8 @@ async fn create_workplace(
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
     // Create new workplace
-    let workplace = query::create_workplace(&new_workplace.into_inner().into_inner())
-        .fetch_one(db_pool.inner())
-        .await?;
+    let workplace =
+        query::create_workplace(db_pool.inner(), &new_workplace.into_inner().into_inner()).await?;
 
     Ok(Json(workplace))
 }
@@ -98,9 +126,7 @@ async fn assign_member_to_workplace(
         .execute(db_pool.inner())
         .await?;
 
-    let workplace_details = query::detail(workplace_id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let workplace_details = query::detail(db_pool.inner(), workplace_id).await?;
 
     let user_data = get_status_data(member_id)
         .fetch_one(db_pool.inner())
@@ -135,9 +161,7 @@ async fn remove_member_from_workplace(
         .execute(db_pool.inner())
         .await?;
 
-    let workplace_details = query::detail(workplace_id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let workplace_details = query::detail(db_pool.inner(), workplace_id).await?;
 
     let user_data = get_status_data(member_id)
         .fetch_one(db_pool.inner())
@@ -179,6 +203,8 @@ async fn get_all_workplace_members(
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
+        list_active,
+        list_inactive,
         detail,
         create_workplace,
         assign_member_to_workplace,

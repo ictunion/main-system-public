@@ -16,7 +16,7 @@ rand = "0.10.1"
 rocket = { version = "0.5.1", features = [ "json" ] }
 serde = { version = "1.0.147", features = ["derive"] }
 validator = { version = "0.20.0", features = [ "derive"] }
-sqlx = { version = "0.8.6", features = [ "runtime-tokio", "tls-native-tls", "postgres", "macros", "uuid", "chrono", "ipnetwork", "time" ] }
+sqlx = { version = "0.8.6", features = [ "runtime-tokio", "tls-native-tls", "postgres", "macros", "uuid", "chrono", "ipnetwork" ] }
 tokio = { version = "1.25.0", features = [ "io-std", "fs", "process" ] }
 image = "0.25.10"
 cfg-if = "1.0.0"

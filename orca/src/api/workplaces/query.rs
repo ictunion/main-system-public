@@ -1,20 +1,26 @@
 use super::{NewWorkplace, WorkplaceSummary};
 use crate::api::members::Summary;
 use crate::data::{Id, Member, Workplace};
-use crate::db::{Query, QueryAs};
+use crate::db::{DbPool, Query, QueryAs};
 
 // member count includes also members, who have already left union
 // current process is to remove association between past members and workplaces manually
 // in the future, it should be done when clicking on "remove member" in member detail
-pub fn list_summaries() -> QueryAs<'static, WorkplaceSummary> {
-    sqlx::query_as(
-        "
+pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
 SELECT id
     , name
     , email
     , created_at
     , keycloak_group_id
-    , COUNT(mw.member_id) AS member_count
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
 GROUP BY workplaces.id
@@ -22,20 +28,103 @@ GROUP BY workplaces.id
     , workplaces.email
     , workplaces.created_at
     , workplaces.keycloak_group_id
+    , workplaces.keycloak_executive_group_id
+    , workplaces.announced_at
+    , workplaces.established_at
+    , workplaces.cancelled_at
+    , workplaces.newsletter_id
 ORDER BY workplaces.created_at DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn detail<'a>(id: Id<Workplace>) -> QueryAs<'a, WorkplaceSummary> {
-    sqlx::query_as(
-        "
+pub async fn list_active_summaries(pool: &DbPool) -> sqlx::Result<Vec<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
 SELECT id
     , name
     , email
     , created_at
     , keycloak_group_id
-    , count(mw.member_id) AS member_count
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , COUNT(mw.member_id) AS "member_count!: i64"
+FROM workplaces
+LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
+WHERE workplaces.cancelled_at IS NULL
+GROUP BY workplaces.id
+    , workplaces.name
+    , workplaces.email
+    , workplaces.created_at
+    , workplaces.keycloak_group_id
+    , workplaces.keycloak_executive_group_id
+    , workplaces.announced_at
+    , workplaces.established_at
+    , workplaces.cancelled_at
+    , workplaces.newsletter_id
+ORDER BY workplaces.created_at DESC
+"#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn list_inactive_summaries(pool: &DbPool) -> sqlx::Result<Vec<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+SELECT id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , COUNT(mw.member_id) AS "member_count!: i64"
+FROM workplaces
+LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
+WHERE workplaces.cancelled_at IS NOT NULL
+GROUP BY workplaces.id
+    , workplaces.name
+    , workplaces.email
+    , workplaces.created_at
+    , workplaces.keycloak_group_id
+    , workplaces.keycloak_executive_group_id
+    , workplaces.announced_at
+    , workplaces.established_at
+    , workplaces.cancelled_at
+    , workplaces.newsletter_id
+ORDER BY workplaces.cancelled_at DESC
+"#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn detail(pool: &DbPool, id: Id<Workplace>) -> sqlx::Result<WorkplaceSummary> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+SELECT id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , count(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
 WHERE workplaces.id = $1
@@ -44,14 +133,25 @@ GROUP BY workplaces.id
     , workplaces.email
     , workplaces.created_at
     , workplaces.keycloak_group_id
-",
+    , workplaces.keycloak_executive_group_id
+    , workplaces.announced_at
+    , workplaces.established_at
+    , workplaces.cancelled_at
+    , workplaces.newsletter_id
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(pool)
+    .await
 }
 
-pub fn create_workplace(new_workplace: &NewWorkplace) -> QueryAs<'_, WorkplaceSummary> {
-    sqlx::query_as(
-        "
+pub async fn create_workplace(
+    pool: &DbPool,
+    new_workplace: &NewWorkplace,
+) -> sqlx::Result<WorkplaceSummary> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
 INSERT INTO workplaces
     ( name
      , email
@@ -64,12 +164,19 @@ RETURNING id
     , email
     , created_at
     , keycloak_group_id
-    , 0::bigint AS member_count
-",
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , 0::bigint AS "member_count!: i64"
+"#,
+        new_workplace.name.as_deref().expect("validated"),
+        new_workplace.email.as_deref().expect("validated"),
+        new_workplace.keycloak_group_id.expect("validated"),
     )
-    .bind(&new_workplace.name)
-    .bind(&new_workplace.email)
-    .bind(new_workplace.keycloak_group_id)
+    .fetch_one(pool)
+    .await
 }
 
 pub fn remove_member_workplace_associations<'a>(id: Id<Member>) -> Query<'a> {

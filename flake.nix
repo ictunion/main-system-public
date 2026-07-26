@@ -57,7 +57,7 @@
               mkShell {
                 name = "ict-union-orca-dev-env";
                 inherit buildInputs;
-                packages = [ rust-analyzer ];
+                packages = [ rust-analyzer sqlx-cli ];
                 OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
               };
             package = orcaPkgs.orca;

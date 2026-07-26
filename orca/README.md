@@ -99,6 +99,8 @@ Main dependecies are:
 - [Rocket](https://rocket.rs/) web server framework
 - [sqlx](https://crates.io/crates/sqlx) sql driver
 
+We use sqlx compile-time check for SQL queries `query_as!`. This requires you to run `DATABASE_URL=postgres://orca@localhost/ictunion cargo sqlx prepare` command after every scheme update/migration or when changing queries in the code. Don't forget to commit the files created be this command.
+
 __Generate Documentation__ for all dependecies and code:
 
 ```

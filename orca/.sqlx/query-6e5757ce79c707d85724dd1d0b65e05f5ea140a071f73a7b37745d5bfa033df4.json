@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , COUNT(mw.member_id) AS \"member_count!: i64\"\nFROM workplaces\nLEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id\nGROUP BY workplaces.id\n    , workplaces.name\n    , workplaces.email\n    , workplaces.created_at\n    , workplaces.keycloak_group_id\n    , workplaces.keycloak_executive_group_id\n    , workplaces.announced_at\n    , workplaces.established_at\n    , workplaces.cancelled_at\n    , workplaces.newsletter_id\nORDER BY workplaces.created_at DESC\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "keycloak_group_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "keycloak_executive_group_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "announced_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "established_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "cancelled_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "newsletter_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "member_count!: i64",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null
+    ]
+  },
+  "hash": "6e5757ce79c707d85724dd1d0b65e05f5ea140a071f73a7b37745d5bfa033df4"
+}
