@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO workplaces\n    ( name\n     , email\n     , keycloak_group_id\n    )\nVALUES\n    ( $1, $2, $3 )\nRETURNING id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , 0::bigint AS \"member_count!: i64\"\n",
+  "query": "\nUPDATE workplaces\nSET newsletter_id = $2\nWHERE id = $1\nRETURNING id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS \"member_count!: i64\"\n",
   "describe": {
     "columns": [
       {
@@ -61,9 +61,8 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
-        "Uuid"
+        "Uuid",
+        "Int4"
       ]
     },
     "nullable": [
@@ -80,5 +79,5 @@
       null
     ]
   },
-  "hash": "5ae1b49a7104f2ad9f30209a89c552322e5a17794f1f38099608feaf68181ed3"
+  "hash": "44da64f2d56ee10329509f519b36a734b0d3f8583629ed32148c9ddbe0ba5b46"
 }

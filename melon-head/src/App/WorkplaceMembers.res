@@ -80,6 +80,9 @@ let make = (~api: Api.t, ~id, ~modal) => {
         currentWorkplace->RemoteData.unwrap(~default="cannot happen", s => s.name),
       )}
     </Page.Title>
+    <SessionContext.RequireRole anyOf=[Session.ListWorkplaces]>
+      <Page.BackButton name="workplaces" path="/workplaces" />
+    </SessionContext.RequireRole>
     <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
       {switch workplaceMembers->RemoteData.toOption {
       | None => React.null

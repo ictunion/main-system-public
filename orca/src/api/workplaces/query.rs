@@ -1,4 +1,4 @@
-use super::{NewWorkplace, WorkplaceSummary};
+use super::{NewWorkplace, UpdateWorkplace, WorkplaceSummary};
 use crate::api::members::Summary;
 use crate::data::{Id, Member, Workplace};
 use crate::db::{DbPool, Query, QueryAs};
@@ -145,6 +145,126 @@ GROUP BY workplaces.id
     .await
 }
 
+pub async fn establish_workplace(
+    pool: &DbPool,
+    id: Id<Workplace>,
+) -> sqlx::Result<Option<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+UPDATE workplaces
+SET established_at = NOW()
+WHERE id = $1
+  AND established_at IS NULL
+  AND cancelled_at IS NULL
+RETURNING id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
+"#,
+        id as _
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn announce_workplace(
+    pool: &DbPool,
+    id: Id<Workplace>,
+) -> sqlx::Result<Option<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+UPDATE workplaces
+SET announced_at = NOW()
+WHERE id = $1
+  AND established_at IS NOT NULL
+  AND announced_at IS NULL
+  AND cancelled_at IS NULL
+RETURNING id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
+"#,
+        id as _
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn cancel_workplace(
+    pool: &DbPool,
+    id: Id<Workplace>,
+) -> sqlx::Result<Option<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+UPDATE workplaces
+SET cancelled_at = NOW()
+WHERE id = $1
+  AND cancelled_at IS NULL
+RETURNING id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
+"#,
+        id as _
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn update_workplace(
+    pool: &DbPool,
+    id: Id<Workplace>,
+    update: &UpdateWorkplace,
+) -> sqlx::Result<WorkplaceSummary> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+UPDATE workplaces
+SET newsletter_id = $2
+WHERE id = $1
+RETURNING id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
+"#,
+        id as _,
+        update.newsletter_id,
+    )
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn create_workplace(
     pool: &DbPool,
     new_workplace: &NewWorkplace,
@@ -154,11 +274,13 @@ pub async fn create_workplace(
         r#"
 INSERT INTO workplaces
     ( name
-     , email
-     , keycloak_group_id
+    , email
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , newsletter_id
     )
 VALUES
-    ( $1, $2, $3 )
+    ( $1, $2, $3, $4, $5 )
 RETURNING id
     , name
     , email
@@ -174,6 +296,10 @@ RETURNING id
         new_workplace.name.as_deref().expect("validated"),
         new_workplace.email.as_deref().expect("validated"),
         new_workplace.keycloak_group_id.expect("validated"),
+        new_workplace
+            .keycloak_executive_group_id
+            .expect("validated"),
+        new_workplace.newsletter_id,
     )
     .fetch_one(pool)
     .await

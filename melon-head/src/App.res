@@ -49,6 +49,8 @@ module ConfiguredApp = {
           | list{"settings"} => <Settings api session=sessionState modal config />
           | list{"workplaces"} => <Workplaces api modal />
           | list{"workplaces", id} =>
+            <WorkplaceDetail api id={Data.Uuid.unsafeFromString(id)} modal />
+          | list{"workplaces", id, "members"} =>
             <WorkplaceMembers api id={Data.Uuid.unsafeFromString(id)} modal />
           | _ =>
             <Page>

@@ -8,7 +8,7 @@ use crate::server::oid::{JwtToken, Provider, Role};
 use crate::validation::Validated;
 use chrono::{DateTime, Utc};
 use rocket::serde::json::Json;
-use rocket::{Route, State, delete, get, post, put, routes};
+use rocket::{Route, State, delete, get, patch, post, put, routes};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -94,6 +94,9 @@ pub struct NewWorkplace {
     email: Option<String>,
     #[validate(required)]
     keycloak_group_id: Option<Uuid>,
+    #[validate(required)]
+    keycloak_executive_group_id: Option<Uuid>,
+    newsletter_id: Option<i32>,
 }
 
 #[post("/", format = "json", data = "<new_workplace>")]
@@ -108,6 +111,81 @@ async fn create_workplace(
     // Create new workplace
     let workplace =
         query::create_workplace(db_pool.inner(), &new_workplace.into_inner().into_inner()).await?;
+
+    Ok(Json(workplace))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateWorkplace {
+    newsletter_id: Option<i32>,
+}
+
+#[patch("/<workplace_id>", format = "json", data = "<update>")]
+async fn update(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+    update: Json<UpdateWorkplace>,
+) -> Response<Json<WorkplaceSummary>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let workplace =
+        query::update_workplace(db_pool.inner(), workplace_id, &update.into_inner()).await?;
+
+    Ok(Json(workplace))
+}
+
+#[patch("/<workplace_id>/establish")]
+async fn establish(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+) -> Response<Json<WorkplaceSummary>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let workplace = query::establish_workplace(db_pool.inner(), workplace_id)
+        .await?
+        .ok_or_else(|| {
+            ApiError::data_conflict("Workplace cannot be established in its current state")
+        })?;
+
+    Ok(Json(workplace))
+}
+
+#[patch("/<workplace_id>/announce")]
+async fn announce(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+) -> Response<Json<WorkplaceSummary>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let workplace = query::announce_workplace(db_pool.inner(), workplace_id)
+        .await?
+        .ok_or_else(|| {
+            ApiError::data_conflict("Workplace cannot be announced in its current state")
+        })?;
+
+    Ok(Json(workplace))
+}
+
+#[patch("/<workplace_id>/cancel")]
+async fn cancel(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+) -> Response<Json<WorkplaceSummary>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let workplace = query::cancel_workplace(db_pool.inner(), workplace_id)
+        .await?
+        .ok_or_else(|| {
+            ApiError::data_conflict("Workplace cannot be cancelled in its current state")
+        })?;
 
     Ok(Json(workplace))
 }
@@ -206,6 +284,10 @@ pub fn routes() -> Vec<Route> {
         list_active,
         list_inactive,
         detail,
+        update,
+        establish,
+        announce,
+        cancel,
         create_workplace,
         assign_member_to_workplace,
         remove_member_from_workplace,
