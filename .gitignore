@@ -10,4 +10,6 @@ result*
 *.envrc
 /.idea/
 /.zed/
+/.vscode/
+/target
 CLAUDE.md
