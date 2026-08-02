@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO members AS m\n( member_number\n, email\n, first_name\n, last_name\n, language\n, date_of_birth\n, note\n, address\n, city\n, postal_code\n, phone_number\n, registration_request_id\n)\nSELECT $2\n, email\n, first_name\n, last_name\n, registration_local\n, date_of_birth\n, note\n, address\n, city\n, postal_code\n, phone_number\n, $1\nFROM registration_requests as rr\nWHERE rr.id = $1\nRETURNING m.id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cb9faf15cb6f95ecf3fb5b847843332379a441f57b901a54e352421be16c9a76"
+}

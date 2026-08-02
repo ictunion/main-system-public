@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO occupations\n( member_id\n, company_name\n, position\n)\nSELECT $2, rr.company_name, rr.occupation\nFROM registration_requests as rr\nWHERE rr.id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e7301e491d38859c6d174f3a81e6c6e189b649482b74cdcf98cede5595fe10cb"
+}

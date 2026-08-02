@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT rr.id AS \"id!\"\n, rr.email\n, rr.first_name\n, rr.last_name\n, rr.phone_number\n, rr.note\n, rr.city\n, rr.company_name\n, rr.registration_local AS \"registration_local!\"\n, rr.created_at AS \"created_at!\"\n, m.created_at AS \"accepted_at!\"\n, m.id AS \"member_id!\"\nFROM registration_requests_accepted as rr\nLEFT JOIN members AS m ON rr.id = m.registration_request_id\nORDER BY rr.created_at DESC\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "phone_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "company_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "registration_local!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "accepted_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "member_id!",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "ca79fc8b34b62d3ae87e21a68edc2f3fc65c8207eafdb2c8a3dd4177d569b443"
+}

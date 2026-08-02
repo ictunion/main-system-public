@@ -1,7 +1,9 @@
+use uuid::Uuid;
+
 use super::{NewWorkplace, UpdateWorkplace, WorkplaceSummary};
-use crate::api::members::Summary;
+use crate::api::members::MemberSummary;
 use crate::data::{Id, Member, Workplace};
-use crate::db::{DbPool, Query, QueryAs};
+use crate::db::DbPool;
 
 // member count includes also members, who have already left union
 // current process is to remove association between past members and workplaces manually
@@ -305,22 +307,29 @@ RETURNING id
     .await
 }
 
-pub fn remove_member_workplace_associations<'a>(id: Id<Member>) -> Query<'a> {
-    sqlx::query(
-        "
-DELETE FROM members_workplaces
-WHERE member_id = $1
-",
+pub async fn remove_member_workplace_associations<'a, E>(
+    executor: E,
+    id: Id<Member>,
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"DELETE FROM members_workplaces WHERE member_id = $1"#,
+        id as _,
     )
-    .bind(id)
+    .execute(executor)
+    .await?;
+    Ok(())
 }
 
-pub fn create_connection_between_member_and_workplace<'a>(
+pub async fn create_connection_between_member_and_workplace(
+    pool: &DbPool,
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,
-) -> Query<'a> {
-    sqlx::query(
-        "
+) -> sqlx::Result<u64> {
+    Ok(sqlx::query!(
+        r#"
 INSERT INTO members_workplaces
     ( workplace_id
     , member_id
@@ -328,30 +337,37 @@ INSERT INTO members_workplaces
 VALUES
     ( $1, $2 )
 ON CONFLICT DO NOTHING
-",
+"#,
+        workplace_id as _,
+        member_id as _,
     )
-    .bind(workplace_id)
-    .bind(member_id)
+    .execute(pool)
+    .await?
+    .rows_affected())
 }
 
-pub fn remove_connection_between_member_and_workplace<'a>(
+pub async fn remove_connection_between_member_and_workplace(
+    pool: &DbPool,
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,
-) -> Query<'a> {
-    sqlx::query(
-        "
-DELETE FROM members_workplaces
-    WHERE 
-        workplace_id=$1 AND member_id=$2
-",
+) -> sqlx::Result<u64> {
+    Ok(sqlx::query!(
+        r#"DELETE FROM members_workplaces WHERE workplace_id=$1 AND member_id=$2"#,
+        workplace_id as _,
+        member_id as _,
     )
-    .bind(workplace_id)
-    .bind(member_id)
+    .execute(pool)
+    .await?
+    .rows_affected())
 }
 
-pub fn get_all_workplace_members<'a>(workplace_id: Id<Workplace>) -> QueryAs<'a, Summary> {
-    sqlx::query_as(
-        "
+pub async fn get_all_workplace_members(
+    pool: &DbPool,
+    workplace_id: Id<Workplace>,
+) -> sqlx::Result<Vec<MemberSummary>> {
+    sqlx::query_as!(
+        MemberSummary,
+        r#"
 SELECT m.id
     , m.member_number
     , m.first_name
@@ -362,9 +378,9 @@ SELECT m.id
     , m.city
     , m.language
     , m.left_at
-    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at
-    , ARRAY(SELECT wp.workplace_id FROM members_workplaces wp WHERE wp.member_id = m.id) AS workplace_ids
+    , ARRAY(SELECT wp.workplace_id FROM members_workplaces wp WHERE wp.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
     , m.sub
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -383,7 +399,9 @@ GROUP BY m.id
     , m.created_at
     , m.sub
 ORDER BY m.member_number DESC
-",
+"#,
+        workplace_id as _
     )
-    .bind(workplace_id)
+    .fetch_all(pool)
+    .await
 }

@@ -3,7 +3,7 @@ use rocket::{Route, State, get, post, routes};
 
 use super::{ApiError, Response};
 use crate::data::{Id, Member};
-use crate::db::{DbPool, QueryAs};
+use crate::db::DbPool;
 use crate::server::oid::{JwtClaims, JwtToken, Provider};
 
 #[derive(Debug, Serialize)]
@@ -20,10 +20,7 @@ async fn current(
 ) -> Response<Json<SessionInfo>> {
     let token_data = oid_provider.inner().decode_jwt(&token)?;
 
-    let member_id = get_user_id(&token_data.claims)
-        .fetch_optional(db_pool.inner())
-        .await?
-        .map(|(member_id,)| member_id);
+    let member_id = get_user_id(db_pool.inner(), &token_data.claims).await?;
 
     let session_info = SessionInfo {
         token_claims: token_data.claims,
@@ -44,15 +41,10 @@ async fn pair_by_email(
     // let any member assing themselves.
     let token_data = oid_provider.inner().decode_jwt(&token)?;
 
-    let member_id = get_user_id(&token_data.claims)
-        .fetch_optional(db_pool.inner())
-        .await?
-        .map(|(member_id,)| member_id);
+    let member_id = get_user_id(db_pool.inner(), &token_data.claims).await?;
 
     if member_id.is_none() {
-        let (member_id,) = set_pairing_by_email(&token_data.claims)
-            .fetch_one(db_pool.inner())
-            .await?;
+        let member_id = set_pairing_by_email(db_pool.inner(), &token_data.claims).await?;
 
         let session_info = SessionInfo {
             token_claims: token_data.claims,
@@ -65,30 +57,22 @@ async fn pair_by_email(
     }
 }
 
-fn get_user_id(claims: &JwtClaims) -> QueryAs<'_, (Id<Member>,)> {
-    sqlx::query_as(
-        "
-SELECT id
-FROM members
-WHERE sub = $1
-",
-    )
-    .bind(claims.sub)
+async fn get_user_id(pool: &DbPool, claims: &JwtClaims) -> sqlx::Result<Option<Id<Member>>> {
+    sqlx::query_scalar!("SELECT id FROM members WHERE sub = $1", claims.sub)
+        .fetch_optional(pool)
+        .await
+        .map(|opt| opt.map(Id::from))
 }
 
-fn set_pairing_by_email(claims: &JwtClaims) -> QueryAs<'_, (Id<Member>,)> {
-    sqlx::query_as(
-        "
-UPDATE members
-SET   sub = $1
-    , onboarding_finished_at = NOW()
-WHERE email = $2
-    AND left_at IS NULL
-RETURNING id
-",
+async fn set_pairing_by_email(pool: &DbPool, claims: &JwtClaims) -> sqlx::Result<Id<Member>> {
+    sqlx::query_scalar!(
+        "UPDATE members SET sub = $1, onboarding_finished_at = NOW() WHERE email = $2 AND left_at IS NULL RETURNING id",
+        claims.sub,
+        claims.email,
     )
-    .bind(claims.sub)
-    .bind(&claims.email)
+    .fetch_one(pool)
+    .await
+    .map(Id::from)
 }
 #[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {

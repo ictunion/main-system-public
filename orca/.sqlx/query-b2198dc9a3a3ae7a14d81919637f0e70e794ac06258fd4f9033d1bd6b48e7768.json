@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH file_ids AS\n    (DELETE FROM registration_requests_files\n        WHERE registration_request_id = $1\n        RETURNING file_id)\nDELETE FROM files WHERE id IN (SELECT file_id FROM file_ids)\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b2198dc9a3a3ae7a14d81919637f0e70e794ac06258fd4f9033d1bd6b48e7768"
+}

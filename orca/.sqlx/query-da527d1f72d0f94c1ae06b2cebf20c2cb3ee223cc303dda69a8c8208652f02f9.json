@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO registration_requests\n( email\n, first_name\n, last_name\n, date_of_birth\n, address\n, city\n, postal_code\n, phone_number\n, company_name\n, occupation\n, registration_local\n, registration_ip\n, registration_user_agent\n, registration_source\n, confirmation_token\n) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )\nRETURNING id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Date",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Inet",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "da527d1f72d0f94c1ae06b2cebf20c2cb3ee223cc303dda69a8c8208652f02f9"
+}

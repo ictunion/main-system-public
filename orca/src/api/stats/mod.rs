@@ -25,25 +25,11 @@ async fn applications_basic_stats(
     // Every authenticated user is able to see stats
     oid_provider.inner().decode_jwt(&token)?;
 
-    let (unverified,) = query::count_unverified_applications()
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let (accepted,) = query::count_accepted_applications()
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let (rejected,) = query::count_rejected_applications()
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let (processing,) = query::count_processing_applications()
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let (invalid,) = query::count_invalid_applications()
-        .fetch_one(db_pool.inner())
-        .await?;
+    let unverified = query::count_unverified_applications(db_pool.inner()).await?;
+    let accepted = query::count_accepted_applications(db_pool.inner()).await?;
+    let rejected = query::count_rejected_applications(db_pool.inner()).await?;
+    let processing = query::count_processing_applications(db_pool.inner()).await?;
+    let invalid = query::count_invalid_applications(db_pool.inner()).await?;
 
     Ok(Json(ApplicationsBasicStats {
         unverified,
@@ -70,17 +56,9 @@ async fn members_basic_stats(
     // Every authenticated user is able to see stats
     oid_provider.inner().decode_jwt(&token)?;
 
-    let (new,) = query::count_new_members()
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let (current,) = query::count_current_members()
-        .fetch_one(db_pool.inner())
-        .await?;
-
-    let (past,) = query::count_past_members()
-        .fetch_one(db_pool.inner())
-        .await?;
+    let new = query::count_new_members(db_pool.inner()).await?;
+    let current = query::count_current_members(db_pool.inner()).await?;
+    let past = query::count_past_members(db_pool.inner()).await?;
 
     Ok(Json(MembersBasicStats { new, current, past }))
 }

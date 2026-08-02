@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE registration_requests AS m\nSET verification_sent_at = now()\nWHERE id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5bb9e5f88331ffad88c6ca9c838f176fc82af286601e5afd5b968a42c24c8850"
+}

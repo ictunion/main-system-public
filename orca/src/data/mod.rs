@@ -49,7 +49,7 @@ impl<'a, T> FromParam<'a> for Id<T> {
     }
 }
 
-// This nees to be implemented specifically for Postgres
+// This needs to be implemented specifically for Postgres
 // because not all db drivers implement decoding for i32.
 // `'r` is the lifetime of the `Row` being decoded
 impl<'r, T> Decode<'r, Postgres> for Id<T>
@@ -123,6 +123,12 @@ impl<'de> Deserialize<'de> for MemberNumber {
     {
         let int: i32 = Deserialize::deserialize(deserializer)?;
         Ok(Self(int))
+    }
+}
+
+impl From<i32> for MemberNumber {
+    fn from(value: i32) -> Self {
+        MemberNumber(value)
     }
 }
 impl<'r> Decode<'r, Postgres> for MemberNumber

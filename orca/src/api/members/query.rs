@@ -1,13 +1,16 @@
 use uuid::Uuid;
 
-use super::{Detail, MemberStatusData, NewMember, Note, Occupation, Summary, UpdateMember};
+use super::{
+    MemberDetail, MemberStatusData, MemberSummary, NewMember, Note, Occupation, UpdateMember,
+};
 use crate::api::files::FileInfo;
 use crate::data::{Id, Member, MemberNumber};
-use crate::db::QueryAs;
+use crate::db::DbPool;
 
-pub fn list_summaries() -> QueryAs<'static, Summary> {
-    sqlx::query_as(
-        "
+pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<MemberSummary>> {
+    sqlx::query_as!(
+        MemberSummary,
+        r#"
 SELECT m.id
     , m.member_number
     , m.first_name
@@ -18,9 +21,9 @@ SELECT m.id
     , m.city
     , m.language
     , m.left_at
-    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at
-    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
     , m.sub
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -37,15 +40,18 @@ GROUP BY m.id
     , m.created_at
     , m.sub
 ORDER BY m.member_number DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_past_summaries() -> QueryAs<'static, Summary> {
-    sqlx::query_as(
-        "
-SELECT m.id
-    , m.member_number
+pub async fn list_past_summaries(pool: &DbPool) -> sqlx::Result<Vec<MemberSummary>> {
+    sqlx::query_as!(
+        MemberSummary,
+        r#"
+SELECT m.id AS "id!"
+    , m.member_number AS "member_number!"
     , m.first_name
     , m.last_name
     , m.email
@@ -54,9 +60,9 @@ SELECT m.id
     , m.city
     , m.language
     , m.left_at
-    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
-    , m.created_at
-    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
+    , m.created_at AS "created_at!"
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
     , m.sub
 FROM members_past AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -73,15 +79,18 @@ GROUP BY m.id
     , m.created_at
     , m.sub
 ORDER BY m.member_number DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_new_summaries() -> QueryAs<'static, Summary> {
-    sqlx::query_as(
-        "
-SELECT m.id
-    , m.member_number
+pub async fn list_new_summaries(pool: &DbPool) -> sqlx::Result<Vec<MemberSummary>> {
+    sqlx::query_as!(
+        MemberSummary,
+        r#"
+SELECT m.id AS "id!"
+    , m.member_number AS "member_number!"
     , m.first_name
     , m.last_name
     , m.email
@@ -90,9 +99,9 @@ SELECT m.id
     , m.city
     , m.language
     , m.left_at
-    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
-    , m.created_at
-    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
+    , m.created_at AS "created_at!"
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
     , m.sub
 FROM members_new AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -109,15 +118,18 @@ GROUP BY m.id
     , m.created_at
     , m.sub
 ORDER BY m.member_number DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_current_summaries() -> QueryAs<'static, Summary> {
-    sqlx::query_as(
-        "
-SELECT m.id
-    , m.member_number
+pub async fn list_current_summaries(pool: &DbPool) -> sqlx::Result<Vec<MemberSummary>> {
+    sqlx::query_as!(
+        MemberSummary,
+        r#"
+SELECT m.id AS "id!"
+    , m.member_number AS "member_number!"
     , m.first_name
     , m.last_name
     , m.email
@@ -126,9 +138,9 @@ SELECT m.id
     , m.city
     , m.language
     , m.left_at
-    , array_agg(o.company_name ORDER BY o.created_at DESC) AS company_names
-    , m.created_at
-    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS workplace_ids
+    , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
+    , m.created_at AS "created_at!"
+    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
     , m.sub
 FROM members_current AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -145,13 +157,23 @@ GROUP BY m.id
     , m.created_at
     , m.sub
 ORDER BY m.member_number DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn create_member(member_number: MemberNumber, new_member: &NewMember) -> QueryAs<'_, Summary> {
-    sqlx::query_as(
-        "
+pub async fn create_member<'a, E>(
+    executor: E,
+    member_number: MemberNumber,
+    new_member: &NewMember,
+) -> sqlx::Result<MemberSummary>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberSummary,
+        r#"
 INSERT INTO members
     ( member_number
     , email
@@ -177,26 +199,32 @@ RETURNING id
     , language
     , left_at
     , created_at
-    , ARRAY[]::text[] AS company_names
-    , ARRAY[]::uuid[] AS workplace_ids
+    , ARRAY[]::text[] AS "company_names!: Vec<Option<String>>"
+    , ARRAY[]::uuid[] AS "workplace_ids!: Vec<Uuid>"
     , sub
-",
+"#,
+        member_number as _,
+        new_member.email.as_deref(),
+        new_member.first_name.as_deref(),
+        new_member.last_name.as_deref(),
+        new_member.language as _,
+        new_member.date_of_birth,
+        new_member.address.as_deref(),
+        new_member.city.as_deref(),
+        new_member.postal_code.as_deref(),
+        new_member.phone_number.as_deref(),
     )
-    .bind(member_number)
-    .bind(&new_member.email)
-    .bind(&new_member.first_name)
-    .bind(&new_member.last_name)
-    .bind(&new_member.language)
-    .bind(new_member.date_of_birth)
-    .bind(&new_member.address)
-    .bind(&new_member.city)
-    .bind(&new_member.postal_code)
-    .bind(&new_member.phone_number)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn detail<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn detail<'a, E>(executor: E, id: Id<Member>) -> sqlx::Result<MemberDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberDetail,
+        r#"
 SELECT id
     , member_number
     , first_name
@@ -213,34 +241,43 @@ SELECT id
     , left_at
     , onboarding_finished_at
     , created_at
-    , mw.workplace_id
+    , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
     , sub
 FROM members
-LEFT JOIN members_workplaces mw ON mw.member_id = members.id
-WHERE id = $1
-",
+WHERE members.id = $1
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-// Returns highest existing member_number + 1 or 1
-// to be used as a member number for next new member
-pub fn get_next_member_number<'a>() -> QueryAs<'a, (MemberNumber,)> {
-    sqlx::query_as(
-        "
+pub async fn get_next_member_number<'a, E>(executor: E) -> sqlx::Result<MemberNumber>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_scalar!(
+        r#"
 SELECT COALESCE
     (1 + (
         SELECT member_number FROM members m
         ORDER BY member_number DESC
         LIMIT 1)
-    , 1);
-",
+    , 1) AS "value!"
+"#
     )
+    .fetch_one(executor)
+    .await
+    .map(MemberNumber::from)
 }
 
-pub fn list_member_files<'a>(id: Id<Member>) -> QueryAs<'a, FileInfo> {
-    sqlx::query_as(
-        "
+pub async fn list_member_files<'a, E>(executor: E, id: Id<Member>) -> sqlx::Result<Vec<FileInfo>>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        FileInfo,
+        r#"
 SELECT f.id
 , f.name
 , f.file_type
@@ -249,14 +286,20 @@ FROM members_files AS mf
 INNER JOIN files AS f ON f.id = mf.file_id
 WHERE mf.member_id = $1
 ORDER BY f.created_at DESC
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_all(executor)
+    .await
 }
 
-pub fn list_occupations<'a>(id: Id<Member>) -> QueryAs<'a, Occupation> {
-    sqlx::query_as(
-        "
+pub async fn list_occupations<'a, E>(executor: E, id: Id<Member>) -> sqlx::Result<Vec<Occupation>>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        Occupation,
+        r#"
 SELECT id
 , company_name
 , position
@@ -264,14 +307,24 @@ SELECT id
 FROM occupations
 WHERE member_id = $1
 ORDER BY created_at DESC
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_all(executor)
+    .await
 }
 
-pub fn assign_member_oid_sub<'a>(id: Id<Member>, uuid: Uuid) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn assign_member_oid_sub<'a, E>(
+    executor: E,
+    id: Id<Member>,
+    uuid: Uuid,
+) -> sqlx::Result<MemberDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberDetail,
+        r#"
 UPDATE members
 SET sub = $2
 WHERE members.id = $1
@@ -291,28 +344,43 @@ RETURNING members.id
 , left_at
 , onboarding_finished_at
 , created_at
-, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
 , sub
-",
+"#,
+        id as _,
+        uuid,
     )
-    .bind(id)
-    .bind(uuid)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn get_status_data<'a>(id: Id<Member>) -> QueryAs<'a, MemberStatusData> {
-    sqlx::query_as(
-        "
+pub async fn get_status_data<'a, E>(executor: E, id: Id<Member>) -> sqlx::Result<MemberStatusData>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberStatusData,
+        r#"
 SELECT sub, left_at, onboarding_finished_at
 FROM members
 WHERE id = $1
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn set_onboarding_finished<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn set_onboarding_finished<'a, E>(
+    executor: E,
+    id: Id<Member>,
+) -> sqlx::Result<MemberDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberDetail,
+        r#"
 UPDATE members
 SET onboarding_finished_at = NOW()
 WHERE members.id = $1
@@ -332,46 +400,66 @@ RETURNING members.id
 , left_at
 , onboarding_finished_at
 , created_at
-, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
 , sub
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn update_member_note(id: Id<Member>, new_note: &Note) -> QueryAs<'_, Detail> {
-    sqlx::query_as(
-        "
-    UPDATE members
-    SET note = $2
-    WHERE members.id = $1
-    RETURNING members.id
-    , member_number
-    , first_name
-    , last_name
-    , date_of_birth
-    , email
-    , phone_number
-    , note
-    , address
-    , city
-    , postal_code
-    , language
-    , registration_request_id as application_id
-    , left_at
-    , onboarding_finished_at
-    , created_at
-    , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
-    , sub
-",
+pub async fn update_member_note<'a, E>(
+    executor: E,
+    id: Id<Member>,
+    new_note: &Note,
+) -> sqlx::Result<MemberDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberDetail,
+        r#"
+UPDATE members
+SET note = $2
+WHERE members.id = $1
+RETURNING members.id
+, member_number
+, first_name
+, last_name
+, date_of_birth
+, email
+, phone_number
+, note
+, address
+, city
+, postal_code
+, language
+, registration_request_id as application_id
+, left_at
+, onboarding_finished_at
+, created_at
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+, sub
+"#,
+        id as _,
+        new_note.note.as_deref(),
     )
-    .bind(id)
-    .bind(new_note.note.as_deref())
+    .fetch_one(executor)
+    .await
 }
 
-pub fn update_member<'a>(id: Id<Member>, updated_member: UpdateMember) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn update_member<'a, E>(
+    executor: E,
+    id: Id<Member>,
+    updated_member: UpdateMember,
+) -> sqlx::Result<MemberDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberDetail,
+        r#"
 UPDATE members
 SET first_name = $2
     , last_name = $3
@@ -400,28 +488,34 @@ RETURNING members.id
 , left_at
 , onboarding_finished_at
 , created_at
-, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
 , sub
-",
+"#,
+        id as _,
+        updated_member.first_name,
+        updated_member.last_name,
+        updated_member.date_of_birth,
+        updated_member.email,
+        updated_member.phone_number,
+        updated_member.note,
+        updated_member.address,
+        updated_member.city,
+        updated_member.postal_code,
+        updated_member.language as _,
     )
-    .bind(id)
-    .bind(updated_member.first_name)
-    .bind(updated_member.last_name)
-    .bind(updated_member.date_of_birth)
-    .bind(updated_member.email)
-    .bind(updated_member.phone_number)
-    .bind(updated_member.note)
-    .bind(updated_member.address)
-    .bind(updated_member.city)
-    .bind(updated_member.postal_code)
-    .bind(updated_member.language)
+    .fetch_one(executor)
+    .await
 }
 
-// This doesn't realy delete member from the database
-// We're just adding left_at flag to the data
-pub fn remove_member<'a>(id: Id<Member>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+// This doesn't really delete member from the database
+// We're just adding left_at flag to the data and removing keycloak sub token
+pub async fn remove_member<'a, E>(executor: E, id: Id<Member>) -> sqlx::Result<MemberDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberDetail,
+        r#"
 UPDATE members
 SET left_at = NOW()
   , sub = NULL
@@ -442,9 +536,11 @@ RETURNING members.id
 , left_at
 , onboarding_finished_at
 , created_at
-, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) as workplace_id
+, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
 , sub
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }

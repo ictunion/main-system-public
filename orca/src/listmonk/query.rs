@@ -1,20 +1,27 @@
 use crate::data::{Id, Member};
-use crate::db::Query;
 
-pub(crate) fn create_email_subscription<'a>(
+pub(crate) async fn create_email_subscription<'a, E>(
+    executor: E,
     member_id: Id<Member>,
     list: i64,
-    listmonk_status: &'static str,
+    listmonk_status: &str,
     listmonk_id: i32,
-) -> Query<'a> {
-    sqlx::query(
-        "
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    let list_str = list.to_string();
+    sqlx::query!(
+        r#"
         INSERT INTO email_subscriptions (member_id, list, listmonk_status, listmonk_id, created_at, updated_at)
         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ",
+        "#,
+        member_id as _,
+        list_str,
+        listmonk_status,
+        listmonk_id,
     )
-    .bind(member_id)
-    .bind(list)
-    .bind(listmonk_status)
-    .bind(listmonk_id)
+    .execute(executor)
+    .await?;
+    Ok(())
 }

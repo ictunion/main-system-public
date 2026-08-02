@@ -337,10 +337,10 @@ async fn status_api<'a>(
 ) -> Json<StatusResponse<'a>> {
     let authorization_connected = oid_provider.is_connected();
 
-    let res: Result<(bool,), sqlx::Error> = sqlx::query_as("SELECT true")
+    let database_connected = sqlx::query_scalar!("SELECT TRUE")
         .fetch_one(db_pool.inner())
-        .await;
-    let database_connected = res.is_ok();
+        .await
+        .is_ok();
 
     // inline bool for proxy support
     cfg_if::cfg_if! {

@@ -1,0 +1,109 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO members\n    ( member_number\n    , email\n    , first_name\n    , last_name\n    , language\n    , date_of_birth\n    , address\n    , city\n    , postal_code\n    , phone_number\n    )\nVALUES\n    ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )\nRETURNING id\n    , member_number\n    , first_name\n    , last_name\n    , email\n    , phone_number\n    , note\n    , city\n    , language\n    , left_at\n    , created_at\n    , ARRAY[]::text[] AS \"company_names!: Vec<Option<String>>\"\n    , ARRAY[]::uuid[] AS \"workplace_ids!: Vec<Uuid>\"\n    , sub\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "member_number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "phone_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "language",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "left_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "company_names!: Vec<Option<String>>",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 12,
+        "name": "workplace_ids!: Vec<Uuid>",
+        "type_info": "UuidArray"
+      },
+      {
+        "ordinal": 13,
+        "name": "sub",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Date",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "a93778b2a68ecad56471eec25aa4f7cd003a0762bec0368a41bf9240b7da3079"
+}

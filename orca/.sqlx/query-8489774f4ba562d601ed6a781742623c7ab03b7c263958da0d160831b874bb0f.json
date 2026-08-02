@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO members_files\n( member_id\n, file_id\n)\nSELECT $2, file_id FROM registration_requests_files\nWHERE registration_request_id = $1\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8489774f4ba562d601ed6a781742623c7ab03b7c263958da0d160831b874bb0f"
+}

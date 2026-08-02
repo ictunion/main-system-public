@@ -94,13 +94,13 @@ pub fn start(config: &Config, db_pool: DbPool, oid_provider: &Provider) -> Queue
 }
 
 pub async fn ensure_member_subs(db_pool: &DbPool, queue: &QueueSender) {
-    match query::get_members_without_sub().fetch_all(db_pool).await {
+    match query::get_members_without_sub(db_pool).await {
         Ok(members) => {
             info!(
                 "Ensuring OID subs for {} member(s) without sub",
                 members.len()
             );
-            for (member_id,) in members {
+            for member_id in members {
                 if let Err(e) = queue.send(Command::NewMemberCreated(member_id, None)).await {
                     error!("Failed to enqueue NewMemberCreated for member {member_id}: {e}");
                 }
@@ -152,11 +152,8 @@ async fn process(
             process_new_registration(reg_id, signature, config, db_pool).await?;
         }
         ResentRegistrationEmail(reg_id) => {
-            let application_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
-
-            let (pdf_data,) = query::fetch_registration_pdf(reg_id)
-                .fetch_one(db_pool)
-                .await?;
+            let application_details = query::query_registration(db_pool, reg_id).await?;
+            let pdf_data = query::fetch_registration_pdf(db_pool, reg_id).await?;
 
             send_verification_email(config, db_pool, &application_details, pdf_data).await?;
         }
@@ -209,9 +206,7 @@ async fn process_new_member_created(
 ) -> Result<(), ProcessingError> {
     let token_string = token_opt.ok_or(ProcessingError::MissingOidToken)?;
     let token = JwtToken::new(&token_string);
-    let oid_user = query::get_member_for_oid(member_id)
-        .fetch_one(db_pool)
-        .await?;
+    let oid_user = query::get_member_for_oid(db_pool, member_id).await?;
 
     let uuid = match oid_provider.create_user(&token, &oid_user).await {
         Ok(uuid) => uuid,
@@ -229,9 +224,7 @@ async fn process_new_member_created(
         Err(e) => return Err(e.into()),
     };
 
-    query::assign_member_oid_sub(member_id, uuid)
-        .execute(db_pool)
-        .await?;
+    query::assign_member_oid_sub(db_pool, member_id, uuid).await?;
 
     Ok(())
 }
@@ -263,14 +256,12 @@ async fn process_new_registration(
     // Query for detail information about member
     // in theory we could also pass this in the command
     // but doing it this way means that all triggers & defaults etc are 100% applied to the data
-    let application_details = query::query_registration(reg_id).fetch_one(db_pool).await?;
+    let application_details = query::query_registration(db_pool, reg_id).await?;
 
     // Generate PDF
     let pdf_path = print_pdf(config, &application_details, &processing_dir).await?;
     let pdf_data = fs::read(pdf_path).await?;
-    query::insert_registration_pdf(reg_id, &pdf_data)
-        .execute(db_pool)
-        .await?;
+    query::insert_registration_pdf(db_pool, reg_id, &pdf_data).await?;
 
     send_verification_email(config, db_pool, &application_details, pdf_data).await?;
 
@@ -435,9 +426,7 @@ async fn send_verification_email(
     send_email(config, message).await?;
 
     // Update info in DB about email being sent
-    query::track_verification_sent_at(application_details.id)
-        .execute(db_pool)
-        .await?;
+    query::track_verification_sent_at(db_pool, application_details.id).await?;
 
     Ok(())
 }

@@ -18,10 +18,10 @@ pub struct File {
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct FileInfo {
-    id: Id<File>,
-    name: String,
-    file_type: String,
-    created_at: DateTime<Utc>,
+    pub(crate) id: Id<File>,
+    pub(crate) name: String,
+    pub(crate) file_type: String,
+    pub(crate) created_at: DateTime<Utc>,
 }
 
 impl<'r> Responder<'r, 'static> for File {
@@ -48,20 +48,18 @@ async fn get(
 ) -> Response<File> {
     oid_provider.require_role(&token, Role::ViewApplication)?;
 
-    let file: File = read_file(id).fetch_one(db_pool.inner()).await?;
+    let file: File = read_file(db_pool.inner(), id).await?;
     Ok(file)
 }
 
-use crate::db::QueryAs;
-
-fn read_file(id: Id<File>) -> QueryAs<'static, File> {
-    sqlx::query_as(
-        "
-SELECT data, file_type FROM files
-WHERE id = $1
-",
+async fn read_file(pool: &DbPool, id: Id<File>) -> sqlx::Result<File> {
+    sqlx::query_as!(
+        File,
+        r#"SELECT data AS "data!", file_type FROM files WHERE id = $1"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(pool)
+    .await
 }
 #[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
 pub fn routes() -> Vec<Route> {

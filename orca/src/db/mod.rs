@@ -1,7 +1,4 @@
-use sqlx::{
-    PgPool, Postgres,
-    postgres::{PgArguments, PgPoolOptions},
-};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
 pub struct Config<'a> {
     pub connection_url: &'a str,
@@ -32,5 +29,3 @@ pub fn fail_duplicated<T>(res: &Result<T, sqlx::Error>) -> bool {
 }
 
 pub type DbPool = PgPool;
-pub type Query<'q> = sqlx::query::Query<'q, Postgres, PgArguments>;
-pub type QueryAs<'q, T> = sqlx::query::QueryAs<'q, Postgres, T, PgArguments>;

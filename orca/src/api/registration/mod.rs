@@ -70,10 +70,14 @@ async fn api_join(
     let mut confirmation_token;
     loop {
         confirmation_token = generate::string(64);
-        let res =
-            query::create_join_request(ip_addr, user_agent, confirmation_token.clone(), &user)
-                .fetch_one(db_pool.inner())
-                .await;
+        let res = query::create_join_request(
+            db_pool.inner(),
+            ip_addr,
+            user_agent,
+            confirmation_token.clone(),
+            &user,
+        )
+        .await;
 
         if db::fail_duplicated(&res) {
             // We won the loterry and generated confirmation token which already exists...
@@ -85,7 +89,7 @@ async fn api_join(
                 // Oh shoot some issue with DB query...
                 return Err(err.into());
             }
-            Ok((id,)) => {
+            Ok(id) => {
                 // All went well...
                 // break the loop so we can respond with Ok
                 reg_id = id;
@@ -112,9 +116,7 @@ async fn api_join(
         .resize(492, 192)
         .map_err(|_e| Status::UnprocessableEntity)?;
 
-    query::create_signature_file(reg_id, &signature_data)
-        .execute(db_pool.inner())
-        .await?;
+    query::create_signature_file(db_pool.inner(), reg_id, &signature_data).await?;
 
     // Rest of the processing then happens on async thread outside of web worker
     queue
@@ -135,8 +137,8 @@ async fn api_confirm(
 ) -> Response<Redirect> {
     use sqlx::error::Error::RowNotFound;
 
-    match query::confirm_email(code).fetch_one(db_pool.inner()).await {
-        Ok((_reg_id, local)) => {
+    match query::confirm_email(db_pool.inner(), code).await {
+        Ok(local) => {
             info!("Registration request verified.");
             // redirect user to the right place
             Ok(Redirect::found(

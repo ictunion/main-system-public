@@ -1,6 +1,6 @@
 use super::{ApiError, SuccessResponse};
 use crate::api::Response;
-use crate::api::members::Summary;
+use crate::api::members::MemberSummary;
 use crate::api::members::query::get_status_data;
 use crate::data::{Id, Member, Workplace};
 use crate::db::DbPool;
@@ -200,15 +200,16 @@ async fn assign_member_to_workplace(
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let result = query::create_connection_between_member_and_workplace(workplace_id, member_id)
-        .execute(db_pool.inner())
-        .await?;
+    let rows_affected = query::create_connection_between_member_and_workplace(
+        db_pool.inner(),
+        workplace_id,
+        member_id,
+    )
+    .await?;
 
     let workplace_details = query::detail(db_pool.inner(), workplace_id).await?;
 
-    let user_data = get_status_data(member_id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let user_data = get_status_data(db_pool.inner(), member_id).await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
         ApiError::keycloak_push(&format!("keycloak ID for user {member_id} not assigned"))
@@ -218,7 +219,7 @@ async fn assign_member_to_workplace(
         .connect_keycloak_user_and_group(&token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
-    if result.rows_affected() == 0 {
+    if rows_affected == 0 {
         Ok(SuccessResponse::NoContent)
     } else {
         Ok(SuccessResponse::Created)
@@ -235,15 +236,16 @@ async fn remove_member_from_workplace(
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let result = query::remove_connection_between_member_and_workplace(workplace_id, member_id)
-        .execute(db_pool.inner())
-        .await?;
+    let rows_affected = query::remove_connection_between_member_and_workplace(
+        db_pool.inner(),
+        workplace_id,
+        member_id,
+    )
+    .await?;
 
     let workplace_details = query::detail(db_pool.inner(), workplace_id).await?;
 
-    let user_data = get_status_data(member_id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let user_data = get_status_data(db_pool.inner(), member_id).await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
         ApiError::keycloak_push(&format!("keycloak ID for user {member_id} not assigned"))
@@ -253,7 +255,7 @@ async fn remove_member_from_workplace(
         .remove_keycloak_user_from_group(&token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
-    if result.rows_affected() == 0 {
+    if rows_affected == 0 {
         Ok(SuccessResponse::NoContent)
     } else {
         Ok(SuccessResponse::Accepted)
@@ -266,13 +268,11 @@ async fn get_all_workplace_members(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
-) -> Response<Json<Vec<Summary>>> {
+) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
     oid_provider.require_role(&token, Role::ViewMember)?;
 
-    let summaries = query::get_all_workplace_members(workplace_id)
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::get_all_workplace_members(db_pool.inner(), workplace_id).await?;
 
     Ok(Json(summaries))
 }

@@ -3,6 +3,7 @@ use log::error;
 use rocket::serde::json::Json;
 use rocket::{Route, State, delete, get, patch, post, routes};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::config::Config;
 
@@ -22,7 +23,7 @@ use super::{ApiError, SuccessResponse};
 mod query;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct Summary {
+pub struct ApplicationSummary {
     id: Id<RegistrationRequest>,
     email: Option<String>,
     first_name: Option<String>,
@@ -40,16 +41,16 @@ async fn list(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<Summary>>> {
+) -> Response<Json<Vec<ApplicationSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
+    let summaries = query::list_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct UnverifiedSummary {
+pub struct ApplicationUnverifiedSummary {
     id: Id<RegistrationRequest>,
     email: Option<String>,
     first_name: Option<String>,
@@ -68,18 +69,16 @@ async fn list_unverified(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<UnverifiedSummary>>> {
+) -> Response<Json<Vec<ApplicationUnverifiedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_unverified_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_unverified_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct AcceptedSummary {
+pub struct ApplicationAcceptedSummary {
     id: Id<RegistrationRequest>,
     email: Option<String>,
     first_name: Option<String>,
@@ -99,18 +98,16 @@ async fn list_accepted(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<AcceptedSummary>>> {
+) -> Response<Json<Vec<ApplicationAcceptedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_accepted_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_accepted_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct RejectedSummary {
+pub struct ApplicationRejectedSummary {
     id: Id<RegistrationRequest>,
     email: Option<String>,
     first_name: Option<String>,
@@ -129,18 +126,16 @@ async fn list_rejected(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<RejectedSummary>>> {
+) -> Response<Json<Vec<ApplicationRejectedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_rejected_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_rejected_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct ProcessingSummary {
+pub struct ApplicationProcessingSummary {
     id: Id<RegistrationRequest>,
     email: Option<String>,
     first_name: Option<String>,
@@ -159,18 +154,16 @@ async fn list_processing(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<ProcessingSummary>>> {
+) -> Response<Json<Vec<ApplicationProcessingSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_processing_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_processing_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct InvalidSummary {
+pub struct ApplicationInvalidSummary {
     id: Id<RegistrationRequest>,
     email: Option<String>,
     first_name: Option<String>,
@@ -189,18 +182,16 @@ async fn list_invalid(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<InvalidSummary>>> {
+) -> Response<Json<Vec<ApplicationInvalidSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_invalid_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_invalid_summaries(db_pool.inner()).await?;
 
     Ok(Json(summaries))
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct Detail {
+pub struct ApplicationDetail {
     id: Id<RegistrationRequest>,
     pub(crate) email: Option<String>,
     pub(crate) first_name: Option<String>,
@@ -232,12 +223,10 @@ async fn detail(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_any_role(&token, &[Role::ViewApplication])?;
 
-    let detail = query::get_application(id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let detail = query::get_application(db_pool.inner(), id).await?;
 
     Ok(Json(detail))
 }
@@ -254,7 +243,7 @@ pub struct ApplicationStatusData {
     rejected_at: Option<DateTime<Utc>>,
     invalidated_at: Option<DateTime<Utc>>,
     accepted_at: Option<DateTime<Utc>>,
-    member_id: Option<Id<Member>>,
+    member_id: Option<Uuid>,
 }
 
 impl ApplicationStatusData {
@@ -342,7 +331,7 @@ async fn reject(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
@@ -350,13 +339,12 @@ async fn reject(
     let mut tx = db_pool.inner().begin().await?;
 
     // check that the application status is in processing
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_waiting_or_in_processing_or()?;
 
-    let detail = query::reject_application(id).fetch_one(&mut *tx).await?;
+    let detail = query::reject_application(&mut *tx, id).await?;
 
     tx.commit().await?;
 
@@ -369,20 +357,17 @@ async fn invalidate(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     let mut tx = db_pool.inner().begin().await?;
 
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_waiting_or_in_processing_or()?;
 
-    let detail = query::invalidate_application(id)
-        .fetch_one(&mut *tx)
-        .await?;
+    let detail = query::invalidate_application(&mut *tx, id).await?;
 
     tx.commit().await?;
 
@@ -395,7 +380,7 @@ async fn unreject(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
@@ -403,13 +388,12 @@ async fn unreject(
     let mut tx = db_pool.inner().begin().await?;
 
     // check that the application status is rejected
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_rejected()?;
 
-    let detail = query::unreject_application(id).fetch_one(&mut *tx).await?;
+    let detail = query::unreject_application(&mut *tx, id).await?;
 
     Ok(Json(detail))
 }
@@ -420,21 +404,18 @@ async fn uninvalidate(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     let mut tx = db_pool.inner().begin().await?;
 
     // check that the application status is rejected
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_invalidated()?;
 
-    let detail = query::uninvalidate_application(id)
-        .fetch_one(&mut *tx)
-        .await?;
+    let detail = query::uninvalidate_application(&mut *tx, id).await?;
 
     tx.commit().await?;
 
@@ -456,7 +437,7 @@ async fn accept(
     queue: &State<QueueSender>,
     id: Id<RegistrationRequest>,
     new_member: Json<NewMember>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
@@ -464,8 +445,7 @@ async fn accept(
     let mut tx = db_pool.inner().begin().await?;
 
     // check that application status is in processing
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_in_proceesing()?;
@@ -474,16 +454,11 @@ async fn accept(
     let member_number: MemberNumber = if let Some(v) = new_member.member_number {
         v
     } else {
-        let (new_num,) = members::query::get_next_member_number()
-            .fetch_one(&mut *tx)
-            .await?;
-        new_num
+        members::query::get_next_member_number(&mut *tx).await?
     };
 
     // Inserting new member data
-    let result = query::create_new_member(id, member_number)
-        .fetch_one(&mut *tx)
-        .await;
+    let result = query::create_new_member(&mut *tx, id, member_number).await;
 
     // Gracefully handle colision of member numbers
     if db::fail_duplicated(&result) {
@@ -495,19 +470,15 @@ async fn accept(
         return Err(ApiError::data_conflict(&message));
     }
 
-    let (member_id,) = result?;
+    let member_id = result?;
 
     // Populate all the relations for new member
-    query::attach_files_to_member(id, member_id)
-        .execute(&mut *tx)
-        .await?;
-    query::attach_occupation(id, member_id)
-        .execute(&mut *tx)
-        .await?;
+    query::attach_files_to_member(&mut *tx, id, member_id).await?;
+    query::attach_occupation(&mut *tx, id, member_id).await?;
 
     // Since we return just member_id from the insert query
     // let's just do an extra query for application detail
-    let detail: Detail = query::get_application(id).fetch_one(&mut *tx).await?;
+    let detail: ApplicationDetail = query::get_application(&mut *tx, id).await?;
 
     // if config file doesn't contain listmonk_host value, let's skip listmonk subscribe step.
     // DEV environment will be probably missing listmonk_host, unless devs setup their own testing listmonk instance.
@@ -547,9 +518,7 @@ async fn list_files(
 ) -> Response<Json<Vec<FileInfo>>> {
     oid_provider.require_role(&token, Role::ViewApplication)?;
 
-    let files = query::list_application_files(id)
-        .fetch_all(db_pool.inner())
-        .await?;
+    let files = query::list_application_files(db_pool.inner(), id).await?;
     Ok(Json(files))
 }
 
@@ -559,7 +528,7 @@ async fn verify(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
@@ -567,13 +536,12 @@ async fn verify(
     let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = db_pool.inner().begin().await?;
 
     // check that the application status is in processing
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_waiting_for_confirmation()?;
 
-    let detail = query::verify_application(id).fetch_one(&mut *tx).await?;
+    let detail = query::verify_application(&mut *tx, id).await?;
 
     tx.commit().await?;
 
@@ -590,8 +558,7 @@ async fn resend_email(
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    query::get_application_status_data(id)
-        .fetch_one(db_pool.inner())
+    query::get_application_status_data(db_pool.inner(), id)
         .await?
         .to_status()
         .assert_waiting_for_confirmation()?;
@@ -616,18 +583,13 @@ async fn hard_delete(
     let mut tx = db_pool.inner().begin().await?;
 
     // check that the application status is rejected
-    query::get_application_status_data(id)
-        .fetch_one(&mut *tx)
+    query::get_application_status_data(&mut *tx, id)
         .await?
         .to_status()
         .assert_invalidated()?;
 
-    query::dangerous_hard_delete_application_data(id)
-        .execute(&mut *tx)
-        .await?;
-    query::dangerous_hard_delete_application(id)
-        .execute(&mut *tx)
-        .await?;
+    query::dangerous_hard_delete_application_data(&mut *tx, id).await?;
+    query::dangerous_hard_delete_application(&mut *tx, id).await?;
 
     tx.commit().await?;
 
@@ -647,12 +609,10 @@ async fn update_note(
     token: JwtToken<'_>,
     id: Id<RegistrationRequest>,
     note: Json<Note>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    let detail = query::update_registration_note(id, &note)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let detail = query::update_registration_note(db_pool.inner(), id, &note).await?;
 
     Ok(Json(detail))
 }

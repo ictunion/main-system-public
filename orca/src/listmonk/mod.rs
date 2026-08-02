@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 
-use crate::api::applications::Detail;
+use crate::api::applications::ApplicationDetail;
 use crate::data::{Id, Member, MemberNumber};
 
 use crate::api::ApiError;
@@ -46,7 +46,7 @@ pub(crate) enum ListMonkStatus {
 }
 
 pub(crate) struct ListMonkDetail<'a> {
-    detail: &'a Detail,
+    detail: &'a ApplicationDetail,
     member_number: MemberNumber,
     pub(crate) lists: Vec<u32>,
 }
@@ -74,7 +74,7 @@ pub(crate) fn set_listmonk_lists(list_monk_detail: &mut ListMonkDetail<'_>) {
 }
 
 pub(crate) async fn subscribe_to_listmonk(
-    application_detail: &Detail,
+    application_detail: &ApplicationDetail,
     member_number: MemberNumber,
     config: &Config,
     mut tx: sqlx::Transaction<'_, sqlx::Postgres>,
@@ -172,9 +172,14 @@ pub(crate) async fn subscribe_to_listmonk(
     let lists = list_monk_detail.lists;
     for list_value in lists {
         let unsingned_list_value = i64::from(list_value);
-        query::create_email_subscription(member_id, unsingned_list_value, status, listmonk_id)
-            .execute(&mut *tx)
-            .await?;
+        query::create_email_subscription(
+            &mut *tx,
+            member_id,
+            unsingned_list_value,
+            status,
+            listmonk_id,
+        )
+        .await?;
     }
 
     tx.commit().await?;

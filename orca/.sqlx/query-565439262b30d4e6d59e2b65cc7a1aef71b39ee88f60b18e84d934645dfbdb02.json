@@ -1,0 +1,154 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE registration_requests\nSET rejected_at = NULL\nWHERE id = $1\nRETURNING id\n, email\n, first_name\n, last_name\n, date_of_birth\n, phone_number\n, note\n, city\n, address\n, postal_code\n, occupation\n, company_name\n, verification_sent_at\n, confirmed_at\n, registration_ip AS \"registration_ip: crate::server::IpAddress\"\n, registration_local\n, registration_user_agent\n, registration_source\n, rejected_at\n, invalidated_at\n, created_at\n, registration_local AS language\n, NULL::timestamptz AS accepted_at\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "date_of_birth",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 5,
+        "name": "phone_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "postal_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "occupation",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "company_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "verification_sent_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "confirmed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "registration_ip: crate::server::IpAddress",
+        "type_info": "Inet"
+      },
+      {
+        "ordinal": 15,
+        "name": "registration_local",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "registration_user_agent",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "registration_source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "rejected_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 19,
+        "name": "invalidated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 20,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 21,
+        "name": "language",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 22,
+        "name": "accepted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "565439262b30d4e6d59e2b65cc7a1aef71b39ee88f60b18e84d934645dfbdb02"
+}

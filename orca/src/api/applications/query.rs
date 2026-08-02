@@ -1,17 +1,19 @@
 use crate::{
     data::{Member, MemberNumber},
-    db::{Query, QueryAs},
+    db::DbPool,
 };
 
 use super::{
-    AcceptedSummary, ApplicationStatusData, Detail, FileInfo, InvalidSummary, Note,
-    ProcessingSummary, RejectedSummary, Summary, UnverifiedSummary,
+    ApplicationAcceptedSummary, ApplicationDetail, ApplicationInvalidSummary,
+    ApplicationProcessingSummary, ApplicationRejectedSummary, ApplicationStatusData,
+    ApplicationSummary, ApplicationUnverifiedSummary, FileInfo, Note,
 };
 use crate::data::{Id, RegistrationRequest};
 
-pub fn list_summaries<'a>() -> QueryAs<'a, Summary> {
-    sqlx::query_as(
-        "
+pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<ApplicationSummary>> {
+    sqlx::query_as!(
+        ApplicationSummary,
+        r#"
 SELECT id
 , email
 , first_name
@@ -24,14 +26,19 @@ SELECT id
 , created_at
 FROM registration_requests
 ORDER BY created_at DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_unverified_summaries<'a>() -> QueryAs<'a, UnverifiedSummary> {
-    sqlx::query_as(
-        "
-SELECT id
+pub async fn list_unverified_summaries(
+    pool: &DbPool,
+) -> sqlx::Result<Vec<ApplicationUnverifiedSummary>> {
+    sqlx::query_as!(
+        ApplicationUnverifiedSummary,
+        r#"
+SELECT id AS "id!"
 , email
 , first_name
 , last_name
@@ -39,19 +46,24 @@ SELECT id
 , note
 , city
 , company_name
-, registration_local
-, created_at
+, registration_local AS "registration_local!"
+, created_at AS "created_at!"
 , verification_sent_at
 FROM registration_requests_unverified
 ORDER BY created_at DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_processing_summaries<'a>() -> QueryAs<'a, ProcessingSummary> {
-    sqlx::query_as(
-        "
-SELECT id
+pub async fn list_processing_summaries(
+    pool: &DbPool,
+) -> sqlx::Result<Vec<ApplicationProcessingSummary>> {
+    sqlx::query_as!(
+        ApplicationProcessingSummary,
+        r#"
+SELECT id AS "id!"
 , email
 , first_name
 , last_name
@@ -59,19 +71,24 @@ SELECT id
 , note
 , city
 , company_name
-, registration_local
-, created_at
-, confirmed_at
+, registration_local AS "registration_local!"
+, created_at AS "created_at!"
+, confirmed_at AS "confirmed_at!"
 FROM registration_requests_processing
 ORDER BY confirmed_at DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_accepted_summaries<'a>() -> QueryAs<'a, AcceptedSummary> {
-    sqlx::query_as(
-        "
-SELECT rr.id
+pub async fn list_accepted_summaries(
+    pool: &DbPool,
+) -> sqlx::Result<Vec<ApplicationAcceptedSummary>> {
+    sqlx::query_as!(
+        ApplicationAcceptedSummary,
+        r#"
+SELECT rr.id AS "id!"
 , rr.email
 , rr.first_name
 , rr.last_name
@@ -79,21 +96,26 @@ SELECT rr.id
 , rr.note
 , rr.city
 , rr.company_name
-, rr.registration_local
-, rr.created_at
-, m.created_at AS accepted_at
-, m.id AS member_id
+, rr.registration_local AS "registration_local!"
+, rr.created_at AS "created_at!"
+, m.created_at AS "accepted_at!"
+, m.id AS "member_id!"
 FROM registration_requests_accepted as rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
-ORDER BY created_at DESC
-",
+ORDER BY rr.created_at DESC
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_rejected_summaries<'a>() -> QueryAs<'a, RejectedSummary> {
-    sqlx::query_as(
-        "
-SELECT id
+pub async fn list_rejected_summaries(
+    pool: &DbPool,
+) -> sqlx::Result<Vec<ApplicationRejectedSummary>> {
+    sqlx::query_as!(
+        ApplicationRejectedSummary,
+        r#"
+SELECT id AS "id!"
 , email
 , first_name
 , last_name
@@ -101,19 +123,22 @@ SELECT id
 , note
 , city
 , company_name
-, registration_local
-, created_at
-, rejected_at
+, registration_local AS "registration_local!"
+, created_at AS "created_at!"
+, rejected_at AS "rejected_at!"
 FROM registration_requests_rejected
 ORDER BY created_at DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn list_invalid_summaries<'a>() -> QueryAs<'a, InvalidSummary> {
-    sqlx::query_as(
-        "
-SELECT id
+pub async fn list_invalid_summaries(pool: &DbPool) -> sqlx::Result<Vec<ApplicationInvalidSummary>> {
+    sqlx::query_as!(
+        ApplicationInvalidSummary,
+        r#"
+SELECT id AS "id!"
 , email
 , first_name
 , last_name
@@ -121,18 +146,27 @@ SELECT id
 , note
 , city
 , company_name
-, registration_local
-, created_at
-, invalidated_at
+, registration_local AS "registration_local!"
+, created_at AS "created_at!"
+, invalidated_at AS "invalidated_at!"
 FROM registration_requests_invalid
 ORDER BY created_at DESC
-",
+"#
     )
+    .fetch_all(pool)
+    .await
 }
 
-pub fn get_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn get_application<'a, E>(
+    executor: E,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<ApplicationDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 SELECT rr.id
 , rr.email
 , rr.first_name
@@ -147,7 +181,7 @@ SELECT rr.id
 , rr.company_name
 , rr.verification_sent_at
 , rr.confirmed_at
-, rr.registration_ip
+, rr.registration_ip AS "registration_ip: crate::server::IpAddress"
 , rr.registration_local
 , rr.registration_user_agent
 , rr.registration_source
@@ -159,14 +193,20 @@ SELECT rr.id
 FROM registration_requests AS rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
 WHERE rr.id = $1
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn list_application_files<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, FileInfo> {
-    sqlx::query_as(
-        "
+pub async fn list_application_files(
+    pool: &DbPool,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<Vec<FileInfo>> {
+    sqlx::query_as!(
+        FileInfo,
+        r#"
 SELECT f.id
 , f.name
 , f.file_type
@@ -175,15 +215,24 @@ FROM registration_requests_files AS rrf
 INNER JOIN files AS f ON f.id = rrf.file_id
 WHERE rrf.registration_request_id = $1
 ORDER BY f.created_at DESC
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_all(pool)
+    .await
 }
 
-pub fn reject_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+pub async fn reject_application<'a, E>(
+    executor: E,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<ApplicationDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
     // We can hardcode null because we know rejected application can't belong to user
-    sqlx::query_as(
-        "
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 UPDATE registration_requests
 SET rejected_at = NOW()
 WHERE id = $1
@@ -201,7 +250,7 @@ RETURNING id
 , company_name
 , verification_sent_at
 , confirmed_at
-, registration_ip
+, registration_ip AS "registration_ip: crate::server::IpAddress"
 , registration_local
 , registration_user_agent
 , registration_source
@@ -209,16 +258,25 @@ RETURNING id
 , invalidated_at
 , created_at
 , registration_local AS language
-, NULL AS accepted_at
-",
+, NULL::timestamptz AS accepted_at
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn invalidate_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
+pub async fn invalidate_application<'a, E>(
+    executor: E,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<ApplicationDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
     // We can hardcode null because we know rejected application can't belong to user
-    sqlx::query_as(
-        "
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 UPDATE registration_requests
 SET invalidated_at = NOW()
 WHERE id = $1
@@ -236,7 +294,7 @@ RETURNING id
 , company_name
 , verification_sent_at
 , confirmed_at
-, registration_ip
+, registration_ip AS "registration_ip: crate::server::IpAddress"
 , registration_local
 , registration_user_agent
 , registration_source
@@ -244,15 +302,24 @@ RETURNING id
 , invalidated_at
 , created_at
 , registration_local AS language
-, NULL AS accepted_at
-",
+, NULL::timestamptz AS accepted_at
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn unreject_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn unreject_application<'a, E>(
+    executor: E,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<ApplicationDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 UPDATE registration_requests
 SET rejected_at = NULL
 WHERE id = $1
@@ -270,7 +337,7 @@ RETURNING id
 , company_name
 , verification_sent_at
 , confirmed_at
-, registration_ip
+, registration_ip AS "registration_ip: crate::server::IpAddress"
 , registration_local
 , registration_user_agent
 , registration_source
@@ -278,15 +345,24 @@ RETURNING id
 , invalidated_at
 , created_at
 , registration_local AS language
-, NULL AS accepted_at
-",
+, NULL::timestamptz AS accepted_at
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn uninvalidate_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn uninvalidate_application<'a, E>(
+    executor: E,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<ApplicationDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 UPDATE registration_requests
 SET invalidated_at = NULL
 WHERE id = $1
@@ -304,7 +380,7 @@ RETURNING id
 , company_name
 , verification_sent_at
 , confirmed_at
-, registration_ip
+, registration_ip AS "registration_ip: crate::server::IpAddress"
 , registration_local
 , registration_user_agent
 , registration_source
@@ -312,15 +388,24 @@ RETURNING id
 , invalidated_at
 , created_at
 , registration_local AS language
-, NULL AS accepted_at
-",
+, NULL::timestamptz AS accepted_at
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn verify_application<'a>(id: Id<RegistrationRequest>) -> QueryAs<'a, Detail> {
-    sqlx::query_as(
-        "
+pub async fn verify_application<'a, E>(
+    executor: E,
+    id: Id<RegistrationRequest>,
+) -> sqlx::Result<ApplicationDetail>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 UPDATE registration_requests
 SET   confirmed_at = NOW()
     , confirmation_token = NULL
@@ -339,7 +424,7 @@ RETURNING id
 , company_name
 , verification_sent_at
 , confirmed_at
-, registration_ip
+, registration_ip AS "registration_ip: crate::server::IpAddress"
 , registration_local
 , registration_user_agent
 , registration_source
@@ -347,39 +432,52 @@ RETURNING id
 , invalidated_at
 , created_at
 , registration_local AS language
-, NULL AS accepted_at
-",
+, NULL::timestamptz AS accepted_at
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
-pub fn get_application_status_data<'a>(
+pub async fn get_application_status_data<'a, E>(
+    executor: E,
     id: Id<RegistrationRequest>,
-) -> QueryAs<'a, ApplicationStatusData> {
-    sqlx::query_as(
-        "
+) -> sqlx::Result<ApplicationStatusData>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        ApplicationStatusData,
+        r#"
 SELECT rr.id
 , rr.created_at
 , rr.confirmed_at
 , rr.rejected_at
 , rr.invalidated_at
 , m.created_at AS accepted_at
-, m.id AS member_id
+, m.id AS "member_id?"
 FROM registration_requests AS rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
 WHERE rr.id = $1
-",
+"#,
+        id as _
     )
-    .bind(id)
+    .fetch_one(executor)
+    .await
 }
 
 /// TODO: this should return member once we have it type for it
-pub fn create_new_member<'a>(
+pub async fn create_new_member<'a, E>(
+    executor: E,
     id: Id<RegistrationRequest>,
     number: MemberNumber,
-) -> QueryAs<'a, (Id<Member>,)> {
-    sqlx::query_as(
-        "
+) -> sqlx::Result<Id<Member>>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_scalar!(
+        r#"
 INSERT INTO members AS m
 ( member_number
 , email
@@ -409,36 +507,50 @@ SELECT $2
 FROM registration_requests as rr
 WHERE rr.id = $1
 RETURNING m.id
-",
+"#,
+        id as _,
+        number as _,
     )
-    .bind(id)
-    .bind(number)
+    .fetch_one(executor)
+    .await
+    .map(Id::from)
 }
 
-pub fn attach_files_to_member<'a>(
+pub async fn attach_files_to_member<'a, E>(
+    executor: E,
     registration_id: Id<RegistrationRequest>,
     member_id: Id<Member>,
-) -> Query<'a> {
-    sqlx::query(
-        "
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
 INSERT INTO members_files
 ( member_id
 , file_id
 )
 SELECT $2, file_id FROM registration_requests_files
 WHERE registration_request_id = $1
-",
+"#,
+        registration_id as _,
+        member_id as _,
     )
-    .bind(registration_id)
-    .bind(member_id)
+    .execute(executor)
+    .await?;
+    Ok(())
 }
 
-pub fn attach_occupation<'a>(
+pub async fn attach_occupation<'a, E>(
+    executor: E,
     registration_id: Id<RegistrationRequest>,
     member_id: Id<Member>,
-) -> Query<'a> {
-    sqlx::query(
-        "
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
 INSERT INTO occupations
 ( member_id
 , company_name
@@ -447,45 +559,64 @@ INSERT INTO occupations
 SELECT $2, rr.company_name, rr.occupation
 FROM registration_requests as rr
 WHERE rr.id = $1
-",
+"#,
+        registration_id as _,
+        member_id as _,
     )
-    .bind(registration_id)
-    .bind(member_id)
+    .execute(executor)
+    .await?;
+    Ok(())
 }
 
-pub fn dangerous_hard_delete_application_data<'a>(
+pub async fn dangerous_hard_delete_application_data<'a, E>(
+    executor: E,
     registration_id: Id<RegistrationRequest>,
-) -> Query<'a> {
-    sqlx::query(
-        "
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
 WITH file_ids AS
     (DELETE FROM registration_requests_files
         WHERE registration_request_id = $1
         RETURNING file_id)
 DELETE FROM files WHERE id IN (SELECT file_id FROM file_ids)
-",
+"#,
+        registration_id as _,
     )
-    .bind(registration_id)
+    .execute(executor)
+    .await?;
+    Ok(())
 }
 
-pub fn dangerous_hard_delete_application<'a>(
+pub async fn dangerous_hard_delete_application<'a, E>(
+    executor: E,
     registration_id: Id<RegistrationRequest>,
-) -> Query<'a> {
-    sqlx::query(
-        "
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
 DELETE FROM registration_requests
     WHERE id = $1
-",
+"#,
+        registration_id as _,
     )
-    .bind(registration_id)
+    .execute(executor)
+    .await?;
+    Ok(())
 }
 
-pub fn update_registration_note(
+pub async fn update_registration_note(
+    pool: &DbPool,
     id: Id<RegistrationRequest>,
     new_note: &Note,
-) -> QueryAs<'_, Detail> {
-    sqlx::query_as(
-        "
+) -> sqlx::Result<ApplicationDetail> {
+    sqlx::query_as!(
+        ApplicationDetail,
+        r#"
 UPDATE registration_requests
 SET note = $2
 WHERE id = $1
@@ -503,7 +634,7 @@ RETURNING id
 , company_name
 , verification_sent_at
 , confirmed_at
-, registration_ip
+, registration_ip AS "registration_ip: crate::server::IpAddress"
 , registration_local
 , registration_user_agent
 , registration_source
@@ -511,9 +642,11 @@ RETURNING id
 , invalidated_at
 , created_at
 , registration_local AS language
-, NULL AS accepted_at
-",
+, NULL::timestamptz AS accepted_at
+"#,
+        id as _,
+        new_note.note.as_deref(),
     )
-    .bind(id)
-    .bind(new_note.note.as_deref())
+    .fetch_one(pool)
+    .await
 }

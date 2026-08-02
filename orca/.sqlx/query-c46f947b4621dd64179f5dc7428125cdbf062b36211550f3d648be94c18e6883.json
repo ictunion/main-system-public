@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO members_workplaces\n    ( workplace_id\n    , member_id\n    )\nVALUES\n    ( $1, $2 )\nON CONFLICT DO NOTHING\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c46f947b4621dd64179f5dc7428125cdbf062b36211550f3d648be94c18e6883"
+}

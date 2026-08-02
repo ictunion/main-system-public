@@ -14,28 +14,28 @@ use super::ApiError;
 use super::SuccessResponse;
 use crate::api::Response;
 use crate::api::files::FileInfo;
-use crate::data::{Id, Member, MemberNumber, RegistrationRequest, Workplace};
+use crate::data::{Id, Member, MemberNumber};
 use crate::db::DbPool;
 use crate::processing::{Command, QueueSender};
 use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role, User};
 use crate::validation::Validated;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct Summary {
-    id: Id<Member>,
-    member_number: MemberNumber,
-    first_name: Option<String>,
-    last_name: Option<String>,
-    email: Option<String>,
-    phone_number: Option<String>,
-    note: Option<String>,
-    city: Option<String>,
-    language: Option<String>,
-    left_at: Option<DateTime<Utc>>,
-    company_names: Vec<Option<String>>,
-    created_at: DateTime<Utc>,
-    workplace_ids: Vec<Uuid>,
-    sub: Option<Uuid>,
+pub struct MemberSummary {
+    pub(crate) id: Id<Member>,
+    pub(crate) member_number: MemberNumber,
+    pub(crate) first_name: Option<String>,
+    pub(crate) last_name: Option<String>,
+    pub(crate) email: Option<String>,
+    pub(crate) phone_number: Option<String>,
+    pub(crate) note: Option<String>,
+    pub(crate) city: Option<String>,
+    pub(crate) language: Option<String>,
+    pub(crate) left_at: Option<DateTime<Utc>>,
+    pub(crate) company_names: Vec<Option<String>>,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) workplace_ids: Vec<Uuid>,
+    pub(crate) sub: Option<Uuid>,
 }
 
 #[get("/")]
@@ -43,10 +43,10 @@ async fn list_all(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<Summary>>> {
+) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_summaries().fetch_all(db_pool.inner()).await?;
+    let summaries = query::list_summaries(db_pool.inner()).await?;
     Ok(Json(summaries))
 }
 
@@ -55,12 +55,10 @@ async fn list_past(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<Summary>>> {
+) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_past_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_past_summaries(db_pool.inner()).await?;
     Ok(Json(summaries))
 }
 
@@ -69,12 +67,10 @@ async fn list_new(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<Summary>>> {
+) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_new_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_new_summaries(db_pool.inner()).await?;
     Ok(Json(summaries))
 }
 
@@ -83,12 +79,10 @@ async fn list_current(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<Summary>>> {
+) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_current_summaries()
-        .fetch_all(db_pool.inner())
-        .await?;
+    let summaries = query::list_current_summaries(db_pool.inner()).await?;
     Ok(Json(summaries))
 }
 
@@ -114,7 +108,7 @@ async fn create_member(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     new_member: Validated<Json<NewMember>>,
-) -> Response<Json<Summary>> {
+) -> Response<Json<MemberSummary>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
     let mut tx = db_pool.begin().await?;
@@ -124,14 +118,11 @@ async fn create_member(
     let member_number = if let Some(num) = member.member_number {
         num
     } else {
-        let (new_num,) = query::get_next_member_number().fetch_one(&mut *tx).await?;
-        new_num
+        query::get_next_member_number(&mut *tx).await?
     };
 
     // Create new member
-    let summary = query::create_member(member_number, &member)
-        .fetch_one(&mut *tx)
-        .await?;
+    let summary = query::create_member(&mut *tx, member_number, &member).await?;
 
     tx.commit().await?;
 
@@ -161,7 +152,7 @@ async fn send_email(
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
     let email_info = request_email_info.into_inner();
-    let member_detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+    let member_detail = query::detail(db_pool.inner(), id).await?;
 
     let wrapper = match member_detail.language.as_deref() {
         Some("cs") => WRAPPER_CS,
@@ -195,7 +186,7 @@ async fn send_email(
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct Detail {
+pub struct MemberDetail {
     id: Id<Member>,
     member_number: MemberNumber,
     first_name: Option<String>,
@@ -208,11 +199,11 @@ pub struct Detail {
     city: Option<String>,
     postal_code: Option<String>,
     language: Option<String>,
-    application_id: Option<Id<RegistrationRequest>>,
+    application_id: Option<Uuid>,
     left_at: Option<DateTime<Utc>>,
     onboarding_finished_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
-    workplace_id: Option<Id<Workplace>>,
+    workplace_id: Option<Uuid>,
     sub: Option<Uuid>,
 }
 
@@ -222,10 +213,10 @@ async fn detail(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<Member>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<MemberDetail>> {
     oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
 
-    let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+    let detail = query::detail(db_pool.inner(), id).await?;
 
     Ok(Json(detail))
 }
@@ -249,12 +240,10 @@ async fn accept(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<Member>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<MemberDetail>> {
     oid_provider.require_realm_role(&token, RealmManagementRole::ManageUsers)?;
 
-    let status = query::get_status_data(id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let status = query::get_status_data(db_pool.inner(), id).await?;
 
     if status.onboarding_finished_at.is_some() {
         return Err(ApiError::data_conflict("Member is accepted already"));
@@ -264,9 +253,7 @@ async fn accept(
         return Err(ApiError::data_conflict("Past members can't be activated"));
     }
 
-    let detail = query::set_onboarding_finished(id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let detail = query::set_onboarding_finished(db_pool.inner(), id).await?;
 
     Ok(Json(detail))
 }
@@ -280,9 +267,7 @@ async fn list_files(
 ) -> Response<Json<Vec<FileInfo>>> {
     oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewApplication])?;
 
-    let files = query::list_member_files(id)
-        .fetch_all(db_pool.inner())
-        .await?;
+    let files = query::list_member_files(db_pool.inner(), id).await?;
 
     Ok(Json(files))
 }
@@ -304,9 +289,7 @@ async fn list_occupations(
 ) -> Response<Json<Vec<Occupation>>> {
     oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
 
-    let occupations = query::list_occupations(id)
-        .fetch_all(db_pool.inner())
-        .await?;
+    let occupations = query::list_occupations(db_pool.inner(), id).await?;
 
     Ok(Json(occupations))
 }
@@ -324,12 +307,10 @@ async fn update_note(
     token: JwtToken<'_>,
     id: Id<Member>,
     note: Json<Note>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::update_member_note(id, &note)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let detail = query::update_member_note(db_pool.inner(), id, &note).await?;
 
     Ok(Json(detail))
 }
@@ -358,12 +339,10 @@ async fn update_member(
     token: JwtToken<'_>,
     id: Id<Member>,
     data: Validated<Json<UpdateMember>>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let result = query::update_member(id, data.into_inner().into_inner())
-        .fetch_one(db_pool.inner())
-        .await?;
+    let result = query::update_member(db_pool.inner(), id, data.into_inner().into_inner()).await?;
 
     Ok(Json(result))
 }
@@ -374,12 +353,12 @@ async fn remove_member(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     id: Id<Member>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
     let mut tx = db_pool.begin().await?;
 
-    let status = query::get_status_data(id).fetch_one(&mut *tx).await?;
+    let status = query::get_status_data(&mut *tx, id).await?;
 
     // Remove from keycloak if paired
     if let Some(uuid) = status.sub {
@@ -393,10 +372,8 @@ async fn remove_member(
     }
 
     // Mark in database and remove workplace associations
-    super::workplaces::query::remove_member_workplace_associations(id)
-        .execute(&mut *tx)
-        .await?;
-    let detail = query::remove_member(id).fetch_one(&mut *tx).await?;
+    super::workplaces::query::remove_member_workplace_associations(&mut *tx, id).await?;
+    let detail = query::remove_member(&mut *tx, id).await?;
 
     tx.commit().await?;
 
@@ -412,7 +389,7 @@ async fn list_candidate_users(
 ) -> Response<Json<Vec<User>>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::detail(id).fetch_one(db_pool.inner()).await?;
+    let detail = query::detail(db_pool.inner(), id).await?;
 
     match detail.email {
         Some(email) => Ok(Json(oid_provider.get_matching_users(&token, email).await?)),
@@ -436,9 +413,7 @@ async fn create_oid_account(
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let status = query::get_status_data(id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let status = query::get_status_data(db_pool.inner(), id).await?;
 
     if status.sub().is_some() {
         return Err(ApiError::data_conflict("Member already has an OID account"));
@@ -467,9 +442,7 @@ async fn add_to_oid_group(
 
     let group_id = Uuid::parse_str(group_id).map_err(|_err| rocket::http::Status::BadRequest)?;
 
-    let status = query::get_status_data(id)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let status = query::get_status_data(db_pool.inner(), id).await?;
     let sub = status
         .sub()
         .ok_or_else(|| ApiError::data_conflict("Member has no OID account"))?;
@@ -488,12 +461,10 @@ async fn pair_oid(
     token: JwtToken<'_>,
     id: Id<Member>,
     data: Json<PairRequest>,
-) -> Response<Json<Detail>> {
+) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::assign_member_oid_sub(id, data.sub)
-        .fetch_one(db_pool.inner())
-        .await?;
+    let detail = query::assign_member_oid_sub(db_pool.inner(), id, data.sub).await?;
 
     Ok(Json(detail))
 }

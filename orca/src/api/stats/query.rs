@@ -1,65 +1,49 @@
-use crate::db::QueryAs;
+use crate::db::DbPool;
 
-pub fn count_unverified_applications<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM registration_requests_unverified
-",
-    )
+pub async fn count_unverified_applications(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_unverified"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_accepted_applications<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM registration_requests_accepted
-",
-    )
+pub async fn count_accepted_applications(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_accepted"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_rejected_applications<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM registration_requests_rejected
-",
-    )
+pub async fn count_rejected_applications(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_rejected"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_processing_applications<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM registration_requests_processing
-",
-    )
+pub async fn count_processing_applications(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_processing"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_invalid_applications<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM registration_requests_invalid
-",
-    )
+pub async fn count_invalid_applications(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_invalid"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_new_members<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM members_new;
-",
-    )
+pub async fn count_new_members(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM members_new"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_current_members<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM members_current;
-",
-    )
+pub async fn count_current_members(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM members_current"#)
+        .fetch_one(pool)
+        .await
 }
 
-pub fn count_past_members<'a>() -> QueryAs<'a, (i64,)> {
-    sqlx::query_as(
-        "
-SELECT COUNT(*) FROM members_past;
-",
-    )
+pub async fn count_past_members(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM members_past"#)
+        .fetch_one(pool)
+        .await
 }

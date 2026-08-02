@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT m.id AS \"id!\"\n    , m.member_number AS \"member_number!\"\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.note\n    , m.city\n    , m.language\n    , m.left_at\n    , array_agg(o.company_name ORDER BY o.created_at DESC) AS \"company_names!: Vec<Option<String>>\"\n    , m.created_at AS \"created_at!\"\n    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS \"workplace_ids!: Vec<Uuid>\"\n    , m.sub\nFROM members_new AS m\nLEFT JOIN occupations o ON o.member_id = m.id\nGROUP BY m.id\n    , m.member_number\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.note\n    , m.city\n    , m.language\n    , m.left_at\n    , m.created_at\n    , m.sub\nORDER BY m.member_number DESC\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "member_number!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "phone_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "note",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "language",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "left_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "company_names!: Vec<Option<String>>",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "workplace_ids!: Vec<Uuid>",
+        "type_info": "UuidArray"
+      },
+      {
+        "ordinal": 13,
+        "name": "sub",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      null,
+      true
+    ]
+  },
+  "hash": "54b78a291f11b0eccd1d3684407b5207e25d8821ccfb196fad47b7e8aff5d3de"
+}

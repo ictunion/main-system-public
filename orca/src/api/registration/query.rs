@@ -1,17 +1,18 @@
 use super::RegistrationRequest;
 use crate::data::{self, Id};
-use crate::db::{Query, QueryAs};
+use crate::db::DbPool;
 use crate::media::ImageData;
 use crate::server::{IpAddress, UserAgent};
 
-pub fn create_join_request<'r>(
+pub async fn create_join_request<'r>(
+    pool: &DbPool,
     ip_addr: IpAddress,
     user_agent: UserAgent<'r>,
     confirmation_token: String,
     user: &RegistrationRequest<'r>,
-) -> QueryAs<'r, (Id<data::RegistrationRequest>,)> {
-    sqlx::query_as(
-        "
+) -> sqlx::Result<Id<data::RegistrationRequest>> {
+    sqlx::query_scalar!(
+        r#"
 INSERT INTO registration_requests
 ( email
 , first_name
@@ -30,44 +31,50 @@ INSERT INTO registration_requests
 , confirmation_token
 ) VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )
 RETURNING id
-",
+"#,
+        user.email,
+        user.first_name,
+        user.last_name,
+        user.date_of_birth,
+        user.address,
+        user.city,
+        user.postal_code,
+        user.phone_number,
+        user.company_name,
+        user.occupation,
+        user.local,
+        ip_addr as _,
+        user_agent as _,
+        "website_join_form",
+        confirmation_token,
     )
-    .bind(user.email)
-    .bind(user.first_name)
-    .bind(user.last_name)
-    .bind(user.date_of_birth)
-    .bind(user.address)
-    .bind(user.city)
-    .bind(user.postal_code)
-    .bind(user.phone_number)
-    .bind(user.company_name)
-    .bind(user.occupation)
-    .bind(user.local)
-    .bind(ip_addr)
-    .bind(user_agent)
-    .bind("website_join_form")
-    .bind(confirmation_token)
+    .fetch_one(pool)
+    .await
+    .map(Id::from)
 }
 
-pub fn confirm_email(code: &'_ str) -> QueryAs<'_, (Id<data::RegistrationRequest>, String)> {
-    sqlx::query_as(
-        "
+pub async fn confirm_email(pool: &DbPool, code: &str) -> sqlx::Result<String> {
+    sqlx::query_scalar!(
+        r#"
 UPDATE registration_requests AS m
 SET   confirmed_at = NOW()
     , confirmation_token = NULL
 WHERE confirmation_token = $1
-RETURNING m.id, m.registration_local
-",
+RETURNING m.registration_local
+"#,
+        code
     )
-    .bind(code)
+    .fetch_one(pool)
+    .await
 }
 
-pub fn create_signature_file(
+pub async fn create_signature_file(
+    pool: &DbPool,
     reg_id: Id<data::RegistrationRequest>,
-    image: &'_ ImageData,
-) -> Query<'_> {
-    sqlx::query(
-        r"
+    image: &ImageData,
+) -> sqlx::Result<()> {
+    sqlx::query!(
+        r#"
 WITH rows AS
 ( INSERT INTO files
     ( name
@@ -82,9 +89,12 @@ INSERT INTO registration_requests_files
     )
     SELECT $3 as registration_request_id, id
     FROM rows
-",
+"#,
+        &image.image_type,
+        image.to_vec(),
+        reg_id as _,
     )
-    .bind(&image.image_type)
-    .bind(image.to_vec())
-    .bind(reg_id)
+    .execute(pool)
+    .await?;
+    Ok(())
 }

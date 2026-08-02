@@ -18,10 +18,10 @@ use keycloak::KeycloakProvider;
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct User {
-    id: Option<String>,
+    pub(crate) id: Option<String>,
     pub email: String,
-    first_name: Option<String>,
-    last_name: Option<String>,
+    pub(crate) first_name: Option<String>,
+    pub(crate) last_name: Option<String>,
 }
 
 impl User {
