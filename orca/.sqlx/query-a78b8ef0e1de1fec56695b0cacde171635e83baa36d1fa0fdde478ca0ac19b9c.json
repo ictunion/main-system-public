@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT rr.id\n, rr.email\n, rr.first_name\n, rr.last_name\n, rr.date_of_birth\n, rr.phone_number\n, rr.note\n, rr.city\n, rr.address\n, rr.postal_code\n, rr.occupation\n, rr.company_name\n, rr.verification_sent_at\n, rr.confirmed_at\n, rr.registration_ip AS \"registration_ip: crate::server::IpAddress\"\n, rr.registration_local\n, rr.registration_user_agent\n, rr.registration_source\n, rr.rejected_at\n, rr.invalidated_at\n, rr.created_at\n, rr.registration_local AS language\n, m.created_at AS accepted_at\nFROM registration_requests AS rr\nLEFT JOIN members AS m ON rr.id = m.registration_request_id\nWHERE rr.id = $1\n",
+  "query": "\nSELECT rr.id\n, rr.email\n, rr.first_name\n, rr.last_name\n, rr.date_of_birth\n, rr.phone_number\n, rr.note\n, rr.city\n, rr.address\n, rr.postal_code\n, rr.occupation\n, rr.company_name\n, rr.verification_sent_at\n, rr.confirmed_at\n, rr.registration_ip AS \"registration_ip: crate::server::IpAddress\"\n, rr.registration_local\n, rr.registration_user_agent\n, rr.registration_source\n, rr.rejected_at\n, rr.invalidated_at\n, rr.created_at\n, rr.registration_local AS language\n, m.created_at AS \"accepted_at?\"\nFROM registration_requests AS rr\nLEFT JOIN members AS m ON rr.id = m.registration_request_id\nWHERE rr.id = $1\n",
   "describe": {
     "columns": [
       {
@@ -115,7 +115,7 @@
       },
       {
         "ordinal": 22,
-        "name": "accepted_at",
+        "name": "accepted_at?",
         "type_info": "Timestamptz"
       }
     ],
@@ -150,5 +150,5 @@
       false
     ]
   },
-  "hash": "253609f2a462264b3edac89c24955ff30f46d3c62a2f31b11aa4874d1e495ca4"
+  "hash": "a78b8ef0e1de1fec56695b0cacde171635e83baa36d1fa0fdde478ca0ac19b9c"
 }

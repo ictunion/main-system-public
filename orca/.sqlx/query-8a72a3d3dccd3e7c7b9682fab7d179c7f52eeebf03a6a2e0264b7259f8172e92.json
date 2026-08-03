@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT rr.id\n, rr.created_at\n, rr.confirmed_at\n, rr.rejected_at\n, rr.invalidated_at\n, m.created_at AS accepted_at\n, m.id AS \"member_id?\"\nFROM registration_requests AS rr\nLEFT JOIN members AS m ON rr.id = m.registration_request_id\nWHERE rr.id = $1\n",
+  "query": "\nSELECT rr.id\n, rr.created_at\n, rr.confirmed_at\n, rr.rejected_at\n, rr.invalidated_at\n, m.created_at AS \"accepted_at?\"\n, m.id AS \"member_id?\"\nFROM registration_requests AS rr\nLEFT JOIN members AS m ON rr.id = m.registration_request_id\nWHERE rr.id = $1\n",
   "describe": {
     "columns": [
       {
@@ -30,7 +30,7 @@
       },
       {
         "ordinal": 5,
-        "name": "accepted_at",
+        "name": "accepted_at?",
         "type_info": "Timestamptz"
       },
       {
@@ -54,5 +54,5 @@
       false
     ]
   },
-  "hash": "2ecaec90a3389ca095bbbf7aff4a8b0d2c4012555fe36969a19a9eeed477d3b2"
+  "hash": "8a72a3d3dccd3e7c7b9682fab7d179c7f52eeebf03a6a2e0264b7259f8172e92"
 }

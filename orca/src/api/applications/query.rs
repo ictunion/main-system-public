@@ -189,7 +189,7 @@ SELECT rr.id
 , rr.invalidated_at
 , rr.created_at
 , rr.registration_local AS language
-, m.created_at AS accepted_at
+, m.created_at AS "accepted_at?"
 FROM registration_requests AS rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
 WHERE rr.id = $1
@@ -455,7 +455,7 @@ SELECT rr.id
 , rr.confirmed_at
 , rr.rejected_at
 , rr.invalidated_at
-, m.created_at AS accepted_at
+, m.created_at AS "accepted_at?"
 , m.id AS "member_id?"
 FROM registration_requests AS rr
 LEFT JOIN members AS m ON rr.id = m.registration_request_id
