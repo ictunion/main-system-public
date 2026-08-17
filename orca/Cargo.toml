@@ -27,7 +27,7 @@ uuid = { version = "1.3.0", features = [ "v4", "serde" ] }
 phf = { version = "0.13.1", features = [ "macros" ] }
 lettre = { version = "0.11.11", features = [ "tokio1", "tokio1-native-tls" ] }
 handlebars = "6.4.0"
-reqwest = { version =  "0.13.2", default-features = false, features = [ "json", "http2", "native-tls" ] }
+reqwest = { version =  "0.13.2", default-features = false, features = [ "json", "http2", "native-tls", "query" ] }
 jsonwebtoken = { version = "10.3.0", features = [ "rust_crypto" ] }
 mrml = "6.0.1"
 thiserror = "2.0.9"

@@ -9,7 +9,7 @@ use crate::data::{Id, Member, MemberNumber};
 
 use crate::api::ApiError;
 
-use log::{debug, error};
+use log::{debug, error, info};
 
 mod query;
 
@@ -21,6 +21,21 @@ struct ListmonkResponseData {
 #[derive(Deserialize)]
 struct ListmonkResponse {
     data: ListmonkResponseData,
+}
+
+#[derive(Deserialize)]
+struct ListmonkSubscriberRecord {
+    id: i32,
+}
+
+#[derive(Deserialize)]
+struct ListmonkSubscribersResponseData {
+    results: Vec<ListmonkSubscriberRecord>,
+}
+
+#[derive(Deserialize)]
+struct ListmonkSubscribersResponse {
+    data: ListmonkSubscribersResponseData,
 }
 
 #[derive(Serialize)]
@@ -71,6 +86,37 @@ pub(crate) fn set_listmonk_lists(list_monk_detail: &mut ListMonkDetail<'_>) {
     }
     // fallback — maybe assign a default list or do nothing
     list_monk_detail.lists = vec![5u32];
+}
+
+async fn get_subscriber_id_by_email(
+    client: &Client,
+    host: &str,
+    username: &str,
+    password: &str,
+    email: &str,
+) -> Result<Option<i32>, ApiError> {
+    let url: String = format!("{host}/api/subscribers");
+    let query = format!("subscribers.email='{}'", email.replace('\'', "''"));
+
+    let res: reqwest::Response = client
+        .get(url)
+        .basic_auth(username, Some(password))
+        .query(&[("query", query.as_str())])
+        .send()
+        .await?;
+
+    let res_status = res.status();
+    let text: String = res.text().await?;
+
+    if !res_status.is_success() {
+        error!("Error looking up Listmonk subscriber by email: {text}");
+        return Err(ApiError::listmonk_error(&text));
+    }
+
+    let parsed: ListmonkSubscribersResponse =
+        json::from_str(&text).map_err(|_ignored| ApiError::data_missing("Listmonk.Subscribers"))?;
+
+    Ok(parsed.data.results.into_iter().next().map(|r| r.id))
 }
 
 pub(crate) async fn subscribe_to_listmonk(
@@ -158,14 +204,22 @@ pub(crate) async fn subscribe_to_listmonk(
 
     debug!("Status: {res_status}");
 
-    if !res_status.is_success() {
+    let listmonk_id: i32 = if res_status.as_u16() == 409 {
+        info!(
+            "Listmonk subscriber already exists for {}, looking up by email",
+            payload.email
+        );
+        get_subscriber_id_by_email(&client, host, username, password, &payload.email)
+            .await?
+            .ok_or_else(|| ApiError::listmonk_error(&text))?
+    } else if !res_status.is_success() {
         error!("Error subscribing user to Listmonk: {text}");
         return Err(ApiError::listmonk_error(&text));
-    }
-
-    let listmonk_id: i32 = json::from_str::<ListmonkResponse>(&text)
-        .map(|r| r.data.id)
-        .map_err(|_ignored| ApiError::data_missing("Listmonk.Id"))?;
+    } else {
+        json::from_str::<ListmonkResponse>(&text)
+            .map(|r| r.data.id)
+            .map_err(|_ignored| ApiError::data_missing("Listmonk.Id"))?
+    };
 
     let status = "enabled";
 
