@@ -10,6 +10,7 @@
     "in-source": true
   },
   "jsx": { "version": 4, "mode": "classic" },
+  "uncurried": false,
   "bsc-flags": [ "-open JsonCombinators" ],
   "bs-dependencies": [
     "@rescript/react",

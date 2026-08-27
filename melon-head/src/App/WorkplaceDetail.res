@@ -14,12 +14,13 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
       },
       {
         label: "State",
-        view: d => (switch WorkplaceData.getStatus(d) {
-        | Initial => "Initial"
-        | Established => "Established"
-        | Announced => "Announced"
-        | Cancelled => "Cancelled"
-        })->React.string,
+        view: d =>
+          switch WorkplaceData.getStatus(d) {
+          | Initial => "Initial"
+          | Established => "Established"
+          | Announced => "Announced"
+          | Cancelled => "Cancelled"
+          }->React.string,
         minmax: ("120px", "200px"),
       },
       {
@@ -44,10 +45,10 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
       },
       {
         label: "Executive Group ID",
-        view: d => d.keycloakExecutiveGroupId->Belt.Option.mapWithDefault(
-          React.string("—"),
-          uuid => uuid->Uuid.toString->React.string,
-        ),
+        view: d =>
+          d.keycloakExecutiveGroupId->Belt.Option.mapWithDefault(React.string("—"), uuid =>
+            uuid->Uuid.toString->React.string
+          ),
         minmax: ("300px", "900px"),
       },
     ],
@@ -57,10 +58,11 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
     cells: [
       {
         label: "Listmonk ID",
-        view: d => switch d.newsletterId {
-        | None => React.string("Newsletter not connected")
-        | Some(id) => id->Belt.Int.toString->React.string
-        },
+        view: d =>
+          switch d.newsletterId {
+          | None => React.string("Newsletter not connected")
+          | Some(id) => id->Belt.Int.toString->React.string
+          },
         minmax: ("250px", "600px"),
       },
     ],
@@ -75,26 +77,26 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
       },
       {
         label: "Established On",
-        view: d => d.establishedAt->Belt.Option.mapWithDefault(
-          React.string("—"),
-          date => date->Js.Date.toLocaleDateString->React.string,
-        ),
+        view: d =>
+          d.establishedAt->Belt.Option.mapWithDefault(React.string("—"), date =>
+            date->Js.Date.toLocaleDateString->React.string
+          ),
         minmax: ("150px", "300px"),
       },
       {
         label: "Announced On",
-        view: d => d.announcedAt->Belt.Option.mapWithDefault(
-          React.string("—"),
-          date => date->Js.Date.toLocaleDateString->React.string,
-        ),
+        view: d =>
+          d.announcedAt->Belt.Option.mapWithDefault(React.string("—"), date =>
+            date->Js.Date.toLocaleDateString->React.string
+          ),
         minmax: ("150px", "300px"),
       },
       {
         label: "Cancelled On",
-        view: d => d.cancelledAt->Belt.Option.mapWithDefault(
-          React.string("—"),
-          date => date->Js.Date.toLocaleDateString->React.string,
-        ),
+        view: d =>
+          d.cancelledAt->Belt.Option.mapWithDefault(React.string("—"), date =>
+            date->Js.Date.toLocaleDateString->React.string
+          ),
         minmax: ("150px", "300px"),
       },
     ],
@@ -103,7 +105,13 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
 
 module EditWorkplace = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~id: Uuid.t, ~detail: WorkplaceData.summary, ~setDetail) => {
+  let make = (
+    ~api: Api.t,
+    ~modal: Modal.Interface.t,
+    ~id: Uuid.t,
+    ~detail: WorkplaceData.summary,
+    ~setDetail,
+  ) => {
     let (newsletterId, setNewsletterId) = React.useState(_ =>
       detail.newsletterId->Belt.Option.mapWithDefault("", Belt.Int.toString)
     )
@@ -124,11 +132,12 @@ module EditWorkplace = {
         let body = Json.Encode.object([
           ("newsletter_id", Json.Encode.option(Json.Encode.int, parsedNewsletterId)),
         ])
-        let req = api->Api.patchJson(
-          ~path="/workplaces/" ++ Uuid.toString(id),
-          ~decoder=WorkplaceData.Decode.summary,
-          ~body,
-        )
+        let req =
+          api->Api.patchJson(
+            ~path="/workplaces/" ++ Uuid.toString(id),
+            ~decoder=WorkplaceData.Decode.summary,
+            ~body,
+          )
         req->Future.get(res => {
           switch res {
           | Ok(updated) => {
@@ -149,7 +158,8 @@ module EditWorkplace = {
         onInput={v => setNewsletterId(_ => v)}
       />
       <Button.Panel>
-        <Button type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+        <Button
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta> {React.string("Save")} </Button>
@@ -167,30 +177,27 @@ let editWorkplaceModal = (~api, ~modal, ~id, ~detail, ~setDetail): Modal.modalCo
   content: <EditWorkplace api modal id detail setDetail />,
 }
 
-let statusButtons = (detail: Api.webData<WorkplaceData.summary>, ~onEstablish, ~onAnnounce, ~onCancel) => {
+let statusButtons = (
+  detail: Api.webData<WorkplaceData.summary>,
+  ~onEstablish,
+  ~onAnnounce,
+  ~onCancel,
+) => {
   switch detail {
   | Success(d) =>
     switch WorkplaceData.getStatus(d) {
     | Initial =>
       <Button.Panel>
-        <Button variant=Button.Cta onClick=onEstablish>
-          {React.string("Establish")}
-        </Button>
+        <Button variant=Button.Cta onClick=onEstablish> {React.string("Establish")} </Button>
       </Button.Panel>
     | Established =>
       <Button.Panel>
-        <Button variant=Button.Cta onClick=onAnnounce>
-          {React.string("Announce")}
-        </Button>
-        <Button variant=Button.Danger onClick=onCancel>
-          {React.string("Cancel Workplace")}
-        </Button>
+        <Button variant=Button.Cta onClick=onAnnounce> {React.string("Announce")} </Button>
+        <Button variant=Button.Danger onClick=onCancel> {React.string("Cancel Workplace")} </Button>
       </Button.Panel>
     | Announced =>
       <Button.Panel>
-        <Button variant=Button.Danger onClick=onCancel>
-          {React.string("Cancel Workplace")}
-        </Button>
+        <Button variant=Button.Danger onClick=onCancel> {React.string("Cancel Workplace")} </Button>
       </Button.Panel>
     | Cancelled => React.null
     }
@@ -208,12 +215,9 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
 
   let (error, setError) = React.useState(() => None)
 
-  let doTransition = path => _ => {
-    let req = api->Api.patchJson(
-      ~path,
-      ~decoder=WorkplaceData.Decode.summary,
-      ~body=Json.Encode.object([]),
-    )
+  let doTransition = (path, _) => {
+    let req =
+      api->Api.patchJson(~path, ~decoder=WorkplaceData.Decode.summary, ~body=Json.Encode.object([]))
     req->Future.get(res => {
       switch res {
       | Ok(updated) => {

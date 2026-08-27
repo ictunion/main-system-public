@@ -112,7 +112,8 @@ let columns: array<DataTable.column<WorkplaceData.summary>> = [
     view: r =>
       <Button
         variant=Button.Cta
-        onClick={_ => RescriptReactRouter.push("/workplaces/" ++ Data.Uuid.toString(r.id) ++ "/members")}>
+        onClick={_ =>
+          RescriptReactRouter.push("/workplaces/" ++ Data.Uuid.toString(r.id) ++ "/members")}>
         {React.string("Members")}
       </Button>,
   },
@@ -129,12 +130,13 @@ let columns: array<DataTable.column<WorkplaceData.summary>> = [
   {
     name: "Status",
     minMax: ("120px", "1fr"),
-    view: r => (switch WorkplaceData.getStatus(r) {
-    | Initial => "Initial"
-    | Established => "Established"
-    | Announced => "Announced"
-    | Cancelled => "Cancelled"
-    })->React.string,
+    view: r =>
+      switch WorkplaceData.getStatus(r) {
+      | Initial => "Initial"
+      | Established => "Established"
+      | Announced => "Announced"
+      | Cancelled => "Cancelled"
+      }->React.string,
   },
 ]
 

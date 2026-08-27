@@ -106,31 +106,33 @@ module DataVerificationContent = {
           let remaining = ref(wps->Array.length)
           let failed = ref(false)
           let acc = ref(Belt.Map.String.empty)
-          let requests = wps->Array.map((wp: WorkplaceData.summary) =>
-            api->Api.getJson(
-              ~path="/oidc/" ++ Data.Uuid.toString(wp.keycloakGroupId),
-              ~decoder=oidGroupMemberDecoder,
+          let requests =
+            wps->Array.map((wp: WorkplaceData.summary) =>
+              api->Api.getJson(
+                ~path="/oidc/" ++ Data.Uuid.toString(wp.keycloakGroupId),
+                ~decoder=oidGroupMemberDecoder,
+              )
             )
-          )
           requests->Array.forEachWithIndex((i, req) => {
             let wp = wps->Array.getUnsafe(i)
-            req->Future.get(res => {
-              remaining := remaining.contents - 1
-              switch res {
-              | Error(e) =>
-                if !failed.contents {
-                  failed := true
-                  setWorkplaceGroupMembersMap(_ => RemoteData.Failure(e))
+            req->Future.get(
+              res => {
+                remaining := remaining.contents - 1
+                switch res {
+                | Error(e) =>
+                  if !failed.contents {
+                    failed := true
+                    setWorkplaceGroupMembersMap(_ => RemoteData.Failure(e))
+                  }
+                | Ok(subs) =>
+                  let subSet = subs->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
+                  acc := acc.contents->Belt.Map.String.set(Data.Uuid.toString(wp.id), subSet)
+                  if remaining.contents === 0 && !failed.contents {
+                    setWorkplaceGroupMembersMap(_ => RemoteData.Success(acc.contents))
+                  }
                 }
-              | Ok(subs) =>
-                let subSet = subs->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
-                acc :=
-                  acc.contents->Belt.Map.String.set(Data.Uuid.toString(wp.id), subSet)
-                if remaining.contents === 0 && !failed.contents {
-                  setWorkplaceGroupMembersMap(_ => RemoteData.Success(acc.contents))
-                }
-              }
-            })
+              },
+            )
           })
           Some(() => requests->Array.forEach(req => Future.cancel(req)))
         }
@@ -183,18 +185,19 @@ module DataVerificationContent = {
       RemoteData.Success(
         ms->Array.keep(m =>
           m.leftAt->Option.isNone &&
-            m.workplaceIds->Array.length > 0 &&
-            m.sub->Option.mapWithDefault(false, sub => {
-              let subStr = Data.Uuid.toString(sub)
-              m.workplaceIds
-              ->Array.keep(wpId =>
+          m.workplaceIds->Array.length > 0 &&
+          m.sub->Option.mapWithDefault(false, sub => {
+            let subStr = Data.Uuid.toString(sub)
+            m.workplaceIds
+            ->Array.keep(
+              wpId =>
                 switch groupMap->Belt.Map.String.get(Data.Uuid.toString(wpId)) {
                 | None => false
                 | Some(subSet) => !(subSet->Belt.Set.String.has(subStr))
-                }
-              )
-              ->Array.length > 0
-            })
+                },
+            )
+            ->Array.length > 0
+          })
         ),
       )
     | (Failure(e), _, _) | (_, Failure(e), _) | (_, _, Failure(e)) => RemoteData.Failure(e)
@@ -276,9 +279,10 @@ module DataVerificationContent = {
     let doFixAllWorkplaceGroup = () => {
       switch (membersWithMissingWorkplaceGroup, workplaces, workplaceGroupMembersMap) {
       | (Success(ms), Success(wps), Success(groupMap)) =>
-        let workplaceKeycloakGroupMap = wps->Array.reduce(Belt.Map.String.empty, (acc, wp) =>
-          acc->Belt.Map.String.set(Data.Uuid.toString(wp.id), wp.keycloakGroupId)
-        )
+        let workplaceKeycloakGroupMap =
+          wps->Array.reduce(Belt.Map.String.empty, (acc, wp) =>
+            acc->Belt.Map.String.set(Data.Uuid.toString(wp.id), wp.keycloakGroupId)
+          )
         let pairs = ref(list{})
         ms->Array.forEach(m =>
           switch m.sub {
@@ -291,8 +295,7 @@ module DataVerificationContent = {
                 groupMap->Belt.Map.String.get(wpIdStr),
                 workplaceKeycloakGroupMap->Belt.Map.String.get(wpIdStr),
               ) {
-              | (Some(subSet), Some(keycloakGroupId))
-                when !(subSet->Belt.Set.String.has(subStr)) =>
+              | (Some(subSet), Some(keycloakGroupId)) if !(subSet->Belt.Set.String.has(subStr)) =>
                 pairs := list{(m.id, keycloakGroupId), ...pairs.contents}
               | _ => ()
               }
