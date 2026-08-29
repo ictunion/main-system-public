@@ -47,3 +47,39 @@ pub async fn count_past_members(pool: &DbPool) -> sqlx::Result<i64> {
         .fetch_one(pool)
         .await
 }
+
+pub async fn count_workplace_members(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(DISTINCT m.id) as "count!"
+FROM members m
+JOIN members_workplaces mw ON mw.member_id = m.id
+WHERE m.left_at IS NULL"#
+    )
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn count_sectoral_members(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*) as "count!"
+FROM members m
+WHERE m.left_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM members_workplaces mw WHERE mw.member_id = m.id)"#
+    )
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn count_current_workplaces(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM workplaces WHERE cancelled_at IS NULL"#)
+        .fetch_one(pool)
+        .await
+}
+
+pub async fn count_past_workplaces(pool: &DbPool) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*) as "count!" FROM workplaces WHERE cancelled_at IS NOT NULL"#
+    )
+    .fetch_one(pool)
+    .await
+}

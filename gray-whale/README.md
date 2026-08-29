@@ -48,7 +48,7 @@ using psql create database called `ictunion`.
 
 
 ```
-CREATE DATABASE itctunion;
+CREATE DATABASE ictunion;
 ```
 
 ## Migrate Database

@@ -11,11 +11,35 @@ let applicationsRows: array<RowBasedTable.row<StatsData.Applications.basic>> = [
   ("All", s => React.string(StatsData.Applications.all(s)->Int.toString)),
 ]
 
+let percentOf = (n: int, total: int): int =>
+  total == 0 ? 0 : (n * 100 + total / 2) / total
+
 let membersRows: array<RowBasedTable.row<StatsData.Members.basic>> = [
+  (
+    "Sectoral / Workplace members",
+    s => {
+      let total = StatsData.Members.active(s)
+      React.string(
+        s.sectoral->Int.toString ++
+        " (" ++
+        percentOf(s.sectoral, total)->Int.toString ++
+        "%) / " ++
+        s.workplace->Int.toString ++
+        " (" ++
+        percentOf(s.workplace, total)->Int.toString ++ "%)",
+      )
+    },
+  ),
   ("New", s => React.string(s.new->Int.toString)),
   ("Current", s => React.string(s.current->Int.toString)),
   ("Past", s => React.string(s.past->Int.toString)),
   ("All", s => React.string(StatsData.Members.all(s)->Int.toString)),
+]
+
+let workplacesRows: array<RowBasedTable.row<StatsData.Workplaces.basic>> = [
+  ("Current", s => React.string(s.current->Int.toString)),
+  ("Past", s => React.string(s.past->Int.toString)),
+  ("All", s => React.string(StatsData.Workplaces.all(s)->Int.toString)),
 ]
 
 @react.component
@@ -33,6 +57,12 @@ let make = (
 
   let (membersBasicStats, _, _) =
     api->Hook.getData(~path="/stats/members/basic", ~decoder=StatsData.Members.Decode.basic)
+
+  let (workplacesBasicStats, _, _) =
+    api->Hook.getData(
+      ~path="/stats/workplaces/basic",
+      ~decoder=StatsData.Workplaces.Decode.basic,
+    )
 
   let openLink = (path: string, _) => {
     RescriptReactRouter.push(path)
@@ -146,6 +176,15 @@ let make = (
         <RowBasedTable rows=membersRows data=membersBasicStats title=Some("Members Stats") />
         <a onClick={openLink("/members")} className={styles["pageLink"]}>
           {React.string("See Members")}
+        </a>
+      </div>
+      <div className={styles["gridItem"]}>
+        <h2 className={styles["itemTitle"]}> {React.string("Workplaces")} </h2>
+        <RowBasedTable
+          rows=workplacesRows data=workplacesBasicStats title=Some("Workplaces Stats")
+        />
+        <a onClick={openLink("/workplaces")} className={styles["pageLink"]}>
+          {React.string("See Workplaces")}
         </a>
       </div>
     </div>

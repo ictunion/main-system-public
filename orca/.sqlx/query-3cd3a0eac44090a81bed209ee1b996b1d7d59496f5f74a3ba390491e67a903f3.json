@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*) as \"count!\"\nFROM members m\nWHERE m.left_at IS NULL\n  AND NOT EXISTS (SELECT 1 FROM members_workplaces mw WHERE mw.member_id = m.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3cd3a0eac44090a81bed209ee1b996b1d7d59496f5f74a3ba390491e67a903f3"
+}
