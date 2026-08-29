@@ -90,6 +90,13 @@ in
     cargoLock = {
       lockFile = ./Cargo.lock;
       allowBuiltinFetchGit = true;
+      # Note: nixpkgs' `importCargoLock` already redirects
+      # "https://github.com/rust-lang/crates.io-index" to the
+      # static.crates.io CDN by default (to avoid the crates.io API's
+      # 1/sec rate limit, see https://github.com/rust-lang/crates.io/issues/13482).
+      # Re-declaring it via `extraRegistries` here made cargo see the
+      # registry defined twice ("already defined by `crates-io`"), so it
+      # must *not* be repeated.
     };
   };
 

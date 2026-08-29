@@ -46,6 +46,108 @@ async fn list_all(
     Ok(Json(summaries))
 }
 
+/// Workplace as seen by one of its own executive committee members.
+/// Carries no Keycloak group IDs and no contact address for the workplace --
+/// just enough to title the page and show how many people are in it.
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct MyWorkplaceSummary {
+    id: Id<Workplace>,
+    name: String,
+    member_count: i64,
+}
+
+/// Reduced projection of a member, for workplace executive committees.
+///
+/// Deliberately narrower than `MemberSummary`, which carries the freeform staff
+/// `note`, `member_number`, `city` and company names, and narrower still than
+/// `MemberDetail`, which adds date of birth, home address and postal code.
+/// Union membership is special-category data; a rep needs to reach their
+/// colleagues, not to hold a dossier on them.
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct WorkplaceMemberSummary {
+    id: Id<Member>,
+    workplace_id: Id<Workplace>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    email: Option<String>,
+    phone_number: Option<String>,
+    created_at: DateTime<Utc>,
+}
+
+/// Resolve which workplaces the caller may act on as an executive.
+///
+/// The Keycloak role grants only the *capability*; this resolves the *scope*,
+/// and it is the single place that decides it. Returns an empty vector when the
+/// caller is in no executive group, which makes every downstream query empty
+/// rather than unbounded.
+async fn executive_workplace_ids(
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+    token: &JwtToken<'_>,
+) -> Response<Vec<MyWorkplaceSummary>> {
+    let group_ids = oid_provider.get_own_groups(token).await?;
+
+    if group_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    Ok(query::list_executive_workplaces(db_pool, &group_ids).await?)
+}
+
+/// Same resolution as [`executive_workplace_ids`], reduced to bare IDs.
+///
+/// Exposed to `api::members` so that reads of a single member can be checked
+/// against the caller's committee scope without that module getting its own,
+/// possibly divergent, notion of what the scope is.
+pub(crate) async fn executive_workplace_id_list(
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+    token: &JwtToken<'_>,
+) -> Response<Vec<Uuid>> {
+    let workplaces = executive_workplace_ids(db_pool, oid_provider, token).await?;
+
+    Ok(workplaces.iter().map(|w| w.id.into()).collect())
+}
+
+/// Workplaces where the caller sits on the executive committee.
+#[get("/mine")]
+async fn list_mine(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+) -> Response<Json<Vec<MyWorkplaceSummary>>> {
+    oid_provider.require_role(&token, Role::ListOwnWorkplaceMembers)?;
+
+    let workplaces = executive_workplace_ids(db_pool.inner(), oid_provider.inner(), &token).await?;
+
+    Ok(Json(workplaces))
+}
+
+/// Members of the workplaces the caller is an executive of -- and only those.
+///
+/// There is no workplace ID in the path on purpose: the caller cannot name a
+/// workplace, so there is no parameter to tamper with and no way to reach a
+/// roster outside their own committee.
+#[get("/mine/members")]
+async fn list_mine_members(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+) -> Response<Json<Vec<WorkplaceMemberSummary>>> {
+    oid_provider.require_role(&token, Role::ListOwnWorkplaceMembers)?;
+
+    let workplace_ids =
+        executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+
+    if workplace_ids.is_empty() {
+        return Ok(Json(Vec::new()));
+    }
+
+    let members = query::list_members_of_workplaces(db_pool.inner(), &workplace_ids).await?;
+
+    Ok(Json(members))
+}
+
 #[get("/active")]
 async fn list_active(
     db_pool: &State<DbPool>,
@@ -281,6 +383,8 @@ async fn get_all_workplace_members(
 pub fn routes() -> Vec<Route> {
     routes![
         list_all,
+        list_mine,
+        list_mine_members,
         list_active,
         list_inactive,
         detail,

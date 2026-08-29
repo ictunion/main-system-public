@@ -1,6 +1,8 @@
 use uuid::Uuid;
 
-use super::{NewWorkplace, UpdateWorkplace, WorkplaceSummary};
+use super::{
+    MyWorkplaceSummary, NewWorkplace, UpdateWorkplace, WorkplaceMemberSummary, WorkplaceSummary,
+};
 use crate::api::members::MemberSummary;
 use crate::data::{Id, Member, Workplace};
 use crate::db::DbPool;
@@ -401,6 +403,69 @@ GROUP BY m.id
 ORDER BY m.member_number DESC
 "#,
         workplace_id as _
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Workplaces the caller is an executive of, resolved by matching the caller's
+/// Keycloak group IDs against `workplaces.keycloak_executive_group_id`.
+///
+/// An empty `executive_group_ids` yields an empty result, so a caller who is in
+/// no executive group can never widen their scope.
+pub async fn list_executive_workplaces(
+    pool: &DbPool,
+    executive_group_ids: &[Uuid],
+) -> sqlx::Result<Vec<MyWorkplaceSummary>> {
+    sqlx::query_as!(
+        MyWorkplaceSummary,
+        r#"
+SELECT w.id
+    , w.name
+    , (
+        SELECT COUNT(*)
+        FROM members_workplaces mw
+        JOIN members m ON m.id = mw.member_id
+        WHERE mw.workplace_id = w.id AND m.left_at IS NULL
+      )::bigint AS "member_count!: i64"
+FROM workplaces w
+WHERE w.keycloak_executive_group_id = ANY($1)
+ORDER BY w.name
+"#,
+        executive_group_ids
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Current members of the given workplaces, in the reduced projection exposed
+/// to workplace executive committees.
+///
+/// Callers must pass only workplace IDs already authorized for the caller --
+/// this function does no authorization of its own. Past members are excluded:
+/// `members_workplaces` rows outlive membership, and a roster of people who
+/// have *left* is exposure without an organising purpose.
+pub async fn list_members_of_workplaces(
+    pool: &DbPool,
+    workplace_ids: &[Uuid],
+) -> sqlx::Result<Vec<WorkplaceMemberSummary>> {
+    sqlx::query_as!(
+        WorkplaceMemberSummary,
+        r#"
+SELECT m.id AS "id: Id<Member>"
+    , mw.workplace_id AS "workplace_id: Id<Workplace>"
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.created_at
+FROM members m
+JOIN members_workplaces mw ON mw.member_id = m.id
+WHERE mw.workplace_id = ANY($1)
+  AND m.left_at IS NULL
+ORDER BY m.last_name NULLS LAST, m.first_name NULLS LAST
+"#,
+        workplace_ids
     )
     .fetch_all(pool)
     .await

@@ -98,6 +98,59 @@ let layout: DataGrid.t<MemberData.detail> = [
   },
 ]
 
+/* What a workplace executive committee member sees of one of their colleagues.
+
+   Orca redacts date of birth, address, city, postal code and the staff note
+   before they ever leave the server (see `redact_for_workplace_executive`), so
+   this is not a security boundary -- it just avoids rendering rows of blanks. */
+let workplaceExecutiveLayout: DataGrid.t<MemberData.detail> = [
+  {
+    label: "Membership",
+    cells: [
+      {
+        label: "Member Number",
+        view: d => MemberSummaryTable.viewPaddedNumber(d.memberNumber),
+        minmax: ("250px", "690px"),
+      },
+      {
+        label: "Language",
+        view: d => View.option(d.language, React.string),
+        minmax: ("200px", "200px"),
+      },
+    ],
+  },
+  {
+    label: "Personal Information",
+    cells: [
+      {
+        label: "First Name",
+        view: d => View.option(d.firstName, React.string),
+        minmax: ("300px", "900px"),
+      },
+      {
+        label: "Last Name",
+        view: d => View.option(d.lastName, React.string),
+        minmax: ("225px", "665px"),
+      },
+    ],
+  },
+  {
+    label: "Contacts",
+    cells: [
+      {
+        label: "Email",
+        view: d => View.option(d.email, email => <Link.Email email />),
+        minmax: ("300px", "900px"),
+      },
+      {
+        label: "Phone Number",
+        view: d => View.option(d.phoneNumber, phoneNumber => <Link.Tel phoneNumber />),
+        minmax: ("150px", "500px"),
+      },
+    ],
+  },
+]
+
 let timeRows: array<RowBasedTable.row<MemberData.detail>> = [
   ("Created", d => d.createdAt->Js.Date.toLocaleString->React.string),
   (
@@ -490,7 +543,20 @@ let make = (~api, ~id, ~modal) => {
 
   let mainOccupation = occupationsData->RemoteData.map(xs => xs->Array.get(0))
 
-  <Page requireAnyRole=[ListMembers, ViewMember] mainResource=detail>
+  /* A workplace executive reaches this page through /my-workplace and holds none
+     of the staff roles. Orca serves them a redacted record for members of their
+     own workplace only, so the page has to be shown without the staff sections
+     rather than not shown at all. */
+  let session = React.useContext(SessionContext.context)
+
+  let isStaff =
+    session
+    ->RemoteData.unwrap(~default=false, s =>
+      Session.hasRole(s, ~role=Session.ListMembers) || Session.hasRole(s, ~role=Session.ViewMember)
+    )
+
+  <Page
+    requireAnyRole=[ListMembers, ViewMember, ListOwnWorkplaceMembers] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Member ")}
@@ -520,6 +586,11 @@ let make = (~api, ~id, ~modal) => {
             }}
           </SessionContext.RequireRole>
         </SessionContext.RequireRole>
+        {if isStaff {
+          React.null
+        } else {
+          <Page.BackButton name="my workplace" path="/my-workplace" />
+        }}
       </div>
       <dl className={styles["headerRow"]}>
         <dt> {React.string("Status:")} </dt>
@@ -534,7 +605,7 @@ let make = (~api, ~id, ~modal) => {
         </SessionContext.RequireRole>
       </dl>
     </header>
-    <DataGrid layout data=detail />
+    <DataGrid layout={isStaff ? layout : workplaceExecutiveLayout} data=detail />
     <DataGrid
       data=mainOccupation
       layout={[
@@ -562,8 +633,16 @@ let make = (~api, ~id, ~modal) => {
       <Tabbed.Tab value=Occupations handlers=tabHandlers>
         {React.string("Occupations")}
       </Tabbed.Tab>
-      <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
-      <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
+      {if isStaff {
+        <>
+          <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
+          /* Files are scanned membership applications -- signatures and
+             identity documents. Staff only, regardless of workplace scope. */
+          <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
+        </>
+      } else {
+        React.null
+      }}
       // <Tabbed.Tab value=Workplace handlers=tabHandlers> {React.string("Workplace")} </Tabbed.Tab>
     </Tabbed.Tabs>
     <Tabbed.Content tab=Occupations handlers=tabHandlers>
@@ -585,11 +664,15 @@ let make = (~api, ~id, ~modal) => {
         </table>
       </div>
     </Tabbed.Content>
-    <Tabbed.Content tab=Metadata handlers=tabHandlers>
-      <div className={styles["metadata"]}>
-        <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
-      </div>
-    </Tabbed.Content>
+    {if isStaff {
+      <Tabbed.Content tab=Metadata handlers=tabHandlers>
+        <div className={styles["metadata"]}>
+          <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
+        </div>
+      </Tabbed.Content>
+    } else {
+      React.null
+    }}
     <Tabbed.Content tab=Files handlers=tabHandlers>
       <DataGrid
         data=filesData
@@ -610,10 +693,14 @@ let make = (~api, ~id, ~modal) => {
     // <Tabbed.Content tab=Workplace handlers=tabHandlers>
     //   React.string("I work in this place (?)")
     // </Tabbed.Content>
-    {switch (status, detail) {
-    | (Success(s), Success(d)) =>
-      <Actions status=s modal api id setDetail hasSub={d.sub->Option.isSome} />
-    | _ => React.null
-    }}
+    /* Accept / remove / create-account all need staff roles server side; a
+       workplace executive would only get a 403 out of them. */
+    <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
+      {switch (status, detail) {
+      | (Success(s), Success(d)) =>
+        <Actions status=s modal api id setDetail hasSub={d.sub->Option.isSome} />
+      | _ => React.null
+      }}
+    </SessionContext.RequireRole>
   </Page>
 }

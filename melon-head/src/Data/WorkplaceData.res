@@ -78,3 +78,45 @@ module Encode = {
   let workplaceMember = (workplaceMember: workplaceMember) =>
     object([("member_id", strOption(workplaceMember.memberId))])
 }
+
+/* Workplace as seen by one of its own executive committee members.
+   Deliberately separate from `summary`: the /workplaces/mine payload carries no
+   Keycloak group IDs, no workplace email and no lifecycle timestamps. */
+type mine = {
+  id: Uuid.t,
+  name: string,
+  memberCount: int,
+}
+
+/* Reduced view of a member, as served to workplace executive committees by
+   /workplaces/mine/members. Has no note, member number, date of birth, address
+   or postal code -- see WorkplaceMemberSummary in orca. */
+type mineMember = {
+  id: Uuid.t,
+  workplaceId: Uuid.t,
+  firstName: option<string>,
+  lastName: option<string>,
+  email: option<Email.t>,
+  phoneNumber: option<PhoneNumber.t>,
+  createdAt: Js.Date.t,
+}
+
+module DecodeMine = {
+  open Json.Decode
+
+  let workplace = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    name: field.required(. "name", string),
+    memberCount: field.required(. "member_count", int),
+  })
+
+  let member = object(field => {
+    id: field.required(. "id", Uuid.decode),
+    workplaceId: field.required(. "workplace_id", Uuid.decode),
+    firstName: field.required(. "first_name", option(string)),
+    lastName: field.required(. "last_name", option(string)),
+    email: field.required(. "email", option(Email.decode)),
+    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
+    createdAt: field.required(. "created_at", date),
+  })
+}

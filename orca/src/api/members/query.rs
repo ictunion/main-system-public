@@ -544,3 +544,34 @@ RETURNING members.id
     .fetch_one(executor)
     .await
 }
+
+/// Whether this member currently belongs to any of the given workplaces.
+///
+/// Used to check a single member read against a workplace executive's scope.
+/// Past members are excluded, matching `list_members_of_workplaces`: someone who
+/// has left is not on the committee's roster and should not be reachable through
+/// a stale link either.
+pub async fn is_member_of_workplaces(
+    pool: &DbPool,
+    id: Id<Member>,
+    workplace_ids: &[Uuid],
+) -> sqlx::Result<bool> {
+    let found = sqlx::query_scalar!(
+        r#"
+SELECT EXISTS (
+    SELECT 1
+    FROM members m
+    JOIN members_workplaces mw ON mw.member_id = m.id
+    WHERE m.id = $1
+      AND mw.workplace_id = ANY($2)
+      AND m.left_at IS NULL
+) AS "exists!: bool"
+"#,
+        id as _,
+        workplace_ids
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(found)
+}

@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT w.id\n    , w.name\n    , (\n        SELECT COUNT(*)\n        FROM members_workplaces mw\n        JOIN members m ON m.id = mw.member_id\n        WHERE mw.workplace_id = w.id AND m.left_at IS NULL\n      )::bigint AS \"member_count!: i64\"\nFROM workplaces w\nWHERE w.keycloak_executive_group_id = ANY($1)\nORDER BY w.name\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "member_count!: i64",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "c219a3d8ccdeb2e1c6228f6ccc7dee5d9afd94f7e604f79f4341c799dc5a74c2"
+}

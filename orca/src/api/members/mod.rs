@@ -14,6 +14,7 @@ use super::ApiError;
 use super::SuccessResponse;
 use crate::api::Response;
 use crate::api::files::FileInfo;
+use crate::api::workplaces;
 use crate::data::{Id, Member, MemberNumber};
 use crate::db::DbPool;
 use crate::processing::{Command, QueueSender};
@@ -207,6 +208,69 @@ pub struct MemberDetail {
     sub: Option<Uuid>,
 }
 
+impl MemberDetail {
+    /// Drop what a workplace executive committee has no organising need for.
+    ///
+    /// Done here rather than in the UI so that hiding these fields on screen is
+    /// not load-bearing: the reduced client never receives them at all. Mirrors
+    /// `WorkplaceMemberSummary` in `api::workplaces`, which is the list view of
+    /// the same people.
+    fn redact_for_workplace_executive(mut self) -> Self {
+        self.note = None;
+        self.date_of_birth = None;
+        self.address = None;
+        self.city = None;
+        self.postal_code = None;
+        self
+    }
+}
+
+/// How much of a member record the caller is entitled to see.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum MemberReadScope {
+    /// Staff: the whole record.
+    Full,
+    /// Workplace executive committee, and this member is in one of their
+    /// workplaces: the reduced projection only.
+    WorkplaceExecutive,
+}
+
+/// Decide whether the caller may read this one member, and how much of them.
+///
+/// Staff roles read anyone. An executive committee member reads only people in
+/// the workplaces they sit on the committee of; that set is resolved from
+/// Keycloak per request and never taken from the URL. A member outside their
+/// scope is refused with the same error as a caller holding no role at all, so
+/// the endpoint cannot be used to probe which member UUIDs exist.
+async fn member_read_scope(
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+    token: &JwtToken<'_>,
+    id: Id<Member>,
+) -> Result<MemberReadScope, ApiError> {
+    let staff_roles = [Role::ListMembers, Role::ViewMember];
+
+    let Err(staff_denial) = oid_provider.require_any_role(token, &staff_roles) else {
+        return Ok(MemberReadScope::Full);
+    };
+
+    if oid_provider
+        .require_role(token, Role::ListOwnWorkplaceMembers)
+        .is_ok()
+    {
+        let workplace_ids =
+            workplaces::executive_workplace_id_list(db_pool, oid_provider, token).await?;
+
+        if !workplace_ids.is_empty()
+            && query::is_member_of_workplaces(db_pool, id, &workplace_ids).await?
+        {
+            return Ok(MemberReadScope::WorkplaceExecutive);
+        }
+    }
+
+    Err(staff_denial.into())
+}
+
 #[get("/<id>")]
 async fn detail(
     db_pool: &State<DbPool>,
@@ -214,11 +278,14 @@ async fn detail(
     token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<MemberDetail>> {
-    oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
+    let scope = member_read_scope(db_pool.inner(), oid_provider.inner(), &token, id).await?;
 
     let detail = query::detail(db_pool.inner(), id).await?;
 
-    Ok(Json(detail))
+    Ok(Json(match scope {
+        MemberReadScope::Full => detail,
+        MemberReadScope::WorkplaceExecutive => detail.redact_for_workplace_executive(),
+    }))
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -287,7 +354,9 @@ async fn list_occupations(
     token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Vec<Occupation>>> {
-    oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewMember])?;
+    // Company and position are exactly what a workplace rep needs, so this is
+    // scoped the same way as the member detail rather than being staff-only.
+    member_read_scope(db_pool.inner(), oid_provider.inner(), &token, id).await?;
 
     let occupations = query::list_occupations(db_pool.inner(), id).await?;
 

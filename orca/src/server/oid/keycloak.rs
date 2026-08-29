@@ -295,4 +295,37 @@ impl OidProvider for KeycloakProvider {
             Err(Error::Proxy(status))
         }
     }
+
+    async fn get_own_groups(&self, token: &JwtToken<'_>) -> Result<Vec<Uuid>, Error> {
+        #[derive(serde::Deserialize)]
+        struct Group {
+            id: Uuid,
+        }
+
+        // The Account REST API, unlike the Admin API, is self-scoped: it answers
+        // only for the bearer of the token, so no service account or elevated
+        // privilege is needed. It does require the `view-groups` role on the
+        // `account` client (granted realm-wide via `default-roles-*`), and it
+        // returns the account console HTML unless JSON is requested explicitly.
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!(
+                "{}/realms/{}/account/groups",
+                self.host, self.realm
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .header("Accept", "application/json")
+            .send()
+            .await?;
+
+        let status = response.status();
+        debug!("Keycloak response status: {status}");
+
+        if status.is_success() {
+            let groups = response.json::<Vec<Group>>().await?;
+            Ok(groups.into_iter().map(|g| g.id).collect())
+        } else {
+            Err(Error::Proxy(status))
+        }
+    }
 }

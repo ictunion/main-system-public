@@ -19,6 +19,12 @@ impl<T> From<Uuid> for Id<T> {
     }
 }
 
+impl<T> From<Id<T>> for Uuid {
+    fn from(value: Id<T>) -> Self {
+        value.0
+    }
+}
+
 impl<T> Display for Id<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         self.0.fmt(f)

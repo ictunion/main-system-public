@@ -78,7 +78,8 @@
           "client": {
             "account": [
               "view-profile",
-              "manage-account"
+              "manage-account",
+              "view-groups"
             ]
           }
         },
@@ -381,6 +382,15 @@
           "clientRole": true,
           "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
           "attributes": {}
+        },
+        {
+          "id": "a0f640f3-1f8b-40e2-ab84-75830ae28dc8",
+          "name": "list-own-workplace-members",
+          "description": "List members of workplaces where the user is on the executive committee (scope resolved per request; no access outside those workplaces)",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
+          "attributes": {}
         }
       ],
       "security-admin-console": [],
@@ -600,9 +610,7 @@
       "realmRoles": [],
       "clientRoles": {
         "orca": [
-          "view-application",
-          "list-workplaces",
-          "view-member"
+          "list-own-workplace-members"
         ]
       }
     }

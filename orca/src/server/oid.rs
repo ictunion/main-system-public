@@ -56,6 +56,11 @@ pub enum Role {
     ManageMembers,
     ListWorkplaces,
     ManageWorkplaces,
+    /// Scoped capability: list members of the workplaces the caller is an
+    /// executive of, and nothing outside them. The role only grants the
+    /// *capability*; the scope is resolved per request from the caller's
+    /// Keycloak executive group membership. See `api::workplaces::mine`.
+    ListOwnWorkplaceMembers,
     SuperPowers,
 }
 
@@ -70,6 +75,7 @@ impl Role {
             Self::ManageMembers => "manage-members",
             Self::ListWorkplaces => "list-workplaces",
             Self::ManageWorkplaces => "manage-workplaces",
+            Self::ListOwnWorkplaceMembers => "list-own-workplace-members",
             Self::SuperPowers => "super-powers",
         }
     }
@@ -144,6 +150,7 @@ trait OidProvider {
         token: &JwtToken<'_>,
         group_id: Uuid,
     ) -> Result<Vec<Uuid>, Error>;
+    async fn get_own_groups(&self, token: &JwtToken<'_>) -> Result<Vec<Uuid>, Error>;
 }
 
 #[derive(Clone)]
@@ -276,6 +283,18 @@ impl Provider {
     ) -> Result<Vec<Uuid>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.get_group_members(token, group_id).await,
+            ProviderState::Disconnected => Err(Error::Disabled),
+        }
+    }
+
+    /// Groups the *caller* belongs to, read live from the identity provider
+    /// using the caller's own token. Deliberately not taken from a token claim:
+    /// group membership drives authorization scope, so it must not be stale for
+    /// the lifetime of an access token, and org structure should not be baked
+    /// into a credential that gets cached and logged.
+    pub async fn get_own_groups(&self, token: &JwtToken<'_>) -> Result<Vec<Uuid>, Error> {
+        match &self.0 {
+            ProviderState::Keycloak(k) => k.get_own_groups(token).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }

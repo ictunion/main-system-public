@@ -71,6 +71,13 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             session
             requiredRole=Some(Session.ManageWorkplaces)
           />
+          <NavItem
+            key="7.5"
+            path="/my-workplace"
+            text="My Workplace"
+            session
+            requiredRole=Some(Session.ListOwnWorkplaceMembers)
+          />
           /* <NavItem */
           /* key="8" */
           /* path="/keycloak-mappings" */

@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT m.id AS \"id: Id<Member>\"\n    , mw.workplace_id AS \"workplace_id: Id<Workplace>\"\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.created_at\nFROM members m\nJOIN members_workplaces mw ON mw.member_id = m.id\nWHERE mw.workplace_id = ANY($1)\n  AND m.left_at IS NULL\nORDER BY m.last_name NULLS LAST, m.first_name NULLS LAST\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: Id<Member>",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "workplace_id: Id<Workplace>",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "phone_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "4128f1a360d5442794444b1fd6b60a6e45b3a031d51c312c8cb039fb7cc97d7c"
+}
