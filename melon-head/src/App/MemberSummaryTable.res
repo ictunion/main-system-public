@@ -1,7 +1,7 @@
 open Data
 open Belt
 
-let viewPaddedNumber = (n: int): React.element => {
+let viewPaddedNumber = (n: int, ~isRepresentative: option<bool>=None, ()): React.element => {
   let stringified = Int.toString(n)
   let prefix = "0000000"
   let shortenedPrefix = prefix->Js.String.slice(~from=0, ~to_=7 - String.length(stringified))
@@ -10,6 +10,13 @@ let viewPaddedNumber = (n: int): React.element => {
   <span>
     <span style> {React.string(shortenedPrefix)} </span>
     {React.string(stringified)}
+    {switch isRepresentative {
+    | Some(true) =>
+      <span title="Workplace representative" style={ReactDOM.Style.make(~color="#E8B322", ())}>
+        {React.string(" ★")}
+      </span>
+    | _ => React.null
+    }}
   </span>
 }
 
@@ -53,7 +60,7 @@ let make = (
     {
       name: "Member Number",
       minMax: ("200px", "1fr"),
-      view: r => viewPaddedNumber(r.memberNumber),
+      view: r => viewPaddedNumber(r.memberNumber, ~isRepresentative=r.isRepresentative, ()),
     },
     {
       name: "First Name",

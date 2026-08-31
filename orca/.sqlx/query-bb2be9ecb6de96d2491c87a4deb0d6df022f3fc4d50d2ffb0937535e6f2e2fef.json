@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT m.id AS \"id!\"\n    , m.member_number AS \"member_number!\"\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.note\n    , m.phone_number\n    , m.city\n    , m.language\n    , m.left_at\n    , array_agg(o.company_name ORDER BY o.created_at DESC) AS \"company_names!: Vec<Option<String>>\"\n    , m.created_at AS \"created_at!\"\n    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS \"workplace_ids!: Vec<Uuid>\"\n    , m.sub\nFROM members_current AS m\nLEFT JOIN occupations o ON o.member_id = m.id\nGROUP BY m.id\n    , m.member_number\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.note\n    , m.city\n    , m.language\n    , m.left_at\n    , m.created_at\n    , m.sub\nORDER BY m.member_number DESC\n",
+  "query": "\nSELECT m.id AS \"id!\"\n    , m.member_number AS \"member_number!\"\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.note\n    , m.city\n    , m.language\n    , m.left_at\n    , array_agg(o.company_name ORDER BY o.created_at DESC) AS \"company_names!: Vec<Option<String>>\"\n    , m.created_at AS \"created_at!\"\n    , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS \"workplace_ids!: Vec<Uuid>\"\n    , (SELECT bool_or(mw.became_representative_at IS NOT NULL) FROM members_workplaces mw WHERE mw.member_id = m.id) AS \"is_representative?\"\n    , m.sub\nFROM members_past AS m\nLEFT JOIN occupations o ON o.member_id = m.id\nGROUP BY m.id\n    , m.member_number\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.note\n    , m.city\n    , m.language\n    , m.left_at\n    , m.created_at\n    , m.sub\nORDER BY m.member_number DESC\n",
   "describe": {
     "columns": [
       {
@@ -30,12 +30,12 @@
       },
       {
         "ordinal": 5,
-        "name": "note",
+        "name": "phone_number",
         "type_info": "Text"
       },
       {
         "ordinal": 6,
-        "name": "phone_number",
+        "name": "note",
         "type_info": "Text"
       },
       {
@@ -70,6 +70,11 @@
       },
       {
         "ordinal": 13,
+        "name": "is_representative?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
         "name": "sub",
         "type_info": "Uuid"
       }
@@ -91,8 +96,9 @@
       null,
       true,
       null,
+      null,
       true
     ]
   },
-  "hash": "6dd2af7a97be493b0f211df4253d88c8bf72e0877401e54b08321007ffc3b9a6"
+  "hash": "bb2be9ecb6de96d2491c87a4deb0d6df022f3fc4d50d2ffb0937535e6f2e2fef"
 }

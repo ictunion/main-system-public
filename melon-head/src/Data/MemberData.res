@@ -15,6 +15,7 @@ type summary = {
   companyNames: array<option<string>>,
   createdAt: Js.Date.t,
   workplaceIds: array<Uuid.t>,
+  isRepresentative: option<bool>,
   sub: option<Uuid.t>,
 }
 
@@ -59,6 +60,7 @@ type detail = {
   leftAt: option<Js.Date.t>,
   onboardingFinishAt: option<Js.Date.t>,
   workplaceId: option<Uuid.t>,
+  isRepresentative: option<bool>,
   createdAt: Js.Date.t,
   sub: option<Uuid.t>,
 }
@@ -103,6 +105,7 @@ module Decode = {
     companyNames: field.required(. "company_names", array(option(string))),
     createdAt: field.required(. "created_at", date),
     workplaceIds: field.required(. "workplace_ids", array(Uuid.decode)),
+    isRepresentative: field.required(. "is_representative", option(bool)),
     sub: field.required(. "sub", option(Uuid.decode)),
   })
 
@@ -123,6 +126,7 @@ module Decode = {
     leftAt: field.required(. "left_at", option(date)),
     onboardingFinishAt: field.required(. "onboarding_finished_at", option(date)),
     workplaceId: field.required(. "workplace_id", option(Uuid.decode)),
+    isRepresentative: field.required(. "is_representative", option(bool)),
     createdAt: field.required(. "created_at", date),
     sub: field.required(. "sub", option(Uuid.decode)),
   })

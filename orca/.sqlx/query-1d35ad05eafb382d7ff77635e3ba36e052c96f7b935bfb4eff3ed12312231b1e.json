@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO members_workplaces\n    ( workplace_id\n    , member_id\n    , became_representative_at\n    )\nVALUES\n    ( $1, $2, CASE WHEN $3::boolean THEN now() ELSE NULL END )\nON CONFLICT\n    ( workplace_id\n    , member_id\n    )\nDO UPDATE\nSET became_representative_at =\n    CASE WHEN $3::boolean\n         THEN COALESCE(members_workplaces.became_representative_at, now())\n         ELSE NULL END\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1d35ad05eafb382d7ff77635e3ba36e052c96f7b935bfb4eff3ed12312231b1e"
+}

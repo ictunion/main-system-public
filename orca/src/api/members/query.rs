@@ -24,6 +24,7 @@ SELECT m.id
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at
     , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
+    , (SELECT bool_or(mw.became_representative_at IS NOT NULL) FROM members_workplaces mw WHERE mw.member_id = m.id) AS "is_representative?"
     , m.sub
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -63,6 +64,7 @@ SELECT m.id AS "id!"
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at AS "created_at!"
     , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
+    , (SELECT bool_or(mw.became_representative_at IS NOT NULL) FROM members_workplaces mw WHERE mw.member_id = m.id) AS "is_representative?"
     , m.sub
 FROM members_past AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -102,6 +104,7 @@ SELECT m.id AS "id!"
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at AS "created_at!"
     , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
+    , (SELECT bool_or(mw.became_representative_at IS NOT NULL) FROM members_workplaces mw WHERE mw.member_id = m.id) AS "is_representative?"
     , m.sub
 FROM members_new AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -141,6 +144,7 @@ SELECT m.id AS "id!"
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at AS "created_at!"
     , ARRAY(SELECT mw.workplace_id FROM members_workplaces mw WHERE mw.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
+    , (SELECT bool_or(mw.became_representative_at IS NOT NULL) FROM members_workplaces mw WHERE mw.member_id = m.id) AS "is_representative?"
     , m.sub
 FROM members_current AS m
 LEFT JOIN occupations o ON o.member_id = m.id
@@ -201,6 +205,7 @@ RETURNING id
     , created_at
     , ARRAY[]::text[] AS "company_names!: Vec<Option<String>>"
     , ARRAY[]::uuid[] AS "workplace_ids!: Vec<Uuid>"
+    , NULL::boolean AS "is_representative?"
     , sub
 "#,
         member_number as _,
@@ -242,6 +247,7 @@ SELECT id
     , onboarding_finished_at
     , created_at
     , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+    , (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS "is_representative?"
     , sub
 FROM members
 WHERE members.id = $1
@@ -345,6 +351,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+, (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS "is_representative?"
 , sub
 "#,
         id as _,
@@ -401,6 +408,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+, (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS "is_representative?"
 , sub
 "#,
         id as _
@@ -440,6 +448,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+, (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS "is_representative?"
 , sub
 "#,
         id as _,
@@ -489,6 +498,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+, (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS "is_representative?"
 , sub
 "#,
         id as _,
@@ -537,6 +547,7 @@ RETURNING members.id
 , onboarding_finished_at
 , created_at
 , (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS "workplace_id?"
+, (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS "is_representative?"
 , sub
 "#,
         id as _

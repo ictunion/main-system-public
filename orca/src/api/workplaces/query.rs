@@ -325,23 +325,56 @@ where
     Ok(())
 }
 
+/// Whether a member is currently a representative of a workplace.
+///
+/// `false` both when there is no connection at all and when there is one with
+/// `became_representative_at` unset -- callers only use this to decide whether a
+/// Keycloak executive-group sync is a no-op, and both cases mean "not in the
+/// group already".
+pub async fn get_is_representative(
+    pool: &DbPool,
+    workplace_id: Id<Workplace>,
+    member_id: Id<Member>,
+) -> sqlx::Result<bool> {
+    let is_representative = sqlx::query_scalar!(
+        r#"SELECT became_representative_at IS NOT NULL AS "is_representative!" FROM members_workplaces WHERE workplace_id = $1 AND member_id = $2"#,
+        workplace_id as _,
+        member_id as _,
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(is_representative.unwrap_or(false))
+}
+
 pub async fn create_connection_between_member_and_workplace(
     pool: &DbPool,
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,
+    is_representative: bool,
 ) -> sqlx::Result<u64> {
     Ok(sqlx::query!(
         r#"
 INSERT INTO members_workplaces
     ( workplace_id
     , member_id
+    , became_representative_at
     )
 VALUES
-    ( $1, $2 )
-ON CONFLICT DO NOTHING
+    ( $1, $2, CASE WHEN $3::boolean THEN now() ELSE NULL END )
+ON CONFLICT
+    ( workplace_id
+    , member_id
+    )
+DO UPDATE
+SET became_representative_at =
+    CASE WHEN $3::boolean
+         THEN COALESCE(members_workplaces.became_representative_at, now())
+         ELSE NULL END
 "#,
         workplace_id as _,
         member_id as _,
+        is_representative as _,
     )
     .execute(pool)
     .await?
@@ -383,6 +416,7 @@ SELECT m.id
     , array_agg(o.company_name ORDER BY o.created_at DESC) AS "company_names!: Vec<Option<String>>"
     , m.created_at
     , ARRAY(SELECT wp.workplace_id FROM members_workplaces wp WHERE wp.member_id = m.id) AS "workplace_ids!: Vec<Uuid>"
+    , (SELECT bool_or(wp.became_representative_at IS NOT NULL) FROM members_workplaces wp WHERE wp.member_id = m.id) AS "is_representative?"
     , m.sub
 FROM members AS m
 LEFT JOIN occupations o ON o.member_id = m.id

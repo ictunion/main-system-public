@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE members\nSET onboarding_finished_at = NOW()\nWHERE members.id = $1\nRETURNING members.id\n, member_number\n, first_name\n, last_name\n, date_of_birth\n, email\n, phone_number\n, note\n, address\n, city\n, postal_code\n, language\n, registration_request_id as application_id\n, left_at\n, onboarding_finished_at\n, created_at\n, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS \"workplace_id?\"\n, sub\n",
+  "query": "\nUPDATE members\nSET note = $2\nWHERE members.id = $1\nRETURNING members.id\n, member_number\n, first_name\n, last_name\n, date_of_birth\n, email\n, phone_number\n, note\n, address\n, city\n, postal_code\n, language\n, registration_request_id as application_id\n, left_at\n, onboarding_finished_at\n, created_at\n, (SELECT workplace_id FROM members_workplaces WHERE member_id = members.id) AS \"workplace_id?\"\n, (SELECT became_representative_at IS NOT NULL FROM members_workplaces WHERE member_id = members.id) AS \"is_representative?\"\n, sub\n",
   "describe": {
     "columns": [
       {
@@ -90,13 +90,19 @@
       },
       {
         "ordinal": 17,
+        "name": "is_representative?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 18,
         "name": "sub",
         "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Text"
       ]
     },
     "nullable": [
@@ -117,8 +123,9 @@
       true,
       false,
       null,
+      null,
       true
     ]
   },
-  "hash": "5e5f7eac5ebffb392f416eb33f7ebfd719ff7a9cea8c14d378838d5592921456"
+  "hash": "5d89e8af29f4e48e80a8b2b3671c0e626fa1d661d69789c04890569ebd6bd255"
 }

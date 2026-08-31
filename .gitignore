@@ -13,3 +13,6 @@ result*
 /.vscode/
 /target
 CLAUDE.md
+
+# Local agent tooling
+.mcp.json

@@ -292,20 +292,24 @@ async fn cancel(
     Ok(Json(workplace))
 }
 
-#[put("/<workplace_id>/members/<member_id>")]
-async fn assign_member_to_workplace(
+async fn assign_member_to_workplace_impl(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,
+    is_representative: bool,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let was_representative =
+        query::get_is_representative(db_pool.inner(), workplace_id, member_id).await?;
 
     let rows_affected = query::create_connection_between_member_and_workplace(
         db_pool.inner(),
         workplace_id,
         member_id,
+        is_representative,
     )
     .await?;
 
@@ -321,11 +325,51 @@ async fn assign_member_to_workplace(
         .connect_keycloak_user_and_group(&token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
+    // Only touch the executive group on an actual transition -- most PUTs here
+    // are either a first-time assignment (never representative) or a
+    // no-op re-assignment, and firing a Keycloak request either way would be
+    // one API round-trip per member for no effect.
+    if let Some(keycloak_executive_group_id) = workplace_details.keycloak_executive_group_id {
+        if is_representative && !was_representative {
+            oid_provider
+                .connect_keycloak_user_and_group(&token, keycloak_id, keycloak_executive_group_id)
+                .await?;
+        } else if !is_representative && was_representative {
+            oid_provider
+                .remove_keycloak_user_from_group(&token, keycloak_id, keycloak_executive_group_id)
+                .await?;
+        }
+    }
+
     if rows_affected == 0 {
         Ok(SuccessResponse::NoContent)
     } else {
         Ok(SuccessResponse::Created)
     }
+}
+
+#[put("/<workplace_id>/members/<member_id>")]
+async fn assign_member_to_workplace(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+    member_id: Id<Member>,
+) -> Response<SuccessResponse> {
+    assign_member_to_workplace_impl(db_pool, oid_provider, token, workplace_id, member_id, false)
+        .await
+}
+
+#[put("/<workplace_id>/members/<member_id>/is_representative")]
+async fn assign_member_to_workplace_rep(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+    member_id: Id<Member>,
+) -> Response<SuccessResponse> {
+    assign_member_to_workplace_impl(db_pool, oid_provider, token, workplace_id, member_id, true)
+        .await
 }
 
 #[delete("/<workplace_id>/members/<member_id>")]
@@ -337,6 +381,9 @@ async fn remove_member_from_workplace(
     member_id: Id<Member>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let was_representative =
+        query::get_is_representative(db_pool.inner(), workplace_id, member_id).await?;
 
     let rows_affected = query::remove_connection_between_member_and_workplace(
         db_pool.inner(),
@@ -356,6 +403,15 @@ async fn remove_member_from_workplace(
     oid_provider
         .remove_keycloak_user_from_group(&token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
+
+    if let (true, Some(keycloak_executive_group_id)) = (
+        was_representative,
+        workplace_details.keycloak_executive_group_id,
+    ) {
+        oid_provider
+            .remove_keycloak_user_from_group(&token, keycloak_id, keycloak_executive_group_id)
+            .await?;
+    }
 
     if rows_affected == 0 {
         Ok(SuccessResponse::NoContent)
@@ -394,6 +450,7 @@ pub fn routes() -> Vec<Route> {
         cancel,
         create_workplace,
         assign_member_to_workplace,
+        assign_member_to_workplace_rep,
         remove_member_from_workplace,
         get_all_workplace_members,
     ]

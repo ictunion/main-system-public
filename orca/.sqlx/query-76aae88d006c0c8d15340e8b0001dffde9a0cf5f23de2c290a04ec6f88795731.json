@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nINSERT INTO members\n    ( member_number\n    , email\n    , first_name\n    , last_name\n    , language\n    , date_of_birth\n    , address\n    , city\n    , postal_code\n    , phone_number\n    )\nVALUES\n    ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )\nRETURNING id\n    , member_number\n    , first_name\n    , last_name\n    , email\n    , phone_number\n    , note\n    , city\n    , language\n    , left_at\n    , created_at\n    , ARRAY[]::text[] AS \"company_names!: Vec<Option<String>>\"\n    , ARRAY[]::uuid[] AS \"workplace_ids!: Vec<Uuid>\"\n    , sub\n",
+  "query": "\nINSERT INTO members\n    ( member_number\n    , email\n    , first_name\n    , last_name\n    , language\n    , date_of_birth\n    , address\n    , city\n    , postal_code\n    , phone_number\n    )\nVALUES\n    ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )\nRETURNING id\n    , member_number\n    , first_name\n    , last_name\n    , email\n    , phone_number\n    , note\n    , city\n    , language\n    , left_at\n    , created_at\n    , ARRAY[]::text[] AS \"company_names!: Vec<Option<String>>\"\n    , ARRAY[]::uuid[] AS \"workplace_ids!: Vec<Uuid>\"\n    , NULL::boolean AS \"is_representative?\"\n    , sub\n",
   "describe": {
     "columns": [
       {
@@ -70,6 +70,11 @@
       },
       {
         "ordinal": 13,
+        "name": "is_representative?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
         "name": "sub",
         "type_info": "Uuid"
       }
@@ -102,8 +107,9 @@
       false,
       null,
       null,
+      null,
       true
     ]
   },
-  "hash": "a93778b2a68ecad56471eec25aa4f7cd003a0762bec0368a41bf9240b7da3079"
+  "hash": "76aae88d006c0c8d15340e8b0001dffde9a0cf5f23de2c290a04ec6f88795731"
 }

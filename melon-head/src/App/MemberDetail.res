@@ -11,7 +11,7 @@ let layout: DataGrid.t<MemberData.detail> = [
     cells: [
       {
         label: "Member Number",
-        view: d => MemberSummaryTable.viewPaddedNumber(d.memberNumber),
+        view: d => MemberSummaryTable.viewPaddedNumber(d.memberNumber, ()),
         minmax: ("250px", "690px"),
       },
       {
@@ -109,7 +109,7 @@ let workplaceExecutiveLayout: DataGrid.t<MemberData.detail> = [
     cells: [
       {
         label: "Member Number",
-        view: d => MemberSummaryTable.viewPaddedNumber(d.memberNumber),
+        view: d => MemberSummaryTable.viewPaddedNumber(d.memberNumber, ()),
         minmax: ("250px", "690px"),
       },
       {
@@ -426,9 +426,14 @@ module MemberWorkplaceSelect = {
   module Loading = {
     @react.component
     let make = () =>
-      <select disabled={true}>
-        <option> {React.string("(loading...)")} </option>
-      </select>
+      <>
+        <dt> {React.string("Workplace:")} </dt>
+        <dd>
+          <select disabled={true}>
+            <option> {React.string("(loading...)")} </option>
+          </select>
+        </dd>
+      </>
   }
 
   module Active = {
@@ -441,51 +446,98 @@ module MemberWorkplaceSelect = {
     @react.component
     let make = (~api, ~detail: MemberData.detail, ~workplaces: array<WorkplaceData.summary>) => {
       let (workplaceId, setWorkplaceId) = React.useState(() => detail.workplaceId)
+      // Assigning to a workplace (whether the plain PUT below or switching away
+      // entirely) always clears representative status server-side -- mirror
+      // that here so the checkbox never shows stale state for a workplace the
+      // member was just moved out of.
+      let (isRepresentative, setIsRepresentative) = React.useState(() =>
+        detail.isRepresentative->Option.getWithDefault(false)
+      )
 
-      <select
-        defaultValue={switch detail.workplaceId {
-        | Some(id) => Uuid.toString(id)
-        | None => ""
-        }}
-        onChange={e => {
-          let value = ReactEvent.Form.currentTarget(e)["value"]
+      let onWorkplaceChange = e => {
+        let value = ReactEvent.Form.currentTarget(e)["value"]
 
-          // remove current workplace -> workplaceID that is assigned before this change event
-          let _ = workplaceId->Option.map(workplaceId => {
-            let _ =
-              api->Api.deleteJson(
-                ~path="/workplaces/" ++
-                Uuid.toString(workplaceId) ++
-                "/members/" ++
-                Uuid.toString(detail.id),
-                ~decoder=Api.Decode.acceptedResponse,
-                ~body=None,
-              )
-          })
-
-          // get selected/new workplace ID or None
-          let newWorkplaceId = switch value {
-          | "" => None
-          | v => Some(Uuid.unsafeFromString(v))
-          }
-
-          // add new workplace if user selected valid workplace from menu
+        // remove current workplace -> workplaceID that is assigned before this change event
+        let _ = workplaceId->Option.map(workplaceId => {
           let _ =
-            newWorkplaceId->Option.map(newWorkplaceId =>
-              api->Api.put(
-                ~path="/workplaces/" ++
-                Uuid.toString(newWorkplaceId) ++
-                "/members/" ++
-                Uuid.toString(detail.id),
-                ~decoder=Api.Decode.acceptedResponse,
-              )
+            api->Api.deleteJson(
+              ~path="/workplaces/" ++
+              Uuid.toString(workplaceId) ++
+              "/members/" ++
+              Uuid.toString(detail.id),
+              ~decoder=Api.Decode.acceptedResponse,
+              ~body=None,
             )
+        })
 
-          setWorkplaceId(_ => newWorkplaceId)
-        }}>
-        <option value=""> {React.string("(none)")} </option>
-        {workplaces->Array.map(viewWorkplaces)->React.array}
-      </select>
+        // get selected/new workplace ID or None
+        let newWorkplaceId = switch value {
+        | "" => None
+        | v => Some(Uuid.unsafeFromString(v))
+        }
+
+        // add new workplace if user selected valid workplace from menu
+        let _ =
+          newWorkplaceId->Option.map(newWorkplaceId =>
+            api->Api.put(
+              ~path="/workplaces/" ++
+              Uuid.toString(newWorkplaceId) ++
+              "/members/" ++
+              Uuid.toString(detail.id),
+              ~decoder=Api.Decode.acceptedResponse,
+            )
+          )
+
+        setWorkplaceId(_ => newWorkplaceId)
+        setIsRepresentative(_ => false)
+      }
+
+      let onRepresentativeChange = (workplaceId, e) => {
+        let checked = ReactEvent.Form.currentTarget(e)["checked"]
+
+        let path = if checked {
+          "/workplaces/" ++
+          Uuid.toString(workplaceId) ++
+          "/members/" ++
+          Uuid.toString(detail.id) ++
+          "/is_representative"
+        } else {
+          "/workplaces/" ++ Uuid.toString(workplaceId) ++ "/members/" ++ Uuid.toString(detail.id)
+        }
+
+        let _ = api->Api.put(~path, ~decoder=Api.Decode.acceptedResponse)
+
+        setIsRepresentative(_ => checked)
+      }
+
+      <>
+        <dt> {React.string("Workplace:")} </dt>
+        <dd>
+          <select
+            defaultValue={switch detail.workplaceId {
+            | Some(id) => Uuid.toString(id)
+            | None => ""
+            }}
+            onChange=onWorkplaceChange>
+            <option value=""> {React.string("(none)")} </option>
+            {workplaces->Array.map(viewWorkplaces)->React.array}
+          </select>
+        </dd>
+        {switch workplaceId {
+        | Some(wid) =>
+          <>
+            <dt> {React.string("Representative:")} </dt>
+            <dd>
+              <label>
+                <input
+                  type_="checkbox" checked=isRepresentative onChange={onRepresentativeChange(wid)}
+                />
+              </label>
+            </dd>
+          </>
+        | None => React.null
+        }}
+      </>
     }
   }
 
@@ -598,10 +650,7 @@ let make = (~api, ~id, ~modal) => {
           <Chip.MemberStatus value=status />
         </dd>
         <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
-          <dt> {React.string("Workplace:")} </dt>
-          <dd>
-            <MemberWorkplaceSelect api detail />
-          </dd>
+          <MemberWorkplaceSelect api detail />
         </SessionContext.RequireRole>
       </dl>
     </header>

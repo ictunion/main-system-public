@@ -36,6 +36,7 @@ pub struct MemberSummary {
     pub(crate) company_names: Vec<Option<String>>,
     pub(crate) created_at: DateTime<Utc>,
     pub(crate) workplace_ids: Vec<Uuid>,
+    pub(crate) is_representative: Option<bool>,
     pub(crate) sub: Option<Uuid>,
 }
 
@@ -205,6 +206,7 @@ pub struct MemberDetail {
     onboarding_finished_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     workplace_id: Option<Uuid>,
+    is_representative: Option<bool>,
     sub: Option<Uuid>,
 }
 
