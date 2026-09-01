@@ -52,18 +52,11 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             session
             requiredRole=Some(Session.ListApplications)
           />
-          /* <NavItem */
-          /* key="4" */
-          /* path="/checklist" */
-          /* text="Checklist" */
-          /* session */
-          /* requiredRole=Some(Session.ListApplications) */
-          /* /> */
-          <NavSeprator key="5" />
+          <NavSeprator key="4" />
           <NavItem
-            key="6" path="/members" text="Members" session requiredRole=Some(Session.ListMembers)
+            key="5" path="/members" text="Members" session requiredRole=Some(Session.ListMembers)
           />
-          <NavSeprator key="6.5" />
+          <NavSeprator key="6" />
           <NavItem
             key="7"
             path="/workplaces"
@@ -71,22 +64,24 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             session
             requiredRole=Some(Session.ManageWorkplaces)
           />
+          <NavSeprator key="8" />
           <NavItem
-            key="7.5"
+            key="9"
             path="/my-workplace"
             text="My Workplace"
             session
             requiredRole=Some(Session.ListOwnWorkplaceMembers)
           />
-          /* <NavItem */
-          /* key="8" */
-          /* path="/keycloak-mappings" */
-          /* text="Login Mapping" */
-          /* session */
-          /* requiredRole=Some(Session.ListApplications) */
-          /* /> */
-          <NavSeprator key="9" />
-          <NavItem key="10" path="/settings" text="Settings" session />
+          <NavSeprator key="10" />
+          <NavItem
+            key="11"
+            path="/my-workplace-settings"
+            text="My Workplace Settings"
+            session
+            requiredRole=Some(Session.ListOwnWorkplace)
+          />
+          <NavSeprator key="12" />
+          <NavItem key="13" path="/settings" text="Settings" session />
         </ul>
       | Loading =>
         <div className={styles["loading"]}>

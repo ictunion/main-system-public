@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT w.id\nFROM workplaces w\nWHERE w.keycloak_executive_group_id = ANY($1)\nORDER BY w.name\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c9dedc077cf0aee946b0c030b1cef53f024550f6031d9d19d289104efddeed13"
+}

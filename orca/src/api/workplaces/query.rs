@@ -1,8 +1,6 @@
 use uuid::Uuid;
 
-use super::{
-    MyWorkplaceSummary, NewWorkplace, UpdateWorkplace, WorkplaceMemberSummary, WorkplaceSummary,
-};
+use super::{NewWorkplace, UpdateWorkplace, WorkplaceMemberSummary, WorkplaceSummary};
 use crate::api::members::MemberSummary;
 use crate::data::{Id, Member, Workplace};
 use crate::db::DbPool;
@@ -442,26 +440,19 @@ ORDER BY m.member_number DESC
     .await
 }
 
-/// Workplaces the caller is an executive of, resolved by matching the caller's
-/// Keycloak group IDs against `workplaces.keycloak_executive_group_id`.
+/// IDs of the workplaces the caller is an executive of, resolved by matching the
+/// caller's Keycloak group IDs against `workplaces.keycloak_executive_group_id`.
 ///
 /// An empty `executive_group_ids` yields an empty result, so a caller who is in
-/// no executive group can never widen their scope.
-pub async fn list_executive_workplaces(
+/// no executive group can never widen their scope. Ordered by name so the first
+/// entry is deterministic.
+pub async fn list_executive_workplace_ids(
     pool: &DbPool,
     executive_group_ids: &[Uuid],
-) -> sqlx::Result<Vec<MyWorkplaceSummary>> {
-    sqlx::query_as!(
-        MyWorkplaceSummary,
+) -> sqlx::Result<Vec<Uuid>> {
+    sqlx::query_scalar!(
         r#"
 SELECT w.id
-    , w.name
-    , (
-        SELECT COUNT(*)
-        FROM members_workplaces mw
-        JOIN members m ON m.id = mw.member_id
-        WHERE mw.workplace_id = w.id AND m.left_at IS NULL
-      )::bigint AS "member_count!: i64"
 FROM workplaces w
 WHERE w.keycloak_executive_group_id = ANY($1)
 ORDER BY w.name
@@ -487,12 +478,14 @@ pub async fn list_members_of_workplaces(
         WorkplaceMemberSummary,
         r#"
 SELECT m.id AS "id: Id<Member>"
+    , m.member_number
     , mw.workplace_id AS "workplace_id: Id<Workplace>"
     , m.first_name
     , m.last_name
     , m.email
     , m.phone_number
     , m.created_at
+    , (mw.became_representative_at IS NOT NULL) AS "is_representative!"
 FROM members m
 JOIN members_workplaces mw ON mw.member_id = m.id
 WHERE mw.workplace_id = ANY($1)

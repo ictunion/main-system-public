@@ -452,6 +452,16 @@ let make = (
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageWorkplaces)} />},
     ),
     (
+      "List own workplace members (executive committee)",
+      session => {
+        <ViewBool value={Session.hasRole(session, ~role=Session.ListOwnWorkplaceMembers)} />
+      },
+    ),
+    (
+      "View own workplace detail (executive committee)",
+      session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListOwnWorkplace)} />},
+    ),
+    (
       "Super-Powers (be careful!)",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
     ),

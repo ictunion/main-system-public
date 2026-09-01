@@ -53,6 +53,7 @@ module ConfiguredApp = {
           | list{"workplaces", id, "members"} =>
             <WorkplaceMembers api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"my-workplace"} => <MyWorkplace api />
+          | list{"my-workplace-settings"} => <MyWorkplaceSettings api modal />
           | _ =>
             <Page>
               <ErrorPage.NotFound />

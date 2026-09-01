@@ -242,8 +242,7 @@ enum MemberReadScope {
 /// Staff roles read anyone. An executive committee member reads only people in
 /// the workplaces they sit on the committee of; that set is resolved from
 /// Keycloak per request and never taken from the URL. A member outside their
-/// scope is refused with the same error as a caller holding no role at all, so
-/// the endpoint cannot be used to probe which member UUIDs exist.
+/// scope is refused with the same error as a caller holding no role at all.
 async fn member_read_scope(
     db_pool: &DbPool,
     oid_provider: &Provider,
@@ -334,7 +333,7 @@ async fn list_files(
     token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Vec<FileInfo>>> {
-    oid_provider.require_any_role(&token, &[Role::ListMembers, Role::ViewApplication])?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let files = query::list_member_files(db_pool.inner(), id).await?;
 
@@ -356,11 +355,17 @@ async fn list_occupations(
     token: JwtToken<'_>,
     id: Id<Member>,
 ) -> Response<Json<Vec<Occupation>>> {
-    // Company and position are exactly what a workplace rep needs, so this is
-    // scoped the same way as the member detail rather than being staff-only.
-    member_read_scope(db_pool.inner(), oid_provider.inner(), &token, id).await?;
+    // Staff see the full employment history; a workplace executive sees only the
+    // member's current occupation -- enough to know where a colleague works now,
+    // without a record of previous employers.
+    let scope = member_read_scope(db_pool.inner(), oid_provider.inner(), &token, id).await?;
 
-    let occupations = query::list_occupations(db_pool.inner(), id).await?;
+    let occupations = match scope {
+        MemberReadScope::Full => query::list_occupations(db_pool.inner(), id).await?,
+        MemberReadScope::WorkplaceExecutive => {
+            query::latest_occupation(db_pool.inner(), id).await?
+        }
+    };
 
     Ok(Json(occupations))
 }

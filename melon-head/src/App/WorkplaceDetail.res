@@ -205,40 +205,50 @@ let statusButtons = (
   }
 }
 
-@react.component
-let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
-  let (detail, setDetail, _) =
-    api->Hook.getData(
-      ~path="/workplaces/" ++ Uuid.toString(id),
-      ~decoder=WorkplaceData.Decode.summary,
-    )
+module View = {
+  @react.component
+  let make = (
+    ~api: Api.t,
+    ~modal: Modal.Interface.t,
+    ~detail: Api.webData<WorkplaceData.summary>,
+    ~setDetail,
+  ) => {
+    let (error, setError) = React.useState(() => None)
 
-  let (error, setError) = React.useState(() => None)
-
-  let doTransition = (path, _) => {
-    let req =
-      api->Api.patchJson(~path, ~decoder=WorkplaceData.Decode.summary, ~body=Json.Encode.object([]))
-    req->Future.get(res => {
-      switch res {
-      | Ok(updated) => {
-          setError(_ => None)
-          setDetail(_ => RemoteData.Success(updated))
+    let doTransition = (path, _) => {
+      let req =
+        api->Api.patchJson(
+          ~path,
+          ~decoder=WorkplaceData.Decode.summary,
+          ~body=Json.Encode.object([]),
+        )
+      req->Future.get(res => {
+        switch res {
+        | Ok(updated) => {
+            setError(_ => None)
+            setDetail(_ => RemoteData.Success(updated))
+          }
+        | Error(e) => setError(_ => Some(e))
         }
-      | Error(e) => setError(_ => Some(e))
-      }
-    })
-  }
-
-  let basePath = "/workplaces/" ++ Uuid.toString(id)
-
-  let openEditModal = _ =>
-    switch detail {
-    | Success(d) =>
-      Modal.Interface.openModal(modal, editWorkplaceModal(~api, ~modal, ~id, ~detail=d, ~setDetail))
-    | _ => ()
+      })
     }
 
-  <Page requireAnyRole=[ListWorkplaces] mainResource=detail>
+    let basePath = switch detail {
+    | Success(d) => "/workplaces/" ++ Uuid.toString(d.id)
+    | _ => ""
+    }
+
+    let openEditModal = _ =>
+      switch detail {
+      | Success(d) =>
+        Modal.Interface.openModal(
+          modal,
+          editWorkplaceModal(~api, ~modal, ~id=d.id, ~detail=d, ~setDetail),
+        )
+      | _ => ()
+      }
+
+    <Page requireAnyRole=[ListWorkplaces, ListOwnWorkplace] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         <span className={styles["titleText"]}>
@@ -261,6 +271,13 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
         <SessionContext.RequireRole anyOf=[Session.ListWorkplaces]>
           <Page.BackButton name="workplace members" path={basePath ++ "/members"} />
         </SessionContext.RequireRole>
+        <SessionContext.RequireRole anyOf=[Session.ListOwnWorkplaceMembers]>
+          <a
+            className={styles["navLink"]}
+            onClick={_ => RescriptReactRouter.push("/my-workplace")}>
+            {React.string("Show workplace members")}
+          </a>
+        </SessionContext.RequireRole>
       </div>
     </header>
     <div className={styles["info"]}>
@@ -279,4 +296,16 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
       )}
     </SessionContext.RequireRole>
   </Page>
+  }
+}
+
+@react.component
+let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
+  let (detail, setDetail, _) =
+    api->Hook.getData(
+      ~path="/workplaces/" ++ Uuid.toString(id),
+      ~decoder=WorkplaceData.Decode.summary,
+    )
+
+  <View api modal detail setDetail />
 }

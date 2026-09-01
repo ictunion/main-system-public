@@ -11,6 +11,7 @@ type orcaRole =
   | ListWorkplaces
   | ManageWorkplaces
   | ListOwnWorkplaceMembers
+  | ListOwnWorkplace
   | SuperPowers
 
 let showOrcaRole = (r: orcaRole): string =>
@@ -25,6 +26,7 @@ let showOrcaRole = (r: orcaRole): string =>
   | ListWorkplaces => "list-workplaces"
   | ManageWorkplaces => "manage-workplaces"
   | ListOwnWorkplaceMembers => "list-own-workplace-members"
+  | ListOwnWorkplace => "list-own-workplace"
   | SuperPowers => "super-powers"
   }
 
@@ -85,6 +87,7 @@ module Decode = {
     | "list-workplaces" => ListWorkplaces
     | "manage-workplaces" => ManageWorkplaces
     | "list-own-workplace-members" => ListOwnWorkplaceMembers
+    | "list-own-workplace" => ListOwnWorkplace
     | "super-powers" => SuperPowers
     | _ => UnknownOrcaRole(str)
     }

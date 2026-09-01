@@ -2,7 +2,7 @@ use super::{ApiError, SuccessResponse};
 use crate::api::Response;
 use crate::api::members::MemberSummary;
 use crate::api::members::query::get_status_data;
-use crate::data::{Id, Member, Workplace};
+use crate::data::{Id, Member, MemberNumber, Workplace};
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider, Role};
 use crate::validation::Validated;
@@ -46,81 +46,74 @@ async fn list_all(
     Ok(Json(summaries))
 }
 
-/// Workplace as seen by one of its own executive committee members.
-/// Carries no Keycloak group IDs and no contact address for the workplace --
-/// just enough to title the page and show how many people are in it.
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct MyWorkplaceSummary {
-    id: Id<Workplace>,
-    name: String,
-    member_count: i64,
-}
-
 /// Reduced projection of a member, for workplace executive committees.
 ///
 /// Deliberately narrower than `MemberSummary`, which carries the freeform staff
-/// `note`, `member_number`, `city` and company names, and narrower still than
-/// `MemberDetail`, which adds date of birth, home address and postal code.
-/// Union membership is special-category data; a rep needs to reach their
-/// colleagues, not to hold a dossier on them.
+/// `note`, `city` and company names, and narrower still than `MemberDetail`,
+/// which adds date of birth, home address and postal code. `member_number` is
+/// included: it is the human-readable identifier members quote for payments, so
+/// a rep needs to see it.
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct WorkplaceMemberSummary {
     id: Id<Member>,
+    member_number: MemberNumber,
     workplace_id: Id<Workplace>,
     first_name: Option<String>,
     last_name: Option<String>,
     email: Option<String>,
     phone_number: Option<String>,
     created_at: DateTime<Utc>,
+    is_representative: bool,
 }
 
-/// Resolve which workplaces the caller may act on as an executive.
+/// Resolve which workplaces the caller may act on as an executive, as bare IDs.
 ///
 /// The Keycloak role grants only the *capability*; this resolves the *scope*,
 /// and it is the single place that decides it. Returns an empty vector when the
-/// caller is in no executive group, which makes every downstream query empty
-/// rather than unbounded.
-async fn executive_workplace_ids(
+/// caller is in no executive group, so every downstream query is bounded rather
+/// than unbounded. Exposed to `api::members` so a single-member read can be
+/// checked against the same scope.
+pub(crate) async fn executive_workplace_id_list(
     db_pool: &DbPool,
     oid_provider: &Provider,
     token: &JwtToken<'_>,
-) -> Response<Vec<MyWorkplaceSummary>> {
+) -> Response<Vec<Uuid>> {
     let group_ids = oid_provider.get_own_groups(token).await?;
 
     if group_ids.is_empty() {
         return Ok(Vec::new());
     }
 
-    Ok(query::list_executive_workplaces(db_pool, &group_ids).await?)
+    Ok(query::list_executive_workplace_ids(db_pool, &group_ids).await?)
 }
 
-/// Same resolution as [`executive_workplace_ids`], reduced to bare IDs.
+/// The workplace whose executive committee the caller sits on, in full -- the
+/// same projection as `GET /workplaces/<id>`. Backs both the rep-facing "My
+/// Workplace" roster (which reads its title off this) and the "My Workplace
+/// Settings" page (which reuses the staff workplace detail view).
 ///
-/// Exposed to `api::members` so that reads of a single member can be checked
-/// against the caller's committee scope without that module getting its own,
-/// possibly divergent, notion of what the scope is.
-pub(crate) async fn executive_workplace_id_list(
-    db_pool: &DbPool,
-    oid_provider: &Provider,
-    token: &JwtToken<'_>,
-) -> Response<Vec<Uuid>> {
-    let workplaces = executive_workplace_ids(db_pool, oid_provider, token).await?;
-
-    Ok(workplaces.iter().map(|w| w.id.into()).collect())
-}
-
-/// Workplaces where the caller sits on the executive committee.
+/// No workplace ID in the path: the scope is resolved from the caller's
+/// Keycloak executive group membership. By union process a rep sits on exactly
+/// one committee; if the resolver ever returns several, the first by name is
+/// used. A caller not linked to any workplace gets a 404.
 #[get("/mine")]
 async fn list_mine(
     db_pool: &State<DbPool>,
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
-) -> Response<Json<Vec<MyWorkplaceSummary>>> {
-    oid_provider.require_role(&token, Role::ListOwnWorkplaceMembers)?;
+) -> Response<Json<WorkplaceSummary>> {
+    oid_provider.require_any_role(&token, &[Role::ListOwnWorkplace])?;
 
-    let workplaces = executive_workplace_ids(db_pool.inner(), oid_provider.inner(), &token).await?;
+    // each executive member should have only one workplace, we don't want someone to be rep at multiple workplaces
+    let own = executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
 
-    Ok(Json(workplaces))
+    let Some(workplace_id) = own.first().copied() else {
+        return Err(ApiError::Status(rocket::http::Status::NotFound));
+    };
+
+    let detail = query::detail(db_pool.inner(), Id::from(workplace_id)).await?;
+
+    Ok(Json(detail))
 }
 
 /// Members of the workplaces the caller is an executive of -- and only those.
@@ -181,7 +174,21 @@ async fn detail(
     token: JwtToken<'_>,
     workplace_id: Id<Workplace>,
 ) -> Response<Json<WorkplaceSummary>> {
-    oid_provider.require_any_role(&token, &[Role::ListWorkplaces])?;
+    // Staff (`list-workplaces`) may open any workplace. A rep with
+    // `list-own-workplace` may open only workplaces whose executive committee
+    // they sit on -- the same full projection, internal IDs and contact address
+    // included, since those help a rep debugging their own workplace's
+    // integrations. A workplace outside their scope is refused with the same
+    // 403 as a caller holding no role at all.
+    if let Err(staff_denial) = oid_provider.require_role(&token, Role::ListWorkplaces) {
+        oid_provider.require_role(&token, Role::ListOwnWorkplace)?;
+
+        let own =
+            executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+        if !own.contains(&Uuid::from(workplace_id)) {
+            return Err(staff_denial.into());
+        }
+    }
 
     let detail = query::detail(db_pool.inner(), workplace_id).await?;
 

@@ -678,20 +678,16 @@ let make = (~api, ~id, ~modal) => {
         },
       ]}
     />
-    <Tabbed.Tabs>
+    {if isStaff {
+      <>
+        <Tabbed.Tabs>
       <Tabbed.Tab value=Occupations handlers=tabHandlers>
         {React.string("Occupations")}
       </Tabbed.Tab>
-      {if isStaff {
-        <>
-          <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
-          /* Files are scanned membership applications -- signatures and
-             identity documents. Staff only, regardless of workplace scope. */
-          <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
-        </>
-      } else {
-        React.null
-      }}
+      <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
+      /* Files are scanned membership applications -- signatures and identity
+         documents. Staff only, regardless of workplace scope. */
+      <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
       // <Tabbed.Tab value=Workplace handlers=tabHandlers> {React.string("Workplace")} </Tabbed.Tab>
     </Tabbed.Tabs>
     <Tabbed.Content tab=Occupations handlers=tabHandlers>
@@ -713,15 +709,11 @@ let make = (~api, ~id, ~modal) => {
         </table>
       </div>
     </Tabbed.Content>
-    {if isStaff {
-      <Tabbed.Content tab=Metadata handlers=tabHandlers>
-        <div className={styles["metadata"]}>
-          <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
-        </div>
-      </Tabbed.Content>
-    } else {
-      React.null
-    }}
+    <Tabbed.Content tab=Metadata handlers=tabHandlers>
+      <div className={styles["metadata"]}>
+        <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
+      </div>
+    </Tabbed.Content>
     <Tabbed.Content tab=Files handlers=tabHandlers>
       <DataGrid
         data=filesData
@@ -739,9 +731,10 @@ let make = (~api, ~id, ~modal) => {
         ]}
       />
     </Tabbed.Content>
-    // <Tabbed.Content tab=Workplace handlers=tabHandlers>
-    //   React.string("I work in this place (?)")
-    // </Tabbed.Content>
+      </>
+    } else {
+      React.null
+    }}
     /* Accept / remove / create-account all need staff roles server side; a
        workplace executive would only get a 403 out of them. */
     <SessionContext.RequireRole anyOf=[Session.ManageMembers]>

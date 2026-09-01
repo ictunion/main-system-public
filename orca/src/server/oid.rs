@@ -61,6 +61,12 @@ pub enum Role {
     /// *capability*; the scope is resolved per request from the caller's
     /// Keycloak executive group membership. See `api::workplaces::mine`.
     ListOwnWorkplaceMembers,
+    /// Scoped capability: open the full detail of a workplace the caller is an
+    /// executive of. Grants only the *capability*; the scope is resolved per
+    /// request from the caller's Keycloak executive group membership. Staff use
+    /// `ListWorkplaces` and are not restricted to their own. See
+    /// `api::workplaces::detail`.
+    ListOwnWorkplace,
     SuperPowers,
 }
 
@@ -76,6 +82,7 @@ impl Role {
             Self::ListWorkplaces => "list-workplaces",
             Self::ManageWorkplaces => "manage-workplaces",
             Self::ListOwnWorkplaceMembers => "list-own-workplace-members",
+            Self::ListOwnWorkplace => "list-own-workplace",
             Self::SuperPowers => "super-powers",
         }
     }

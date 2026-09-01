@@ -320,6 +320,31 @@ ORDER BY created_at DESC
     .await
 }
 
+/// Only the member's current occupation (most recent row). Served to workplace
+/// executives, who may see where a member works now but not their full
+/// employment history.
+pub async fn latest_occupation<'a, E>(executor: E, id: Id<Member>) -> sqlx::Result<Vec<Occupation>>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        Occupation,
+        r#"
+SELECT id
+, company_name
+, position
+, created_at
+FROM occupations
+WHERE member_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+"#,
+        id as _
+    )
+    .fetch_all(executor)
+    .await
+}
+
 pub async fn assign_member_oid_sub<'a, E>(
     executor: E,
     id: Id<Member>,

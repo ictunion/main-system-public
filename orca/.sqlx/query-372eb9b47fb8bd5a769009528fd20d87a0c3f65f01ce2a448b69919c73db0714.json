@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT m.id AS \"id: Id<Member>\"\n    , m.member_number\n    , mw.workplace_id AS \"workplace_id: Id<Workplace>\"\n    , m.first_name\n    , m.last_name\n    , m.email\n    , m.phone_number\n    , m.created_at\n    , (mw.became_representative_at IS NOT NULL) AS \"is_representative!\"\nFROM members m\nJOIN members_workplaces mw ON mw.member_id = m.id\nWHERE mw.workplace_id = ANY($1)\n  AND m.left_at IS NULL\nORDER BY m.last_name NULLS LAST, m.first_name NULLS LAST\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: Id<Member>",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "member_number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "workplace_id: Id<Workplace>",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "phone_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "is_representative!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "372eb9b47fb8bd5a769009528fd20d87a0c3f65f01ce2a448b69919c73db0714"
+}
