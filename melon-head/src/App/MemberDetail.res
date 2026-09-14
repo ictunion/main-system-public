@@ -564,12 +564,120 @@ type tabs =
   | Occupations
   | Workplace
 
-let viewOccupation = (occupation: MemberData.occupation) => {
+let viewOccupation = (
+  ~api: Api.t,
+  ~memberId,
+  ~setOccupationsData,
+  occupation: MemberData.occupation,
+) => {
+  let doDelete = _ => {
+    let req =
+      api->Api.deleteJson(
+        ~path="/members/" ++
+        Uuid.toString(memberId) ++
+        "/occupations/" ++
+        Uuid.toString(occupation.id),
+        ~decoder=Api.Decode.acceptedResponse,
+        ~body=None,
+      )
+
+    req->Future.get(res => {
+      switch res {
+      | Ok(_) =>
+        setOccupationsData(prev =>
+          prev->RemoteData.map(xs =>
+            xs->Array.keep((o: MemberData.occupation) => o.id != occupation.id)
+          )
+        )
+      | Error(_) => ()
+      }
+    })
+  }
+
   <tr key={occupation.id->Uuid.toString}>
     <td> {occupation.companyName->View.option(React.string)} </td>
     <td> {occupation.position->View.option(React.string)} </td>
+    <td> {React.string(occupation.source)} </td>
     <td> {occupation.createdAt->Js.Date.toLocaleDateString->React.string} </td>
+    <td>
+      {if occupation.source != "application" {
+        <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
+          <Button variant=Button.Danger onClick=doDelete> {React.string("Delete")} </Button>
+        </SessionContext.RequireRole>
+      } else {
+        React.null
+      }}
+    </td>
   </tr>
+}
+
+module AddOccupation = {
+  let emptyOccupation: MemberData.newOccupation = {companyName: "", position: "", source: "orca"}
+
+  let fromCurrent = (current: MemberData.occupation): MemberData.newOccupation => {
+    companyName: current.companyName->Option.map(name => "Ex-" ++ name)->Option.getWithDefault(""),
+    position: current.position->Option.getWithDefault(""),
+    source: "orca",
+  }
+
+  @react.component
+  let make = (~modal, ~api: Api.t, ~id, ~current: option<MemberData.occupation>, ~setOccupationsData) => {
+    let (newOccupation, setNewOccupation) = React.useState(_ =>
+      current->Option.mapWithDefault(emptyOccupation, fromCurrent)
+    )
+    let (error, setError) = React.useState(() => None)
+
+    let onSubmit = _ => {
+      let body = MemberData.Encode.newOccupation(newOccupation)
+      let req =
+        api->Api.postJson(
+          ~path="/members/" ++ Uuid.toString(id) ++ "/occupations",
+          ~decoder=MemberData.Decode.occupation,
+          ~body,
+        )
+
+      req->Future.get(res => {
+        switch res {
+        | Ok(data) => {
+            setOccupationsData(prev => prev->RemoteData.map(xs => Array.concat([data], xs)))
+            Modal.Interface.closeModal(modal)
+          }
+        | Error(e) => setError(_ => Some(e))
+        }
+      })
+    }
+
+    <Form onSubmit>
+      <Form.TextField
+        label="Company Name"
+        placeholder="Evil corp."
+        value=newOccupation.companyName
+        onInput={companyName => setNewOccupation(o => {...o, companyName})}
+      />
+      <Form.TextField
+        label="Position"
+        placeholder="Site Reliability Engineer"
+        value=newOccupation.position
+        onInput={position => setNewOccupation(o => {...o, position})}
+      />
+      <Button.Panel>
+        <Button
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          {React.string("Cancel")}
+        </Button>
+        <Button type_="submit" variant=Button.Cta> {React.string("Add Occupation")} </Button>
+      </Button.Panel>
+      {switch error {
+      | None => React.null
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      }}
+    </Form>
+  }
+}
+
+let addOccupationModal = (~api, ~modal, ~id, ~current, ~setOccupationsData): Modal.modalContent => {
+  title: "Add Occupation",
+  content: <AddOccupation modal api id current setOccupationsData />,
 }
 
 @react.component
@@ -587,13 +695,20 @@ let make = (~api, ~id, ~modal) => {
       ~decoder=Json.Decode.array(Data.Decode.file),
     )
 
-  let (occupationsData, _, _) =
+  let (occupationsData, setOccupationsData, _) =
     api->Hook.getData(
       ~path="/members/" ++ Uuid.toString(id) ++ "/occupations",
       ~decoder=Json.Decode.array(MemberData.Decode.occupation),
     )
 
   let mainOccupation = occupationsData->RemoteData.map(xs => xs->Array.get(0))
+
+  let openAddOccupationModal = _ => {
+    let current = mainOccupation->RemoteData.toOption->Option.flatMap(x => x)
+    modal->Modal.Interface.openModal(
+      addOccupationModal(~api, ~modal, ~id, ~current, ~setOccupationsData),
+    )
+  }
 
   /* A workplace executive reaches this page through /my-workplace and holds none
      of the staff roles. Orca serves them a redacted record for members of their
@@ -697,16 +812,28 @@ let make = (~api, ~id, ~modal) => {
             <tr>
               <th> {React.string("Company")} </th>
               <th> {React.string("Position")} </th>
+              <th> {React.string("Source")} </th>
               <th> {React.string("Created at")} </th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {switch occupationsData {
-            | Success(occupations) => occupations->Array.map(viewOccupation)->React.array
+            | Success(occupations) =>
+              occupations
+              ->Array.map(viewOccupation(~api, ~memberId=id, ~setOccupationsData))
+              ->React.array
             | _ => React.null
             }}
           </tbody>
         </table>
+        <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
+          <div className={styles["occupationsFooter"]}>
+            <Button variant=Button.Cta onClick=openAddOccupationModal>
+              {React.string("+ Add Occupation")}
+            </Button>
+          </div>
+        </SessionContext.RequireRole>
       </div>
     </Tabbed.Content>
     <Tabbed.Content tab=Metadata handlers=tabHandlers>

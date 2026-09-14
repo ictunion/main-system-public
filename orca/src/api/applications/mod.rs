@@ -474,7 +474,13 @@ async fn accept(
 
     // Populate all the relations for new member
     query::attach_files_to_member(&mut *tx, id, member_id).await?;
-    query::attach_occupation(&mut *tx, id, member_id).await?;
+    query::attach_occupation(
+        &mut *tx,
+        id,
+        member_id,
+        members::OccupationSource::Application.as_str(),
+    )
+    .await?;
 
     // Since we return just member_id from the insert query
     // let's just do an extra query for application detail

@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO occupations\n    ( member_id\n    , company_name\n    , position\n    , source\n    )\nVALUES\n    ( $1, $2, $3, $4 )\nRETURNING id\n    , company_name\n    , position\n    , source\n    , created_at\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "company_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "position",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "4cfb7a7d4c28cc9589f268e6ccbc36428c1ccd78c41deb61d8fb709c68523116"
+}

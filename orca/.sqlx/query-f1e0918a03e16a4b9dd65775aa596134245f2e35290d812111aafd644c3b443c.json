@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id\n, company_name\n, position\n, created_at\nFROM occupations\nWHERE member_id = $1\nORDER BY created_at DESC\n",
+  "query": "\nSELECT id\n, company_name\n, position\n, source\n, created_at\nFROM occupations\nWHERE member_id = $1\nAND deleted_at IS NULL\nORDER BY created_at DESC\n",
   "describe": {
     "columns": [
       {
@@ -20,6 +20,11 @@
       },
       {
         "ordinal": 3,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
@@ -33,8 +38,9 @@
       false,
       true,
       true,
+      false,
       false
     ]
   },
-  "hash": "5cccfc2e59dd564ec15dcb76beec30d59a81be421174d1eabc13527d4058ce07"
+  "hash": "f1e0918a03e16a4b9dd65775aa596134245f2e35290d812111aafd644c3b443c"
 }

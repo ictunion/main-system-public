@@ -309,9 +309,11 @@ where
 SELECT id
 , company_name
 , position
+, source
 , created_at
 FROM occupations
 WHERE member_id = $1
+AND deleted_at IS NULL
 ORDER BY created_at DESC
 "#,
         id as _
@@ -333,9 +335,11 @@ where
 SELECT id
 , company_name
 , position
+, source
 , created_at
 FROM occupations
 WHERE member_id = $1
+AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT 1
 "#,
@@ -343,6 +347,68 @@ LIMIT 1
     )
     .fetch_all(executor)
     .await
+}
+
+pub async fn create_occupation<'a, E>(
+    executor: E,
+    member_id: Id<Member>,
+    company_name: &str,
+    position: &str,
+    source: &str,
+) -> sqlx::Result<Occupation>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        Occupation,
+        r#"
+INSERT INTO occupations
+    ( member_id
+    , company_name
+    , position
+    , source
+    )
+VALUES
+    ( $1, $2, $3, $4 )
+RETURNING id
+    , company_name
+    , position
+    , source
+    , created_at
+"#,
+        member_id as _,
+        company_name,
+        position,
+        source,
+    )
+    .fetch_one(executor)
+    .await
+}
+
+pub async fn delete_occupation<'a, E>(
+    executor: E,
+    member_id: Id<Member>,
+    occupation_id: Id<Occupation>,
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
+UPDATE occupations
+SET deleted_at = now()
+WHERE id = $1
+AND member_id = $2
+AND deleted_at IS NULL
+RETURNING id
+"#,
+        occupation_id as _,
+        member_id as _,
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn assign_member_oid_sub<'a, E>(

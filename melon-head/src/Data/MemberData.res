@@ -69,7 +69,14 @@ type occupation = {
   id: Uuid.t,
   companyName: option<string>,
   position: option<string>,
+  source: string,
   createdAt: Js.Date.t,
+}
+
+type newOccupation = {
+  companyName: string,
+  position: string,
+  source: string,
 }
 
 type status =
@@ -135,6 +142,7 @@ module Decode = {
     id: field.required(. "id", Uuid.decode),
     companyName: field.required(. "company_name", option(string)),
     position: field.required(. "position", option(string)),
+    source: field.required(. "source", string),
     createdAt: field.required(. "created_at", date),
   })
 }
@@ -168,6 +176,13 @@ module Encode = {
 
   let newWorkplaceMember = (newWorkplaceMember: newWorkplaceMember) =>
     object([("member_id", string(newWorkplaceMember.memberId))])
+
+  let newOccupation = (newOccupation: newOccupation) =>
+    object([
+      ("company_name", string(newOccupation.companyName)),
+      ("position", string(newOccupation.position)),
+      ("source", string(newOccupation.source)),
+    ])
 
   let dict = (encoder, d) => Js.Json.object_(Js.Dict.map((. v) => encoder(v), d))
 

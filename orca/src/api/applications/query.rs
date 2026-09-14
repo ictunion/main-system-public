@@ -545,6 +545,7 @@ pub async fn attach_occupation<'a, E>(
     executor: E,
     registration_id: Id<RegistrationRequest>,
     member_id: Id<Member>,
+    source: &str,
 ) -> sqlx::Result<()>
 where
     E: sqlx::Executor<'a, Database = sqlx::Postgres>,
@@ -555,13 +556,15 @@ INSERT INTO occupations
 ( member_id
 , company_name
 , position
+, source
 )
-SELECT $2, rr.company_name, rr.occupation
+SELECT $2, rr.company_name, rr.occupation, $3
 FROM registration_requests as rr
 WHERE rr.id = $1
 "#,
         registration_id as _,
         member_id as _,
+        source,
     )
     .execute(executor)
     .await?;

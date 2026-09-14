@@ -345,7 +345,34 @@ pub struct Occupation {
     id: Id<Occupation>,
     company_name: Option<String>,
     position: Option<String>,
+    source: String,
     created_at: DateTime<Utc>,
+}
+
+/// Known values for `occupations.source`. The column is plain `TEXT`, not a DB
+/// enum, so this doesn't constrain what can be stored -- it just documents the
+/// values our code actually writes.
+#[derive(Debug, Clone, Copy)]
+pub enum OccupationSource {
+    /// Submitted by the applicant as part of their registration.
+    Application,
+    /// Added by staff on the member detail page in Melon Head. Not constructed
+    /// server-side -- Melon Head sends the literal string in the request body
+    /// -- kept here so the value is documented alongside `Application`.
+    #[allow(
+        dead_code,
+        reason = "documents a value Melon Head sends but orca never constructs"
+    )]
+    Orca,
+}
+
+impl OccupationSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Application => "application",
+            Self::Orca => "orca",
+        }
+    }
 }
 
 #[get("/<id>/occupations")]
@@ -368,6 +395,58 @@ async fn list_occupations(
     };
 
     Ok(Json(occupations))
+}
+
+#[derive(Debug, Deserialize, Validate)]
+#[serde(crate = "rocket::serde")]
+pub struct NewOccupation {
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    company_name: Option<String>,
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    position: Option<String>,
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    source: Option<String>,
+}
+
+#[post("/<id>/occupations", format = "json", data = "<data>")]
+async fn create_occupation(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    id: Id<Member>,
+    data: Validated<Json<NewOccupation>>,
+) -> Response<Json<Occupation>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let data = data.into_inner().into_inner();
+    let occupation = query::create_occupation(
+        db_pool.inner(),
+        id,
+        data.company_name.as_deref().expect("validated"),
+        data.position.as_deref().expect("validated"),
+        data.source.as_deref().expect("validated"),
+    )
+    .await?;
+
+    Ok(Json(occupation))
+}
+
+#[delete("/<id>/occupations/<occupation_id>")]
+async fn delete_occupation(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    id: Id<Member>,
+    occupation_id: Id<Occupation>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    query::delete_occupation(db_pool.inner(), id, occupation_id).await?;
+
+    Ok(SuccessResponse::Accepted)
 }
 
 #[derive(Debug, Deserialize)]
@@ -556,6 +635,8 @@ pub fn routes() -> Vec<Route> {
         send_email,
         list_files,
         list_occupations,
+        create_occupation,
+        delete_occupation,
         detail,
         accept,
         update_note,
