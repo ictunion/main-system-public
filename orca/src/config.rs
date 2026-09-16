@@ -4,6 +4,7 @@ use rocket::figment::{
 };
 
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use self::templates::Templates;
 pub mod templates;
@@ -32,6 +33,7 @@ pub struct Config {
     pub keycloak_host: Option<String>,
     pub keycloak_realm: Option<String>,
     pub keycloak_client_id: Option<String>,
+    pub keycloak_members_group_id: Option<Uuid>,
     pub templates: Templates<'static>,
     pub listmonk_password: Option<String>,
     pub listmonk_username: Option<String>,
@@ -119,6 +121,9 @@ impl Config {
 
         let keycloak_client_id: Option<String> = figment.extract_inner("keycloak_client_id").ok();
 
+        let keycloak_members_group_id: Option<Uuid> =
+            figment.extract_inner("keycloak_members_group_id").ok();
+
         let listmonk_password: Option<String> = figment.extract_inner("listmonk_password").ok();
 
         let listmonk_username: Option<String> = figment.extract_inner("listmonk_username").ok();
@@ -147,6 +152,7 @@ impl Config {
             keycloak_host,
             keycloak_realm,
             keycloak_client_id,
+            keycloak_members_group_id,
             templates,
             listmonk_password,
             listmonk_username,

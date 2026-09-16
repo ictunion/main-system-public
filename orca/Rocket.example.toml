@@ -40,6 +40,7 @@ tex_exe = "xelatex"
 keycloak_host = "http://localhost:8180"
 keycloak_realm = "members"
 keycloak_client_id = "orca"
+keycloak_members_group_id = "f2d3fe95-05e0-4d00-9e8c-9a189fdbf495"
 
 # Business logic configuration
 processing_queue_size = 16

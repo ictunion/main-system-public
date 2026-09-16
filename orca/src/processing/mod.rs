@@ -188,7 +188,7 @@ async fn process(
             send_email(config, message).await?;
         }
         NewMemberCreated(member_id, token_opt) => {
-            process_new_member_created(member_id, token_opt, db_pool, oid_provider).await?;
+            process_new_member_created(member_id, token_opt, config, db_pool, oid_provider).await?;
         }
         SendNotificationToTreasurer => {
             process_confirmation_email_for_treasurer(config).await?;
@@ -201,6 +201,7 @@ async fn process(
 async fn process_new_member_created(
     member_id: Id<Member>,
     token_opt: Option<String>,
+    config: &Config,
     db_pool: &DbPool,
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
@@ -208,7 +209,7 @@ async fn process_new_member_created(
     let token = JwtToken::new(&token_string);
     let oid_user = query::get_member_for_oid(db_pool, member_id).await?;
 
-    let uuid = match oid_provider.create_user(&token, &oid_user).await {
+    let sub_uuid = match oid_provider.create_user(&token, &oid_user).await {
         Ok(uuid) => uuid,
         Err(crate::server::oid::Error::Proxy(status)) if status.as_u16() == 409 => {
             info!("Keycloak user already exists for member {member_id}, looking up by email");
@@ -224,7 +225,13 @@ async fn process_new_member_created(
         Err(e) => return Err(e.into()),
     };
 
-    query::assign_member_oid_sub(db_pool, member_id, uuid).await?;
+    query::assign_member_oid_sub(db_pool, member_id, sub_uuid).await?;
+
+    if let Some(group_id) = config.keycloak_members_group_id {
+        oid_provider
+            .connect_keycloak_user_and_group(&token, sub_uuid, group_id)
+            .await?;
+    }
 
     Ok(())
 }
