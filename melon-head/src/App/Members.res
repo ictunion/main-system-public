@@ -211,7 +211,7 @@ module All = {
       <MemberSummaryTable
         data=displayedMembers
         onNoteClick={(id, note) => openNewNoteModal(id, note)}
-        showLeftOn=true>
+        columns={Array.concat(MemberSummaryTable.defaultColumns, [MemberSummaryTable.LeftOn])}>
         <p> {React.string("Currently there are no member.")} </p>
         <p>
           <small>
@@ -258,7 +258,9 @@ module New = {
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
       <MemberSummaryTable
-        data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+        data=displayedMembers
+        onNoteClick={(id, note) => openNewNoteModal(id, note)}
+        columns=MemberSummaryTable.defaultColumns>
         <p> {React.string("There are no new members who need to be onboarded.")} </p>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
           <p>
@@ -306,7 +308,9 @@ module Current = {
         <SectoralFilter checked=filterSectoral onChange={() => setFilterSectoral(v => !v)} />
       </Button.Panel>
       <MemberSummaryTable
-        data=displayedMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+        data=displayedMembers
+        onNoteClick={(id, note) => openNewNoteModal(id, note)}
+        columns=MemberSummaryTable.defaultColumns>
         <p> {React.string("There are no members yet.")} </p>
         <p>
           <small>
@@ -367,7 +371,7 @@ module Past = {
       <MemberSummaryTable
         data=displayedMembers
         onNoteClick={(id, note) => openNewNoteModal(id, note)}
-        showLeftOn=true>
+        columns={Array.concat(MemberSummaryTable.defaultColumns, [MemberSummaryTable.LeftOn])}>
         <p> {React.string("There are no ex-members.")} </p>
       </MemberSummaryTable>
     </div>

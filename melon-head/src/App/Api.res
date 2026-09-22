@@ -104,6 +104,15 @@ let make = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
   }
 }
 
+let makeBank = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
+  {
+    // The bank API serves everything under an /api prefix; request paths stay
+    // prefix-free (e.g. "/payments/...").
+    host: config.bankApiUrl ++ "/api",
+    oidcUser,
+  }
+}
+
 let makeJsonHeaders = api => {
   Js.Dict.fromList(list{
     ("Authorization", "Bearer " ++ getToken(api)),

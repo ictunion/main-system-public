@@ -5,6 +5,7 @@ module ConfiguredApp = {
   let make = (~oidc: Oidc.t, ~config: Config.t) => {
     let oidcUser = Oidc.getUser(oidc)
     let api = Api.make(~config, ~oidcUser)
+    let bankApi = Api.makeBank(~config, ~oidcUser)
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
 
@@ -41,7 +42,8 @@ module ConfiguredApp = {
           | list{"applications", id} =>
             <ApplicationDetail id={Data.Uuid.unsafeFromString(id)} api modal />
           | list{"members"} => <Members api modal />
-          | list{"members", id} => <MemberDetail api id={Data.Uuid.unsafeFromString(id)} modal />
+          | list{"members", id} =>
+            <MemberDetail api bankApi id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"members", id, "welcome"} =>
             <MemberWelcome api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"members", id, "workplacewelcome"} =>
@@ -54,6 +56,8 @@ module ConfiguredApp = {
             <WorkplaceMembers api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"my-workplace"} => <MyWorkplace api />
           | list{"my-workplace-settings"} => <MyWorkplaceSettings api modal />
+          | list{"missing-dues"} => <MissingDues api bankApi />
+          | list{"my-workplace-missing-dues"} => <MyWorkplaceMissingDues api bankApi />
           | _ =>
             <Page>
               <ErrorPage.NotFound />

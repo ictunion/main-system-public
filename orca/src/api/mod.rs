@@ -14,6 +14,7 @@ mod oidc;
 mod registration;
 mod session;
 mod stats;
+mod sync;
 mod workplaces;
 
 use crate::api::errors::validation_error;
@@ -378,6 +379,8 @@ pub fn build() -> Rocket<Build> {
         .register("/oidc", errors::catchers())
         .mount("/workplaces", workplaces::routes())
         .register("/workplaces", errors::catchers())
+        .mount("/sync", sync::routes())
+        .register("/sync", errors::catchers())
         // Files use default catchers
         .mount("/files", files::routes())
 }

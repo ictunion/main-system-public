@@ -29,3 +29,28 @@ module RequireRole = {
     }
   }
 }
+
+module RequireBankRole = {
+  open Belt
+
+  @react.component
+  let make = (~children: React.element, ~anyOf=[]) => {
+    let session = React.useContext(context)
+
+    {
+      switch session {
+      | Idle => React.null
+      | Success(session) =>
+        if Array.length(anyOf) == 0 {
+          children
+        } else if Array.some(anyOf, role => session->Session.hasBankRole(~role)) {
+          children
+        } else {
+          React.null
+        }
+      | Loading => React.null
+      | Failure(_) => React.null
+      }
+    }
+  }
+}

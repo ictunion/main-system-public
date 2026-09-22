@@ -1,5 +1,6 @@
 type t = {
   apiUrl: string,
+  bankApiUrl: string,
   keycloakUrl: string,
   keycloakRealm: string,
   keycloakClietId: string,
@@ -12,6 +13,7 @@ module Decode = {
 
   let config = object(field => {
     apiUrl: field.required(. "api_url", string),
+    bankApiUrl: field.required(. "bank_api_url", string),
     keycloakUrl: field.required(. "keycloak_url", string),
     keycloakRealm: field.required(. "keycloak_realm", string),
     keycloakClietId: field.required(. "keycloak_client_id", string),

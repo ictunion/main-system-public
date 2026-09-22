@@ -38,6 +38,8 @@ pub struct Config {
     pub listmonk_password: Option<String>,
     pub listmonk_username: Option<String>,
     pub listmonk_host: Option<String>,
+    /// Shared secret bearer token for machine-to-machine bank-system sync
+    pub bank_sync_token: Option<String>,
 }
 
 impl Config {
@@ -130,6 +132,8 @@ impl Config {
 
         let listmonk_host: Option<String> = figment.extract_inner("listmonk_host").ok();
 
+        let bank_sync_token: Option<String> = figment.extract_inner("bank_sync_token").ok();
+
         Self {
             email_sender_email,
             email_sender_name,
@@ -157,6 +161,7 @@ impl Config {
             listmonk_password,
             listmonk_username,
             listmonk_host,
+            bank_sync_token,
         }
     }
 

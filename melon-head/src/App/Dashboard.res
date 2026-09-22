@@ -11,8 +11,7 @@ let applicationsRows: array<RowBasedTable.row<StatsData.Applications.basic>> = [
   ("All", s => React.string(StatsData.Applications.all(s)->Int.toString)),
 ]
 
-let percentOf = (n: int, total: int): int =>
-  total == 0 ? 0 : (n * 100 + total / 2) / total
+let percentOf = (n: int, total: int): int => total == 0 ? 0 : (n * 100 + total / 2) / total
 
 let membersRows: array<RowBasedTable.row<StatsData.Members.basic>> = [
   (
@@ -59,10 +58,7 @@ let make = (
     api->Hook.getData(~path="/stats/members/basic", ~decoder=StatsData.Members.Decode.basic)
 
   let (workplacesBasicStats, _, _) =
-    api->Hook.getData(
-      ~path="/stats/workplaces/basic",
-      ~decoder=StatsData.Workplaces.Decode.basic,
-    )
+    api->Hook.getData(~path="/stats/workplaces/basic", ~decoder=StatsData.Workplaces.Decode.basic)
 
   let openLink = (path: string, _) => {
     RescriptReactRouter.push(path)

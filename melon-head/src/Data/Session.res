@@ -40,12 +40,23 @@ let showRealmRole = (r: realmRole): string =>
   | ManageUsers => "manage-users"
   }
 
+type bankRole =
+  | UnknownBankRole(string)
+  | PaymentHistory
+
+let showBankRole = (r: bankRole): string =>
+  switch r {
+  | UnknownBankRole(str) => str
+  | PaymentHistory => "payment-history"
+  }
+
 type tokenClaims = {
   sub: Data.Uuid.t,
   email: Email.t,
   name: option<string>,
   orcaRoles: array<orcaRole>,
   realmRoles: array<realmRole>,
+  bankRoles: array<bankRole>,
 }
 
 type t = {
@@ -63,6 +74,12 @@ let hasRole = (session, ~role: orcaRole): bool => {
 let hasRealmRole = (session, ~role: realmRole): bool => {
   open Belt
   let allRoles = session.tokenClaims.realmRoles
+  Array.some(allRoles, r => r == role)
+}
+
+let hasBankRole = (session, ~role: bankRole): bool => {
+  open Belt
+  let allRoles = session.tokenClaims.bankRoles
   Array.some(allRoles, r => r == role)
 }
 
@@ -114,12 +131,27 @@ module Decode = {
     )->Belt.Option.getWithDefault([])
   )
 
+  let bankRole = string->map((. str) => {
+    switch str {
+    | "payment-history" => PaymentHistory
+    | _ => UnknownBankRole(str)
+    }
+  })
+
+  let bankRoles = object(field =>
+    field.optional(.
+      "bank-system",
+      object(field => field.required(. "roles", array(bankRole))),
+    )->Belt.Option.getWithDefault([])
+  )
+
   let tokenClaims = object(field => {
     sub: field.required(. "sub", Data.Uuid.decode),
     email: field.required(. "email", Email.decode),
     name: field.required(. "name", option(string)),
     orcaRoles: field.required(. "resource_access", orcaRoles),
     realmRoles: field.required(. "resource_access", realmRoles),
+    bankRoles: field.required(. "resource_access", bankRoles),
   })
 
   let session = object(field => {

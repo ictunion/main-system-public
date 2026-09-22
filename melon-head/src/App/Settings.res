@@ -341,7 +341,10 @@ module DataVerificationContent = {
         <div className={styles["backButton"]}>
           <Button onClick={_ => setDetailView(_ => Overview)}> {React.string("← Back")} </Button>
         </div>
-        <MemberSummaryTable data=membersWithoutSub onNoteClick=openNewNoteModal>
+        <MemberSummaryTable
+          data=membersWithoutSub
+          onNoteClick=openNewNoteModal
+          columns=MemberSummaryTable.defaultColumns>
           {React.null}
         </MemberSummaryTable>
       </div>
@@ -350,7 +353,10 @@ module DataVerificationContent = {
         <div className={styles["backButton"]}>
           <Button onClick={_ => setDetailView(_ => Overview)}> {React.string("← Back")} </Button>
         </div>
-        <MemberSummaryTable data=membersNotInGroup onNoteClick=openNewNoteModal>
+        <MemberSummaryTable
+          data=membersNotInGroup
+          onNoteClick=openNewNoteModal
+          columns=MemberSummaryTable.defaultColumns>
           {React.null}
         </MemberSummaryTable>
       </div>
@@ -359,7 +365,10 @@ module DataVerificationContent = {
         <div className={styles["backButton"]}>
           <Button onClick={_ => setDetailView(_ => Overview)}> {React.string("← Back")} </Button>
         </div>
-        <MemberSummaryTable data=membersWithMissingWorkplaceGroup onNoteClick=openNewNoteModal>
+        <MemberSummaryTable
+          data=membersWithMissingWorkplaceGroup
+          onNoteClick=openNewNoteModal
+          columns=MemberSummaryTable.defaultColumns>
           {React.null}
         </MemberSummaryTable>
       </div>

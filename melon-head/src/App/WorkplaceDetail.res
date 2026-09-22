@@ -249,53 +249,60 @@ module View = {
       }
 
     <Page requireAnyRole=[ListWorkplaces, ListOwnWorkplace] mainResource=detail>
-    <header className={styles["header"]}>
-      <h1 className={styles["title"]}>
-        <span className={styles["titleText"]}>
-          {React.string("Workplace ")}
-          <span className={styles["titleId"]}>
-            {switch detail {
-            | Success(d) => d.id->Uuid.toString->React.string
-            | _ => React.string("...")
-            }}
+      <header className={styles["header"]}>
+        <h1 className={styles["title"]}>
+          <span className={styles["titleText"]}>
+            {React.string("Workplace ")}
+            <span className={styles["titleId"]}>
+              {switch detail {
+              | Success(d) => d.id->Uuid.toString->React.string
+              | _ => React.string("...")
+              }}
+            </span>
           </span>
-        </span>
-        <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
-          <Button onClick=openEditModal> {React.string("Edit")} </Button>
-        </SessionContext.RequireRole>
-      </h1>
-      <div className={styles["headerNav"]}>
-        <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
-          <Page.BackButton name="workplaces" path="/workplaces" />
-        </SessionContext.RequireRole>
-        <SessionContext.RequireRole anyOf=[Session.ListWorkplaces]>
-          <Page.BackButton name="workplace members" path={basePath ++ "/members"} />
-        </SessionContext.RequireRole>
-        <SessionContext.RequireRole anyOf=[Session.ListOwnWorkplaceMembers]>
-          <a
-            className={styles["navLink"]}
-            onClick={_ => RescriptReactRouter.push("/my-workplace")}>
-            {React.string("Show workplace members")}
-          </a>
-        </SessionContext.RequireRole>
+          <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
+            <Button onClick=openEditModal> {React.string("Edit")} </Button>
+          </SessionContext.RequireRole>
+        </h1>
+        <div className={styles["headerNav"]}>
+          <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
+            <Page.BackButton name="workplaces" path="/workplaces" />
+          </SessionContext.RequireRole>
+          <SessionContext.RequireRole anyOf=[Session.ListWorkplaces]>
+            <Page.BackButton name="workplace members" path={basePath ++ "/members"} />
+          </SessionContext.RequireRole>
+          <SessionContext.RequireRole anyOf=[Session.ListOwnWorkplaceMembers]>
+            <a
+              className={styles["navLink"]}
+              onClick={_ => RescriptReactRouter.push("/my-workplace")}>
+              {React.string("Show workplace members")}
+            </a>
+          </SessionContext.RequireRole>
+          <SessionContext.RequireRole anyOf=[Session.ListOwnWorkplaceMembers]>
+            <a
+              className={styles["navLink"]}
+              onClick={_ => RescriptReactRouter.push("/my-workplace-missing-dues")}>
+              {React.string("Show members with missing payments")}
+            </a>
+          </SessionContext.RequireRole>
+        </div>
+      </header>
+      <div className={styles["info"]}>
+        <DataGrid layout data=detail />
       </div>
-    </header>
-    <div className={styles["info"]}>
-      <DataGrid layout data=detail />
-    </div>
-    {switch error {
-    | None => React.null
-    | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
-    }}
-    <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
-      {statusButtons(
-        detail,
-        ~onEstablish=doTransition(basePath ++ "/establish"),
-        ~onAnnounce=doTransition(basePath ++ "/announce"),
-        ~onCancel=doTransition(basePath ++ "/cancel"),
-      )}
-    </SessionContext.RequireRole>
-  </Page>
+      {switch error {
+      | None => React.null
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      }}
+      <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
+        {statusButtons(
+          detail,
+          ~onEstablish=doTransition(basePath ++ "/establish"),
+          ~onAnnounce=doTransition(basePath ++ "/announce"),
+          ~onCancel=doTransition(basePath ++ "/cancel"),
+        )}
+      </SessionContext.RequireRole>
+    </Page>
   }
 }
 

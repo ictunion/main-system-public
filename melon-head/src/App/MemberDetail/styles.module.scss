@@ -103,6 +103,48 @@
     }
 }
 
+.payments {
+    background: var(--background-color);
+    padding-left: 8px;
+}
+
+.payments-table {
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 14px;
+
+    td {
+        padding: 2px 6px;
+        line-height: 2em;
+        border-bottom: 1px solid var(--color4);
+
+        &:first-child {
+            width: 8em;
+        }
+
+        &:last-child {
+            width: 8em;
+            white-space: nowrap;
+            text-align: right;
+            font-family: monospace;
+        }
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:nth-child(even) td {
+        background: var(--color2);
+    }
+
+    .not-due {
+        opacity: 0.5;
+        font-style: italic;
+    }
+}
+
 .modal-body {
     margin-bottom: 12px;
 }

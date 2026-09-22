@@ -2,15 +2,28 @@
 
 module NavItem = {
   @react.component
-  let make = (~path: string, ~text: string, ~session: Session.t, ~requiredRole=None) => {
+  let make = (
+    ~path: string,
+    ~text: string,
+    ~session: Session.t,
+    ~requiredRole=None,
+    ~requiredBankRole=None,
+  ) => {
     let openRoute = (_: JsxEvent.Mouse.t) => {
       RescriptReactRouter.push(path)
     }
 
-    let accessible = switch requiredRole {
+    let hasRequiredRole = switch requiredRole {
     | None => true
     | Some(role) => Session.hasRole(session, ~role)
     }
+
+    let hasRequiredBankRole = switch requiredBankRole {
+    | None => true
+    | Some(role) => Session.hasBankRole(session, ~role)
+    }
+
+    let accessible = hasRequiredRole && hasRequiredBankRole
 
     let isOpen = switch RescriptReactRouter.useUrl().path {
     | list{} => path == "/"
@@ -63,6 +76,14 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             text="Workplaces"
             session
             requiredRole=Some(Session.ManageWorkplaces)
+          />
+          <NavSeprator key="7.5" />
+          <NavItem
+            key="7.6"
+            path="/missing-dues"
+            text="Missing Dues"
+            session
+            requiredBankRole=Some(Session.PaymentHistory)
           />
           <NavSeprator key="8" />
           <NavItem

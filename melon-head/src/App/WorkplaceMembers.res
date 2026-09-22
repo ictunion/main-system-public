@@ -94,7 +94,9 @@ let make = (~api: Api.t, ~id, ~modal) => {
       }}
     </SessionContext.RequireRole>
     <MemberSummaryTable
-      data=workplaceMembers onNoteClick={(id, note) => openNewNoteModal(id, note)}>
+      data=workplaceMembers
+      onNoteClick={(id, note) => openNewNoteModal(id, note)}
+      columns=MemberSummaryTable.defaultColumns>
       <p> {React.string("There are no members yet.")} </p>
     </MemberSummaryTable>
   </Page>

@@ -28,76 +28,116 @@ let viewNote = (r: MemberData.summary, onNoteClick: (Uuid.t, option<string>) => 
   <a onClick={_ => onNoteClick(r.id, r.note)}> {React.string(text)} </a>
 }
 
+/* One entry per column a caller may want to show, in the order they want it
+   shown. `Custom` is the escape hatch for a page-specific column (e.g. the
+   missed-dues count on the Missing Dues page) that doesn't belong in this
+   shared list. */
+type column =
+  | Id
+  | MemberNumber
+  | FirstName
+  | LastName
+  | Note
+  | LastCompany
+  | City
+  | Email
+  | Phone
+  | CreatedOn
+  | LeftOn
+  | Custom(DataTable.column<MemberData.summary>)
+
+/* What most member listings show, in order. Callers with page-specific needs
+   (extra columns, a different set) build their own array instead. */
+let defaultColumns: array<column> = [
+  Id,
+  MemberNumber,
+  FirstName,
+  LastName,
+  Note,
+  LastCompany,
+  City,
+  CreatedOn,
+]
+
 @react.component
 let make = (
   ~data: Api.webData<array<MemberData.summary>>,
+  ~columns: array<column>,
   ~onNoteClick: option<(Uuid.t, option<string>) => unit>=?,
-  ~showLeftOn: bool=false,
   ~children=React.null,
 ) => {
-  let noteColumn = onNoteClick->Option.map((handler): DataTable.column<MemberData.summary> => {
-    name: "Note",
-    minMax: ("250px", "10fr"),
-    view: r => viewNote(r, handler),
-  })
+  let toColumn = (c: column): option<DataTable.column<MemberData.summary>> =>
+    switch c {
+    | Id =>
+      Some({
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+      })
+    | MemberNumber =>
+      Some({
+        name: "Member Number",
+        minMax: ("200px", "1fr"),
+        view: r => viewPaddedNumber(r.memberNumber, ~isRepresentative=r.isRepresentative, ()),
+      })
+    | FirstName =>
+      Some({
+        name: "First Name",
+        minMax: ("150px", "2fr"),
+        view: r => r.firstName->View.option(React.string),
+      })
+    | LastName =>
+      Some({
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => r.lastName->View.option(React.string),
+      })
+    | Note =>
+      onNoteClick->Option.map((handler): DataTable.column<MemberData.summary> => {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r => viewNote(r, handler),
+      })
+    | LastCompany =>
+      Some({
+        name: "Last Company",
+        minMax: ("220px", "2fr"),
+        view: r => r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+      })
+    | City =>
+      Some({
+        name: "City",
+        minMax: ("250px", "1fr"),
+        view: r => r.city->View.option(React.string),
+      })
+    | Email =>
+      Some({
+        name: "Email",
+        minMax: ("250px", "3fr"),
+        view: r => r.email->View.option(e => React.string(Data.Email.toString(e))),
+      })
+    | Phone =>
+      Some({
+        name: "Phone",
+        minMax: ("180px", "2fr"),
+        view: r => r.phoneNumber->View.option(p => React.string(Data.PhoneNumber.toString(p))),
+      })
+    | CreatedOn =>
+      Some({
+        name: "Created On",
+        minMax: ("150px", "1fr"),
+        view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+      })
+    | LeftOn =>
+      Some({
+        name: "Left On",
+        minMax: ("150px", "1fr"),
+        view: r => r.leftAt->View.option(d => React.string(d->Js.Date.toLocaleDateString)),
+      })
+    | Custom(col) => Some(col)
+    }
 
-  let leftOnColumn: option<DataTable.column<MemberData.summary>> = if showLeftOn {
-    Some({
-      name: "Left On",
-      minMax: ("150px", "1fr"),
-      view: r => r.leftAt->View.option(d => React.string(d->Js.Date.toLocaleDateString)),
-    })
-  } else {
-    None
-  }
+  let resolvedColumns = columns->Array.keepMap(toColumn)
 
-  let baseStart: array<DataTable.column<MemberData.summary>> = [
-    {
-      name: "ID",
-      minMax: ("100px", "1fr"),
-      view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
-    },
-    {
-      name: "Member Number",
-      minMax: ("200px", "1fr"),
-      view: r => viewPaddedNumber(r.memberNumber, ~isRepresentative=r.isRepresentative, ()),
-    },
-    {
-      name: "First Name",
-      minMax: ("150px", "2fr"),
-      view: r => r.firstName->View.option(React.string),
-    },
-    {
-      name: "Last Name",
-      minMax: ("150px", "2fr"),
-      view: r => r.lastName->View.option(React.string),
-    },
-  ]
-
-  let baseEnd: array<DataTable.column<MemberData.summary>> = [
-    {
-      name: "Last Company",
-      minMax: ("220px", "2fr"),
-      view: r => r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
-    },
-    {
-      name: "City",
-      minMax: ("250px", "1fr"),
-      view: r => r.city->View.option(React.string),
-    },
-    {
-      name: "Created On",
-      minMax: ("150px", "1fr"),
-      view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
-    },
-  ]
-
-  let columns = Array.concatMany([
-    baseStart,
-    noteColumn->Option.mapWithDefault([], col => [col]),
-    baseEnd,
-    leftOnColumn->Option.mapWithDefault([], col => [col]),
-  ])
-
-  <DataTable data columns> children </DataTable>
+  <DataTable data columns=resolvedColumns> children </DataTable>
 }

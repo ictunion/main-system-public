@@ -1,0 +1,14 @@
+.filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.filter {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-weight: 600;
+    font-size: 14px;
+}

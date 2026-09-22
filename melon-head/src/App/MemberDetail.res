@@ -425,15 +425,14 @@ module Actions = {
 module MemberWorkplaceSelect = {
   module Loading = {
     @react.component
-    let make = () =>
-      <>
-        <dt> {React.string("Workplace:")} </dt>
-        <dd>
-          <select disabled={true}>
-            <option> {React.string("(loading...)")} </option>
-          </select>
-        </dd>
-      </>
+    let make = () => <>
+      <dt> {React.string("Workplace:")} </dt>
+      <dd>
+        <select disabled={true}>
+          <option> {React.string("(loading...)")} </option>
+        </select>
+      </dd>
+    </>
   }
 
   module Active = {
@@ -499,8 +498,7 @@ module MemberWorkplaceSelect = {
           "/workplaces/" ++
           Uuid.toString(workplaceId) ++
           "/members/" ++
-          Uuid.toString(detail.id) ++
-          "/is_representative"
+          Uuid.toString(detail.id) ++ "/is_representative"
         } else {
           "/workplaces/" ++ Uuid.toString(workplaceId) ++ "/members/" ++ Uuid.toString(detail.id)
         }
@@ -558,10 +556,188 @@ module MemberWorkplaceSelect = {
   }
 }
 
+module PaymentsTab = {
+  module Intl = {
+    type dateTimeFormat
+
+    @new @scope("Intl")
+    external makeDateTimeFormat: (Js.Nullable.t<string>, {"month": string}) => dateTimeFormat =
+      "DateTimeFormat"
+
+    @send external format: (dateTimeFormat, Js.Date.t) => string = "format"
+  }
+
+  // Uses the browser's locale (Intl default), so month names aren't hardcoded to English.
+  let monthFormatter = Intl.makeDateTimeFormat(Js.Nullable.undefined, {"month": "long"})
+
+  let monthNames = Array.makeBy(12, month =>
+    Intl.format(
+      monthFormatter,
+      Js.Date.makeWithYM(~year=2000.0, ~month=Belt.Int.toFloat(month), ()),
+    )
+  )
+
+  let yearOf = (date: Js.Date.t): int => date->Js.Date.getFullYear->Float.toInt
+  let monthOf = (date: Js.Date.t): int => date->Js.Date.getMonth->Float.toInt + 1
+
+  let findTransaction = (transactions: array<PaymentData.transaction>, ~year, ~month) =>
+    transactions->Array.getBy(t =>
+      t.coveredMonths->Array.some(cm => cm.year == year && cm.month == month)
+    )
+
+  /* One transaction can cover several months at once (a member catching up
+     on arrears). We show the amount only on the most recent of those months
+     and point the other rows at it, instead of repeating the same amount on
+     every covered row. */
+  let mostRecentCoveredMonth = (t: PaymentData.transaction): option<PaymentData.coveredMonth> =>
+    t.coveredMonths->Array.reduce(None, (acc, cm) =>
+      switch acc {
+      | None => Some(cm)
+      | Some(best) if cm.year > best.year || (cm.year == best.year && cm.month > best.month) =>
+        Some(cm)
+      | Some(_) as best => best
+      }
+    )
+
+  let viewAmount = (t: PaymentData.transaction) => t.amount ++ " " ++ t.currency
+
+  /* A member owes dues starting the month they joined, and a given month's
+     due is paid the month after it (a payment landing in September covers
+     August) -- so the current calendar month, and anything after it, can
+     never have a payment yet and shouldn't read as a missing payment. A real
+     transaction match always wins over both of those, though, in case a
+     member paid ahead. */
+  type cellStatus =
+    | NotMember
+    | Future
+    | Paid(string)
+    | PaidElsewhere(PaymentData.coveredMonth)
+    | Missing
+    | LoadingCell
+
+  let cellStatus = (
+    ~year,
+    ~month,
+    ~joinYear,
+    ~joinMonth,
+    ~currentYear,
+    ~currentMonth,
+    ~paymentsData: Api.webData<array<PaymentData.transaction>>,
+  ) => {
+    let transactionMatch = switch paymentsData {
+    | Success(transactions) => findTransaction(transactions, ~year, ~month)
+    | Idle
+    | Loading
+    | Failure(_) => None
+    }
+
+    switch transactionMatch {
+    | Some(t) =>
+      switch mostRecentCoveredMonth(t) {
+      | Some(recent) if recent.year == year && recent.month == month => Paid(viewAmount(t))
+      | Some(recent) => PaidElsewhere(recent)
+      | None => Paid(viewAmount(t))
+      }
+    | None =>
+      if year < joinYear || (year == joinYear && month < joinMonth) {
+        NotMember
+      } else if year > currentYear || (year == currentYear && month >= currentMonth) {
+        Future
+      } else {
+        switch paymentsData {
+        | Loading => LoadingCell
+        | Success(_)
+        | Idle
+        | Failure(_) => Missing
+        }
+      }
+    }
+  }
+
+  let viewCellStatus = (status: cellStatus) =>
+    switch status {
+    | NotMember => <span className={styles["notDue"]}> {React.string("NOT MEMBER")} </span>
+    | Future => <span className={styles["notDue"]}> {React.string("FUTURE")} </span>
+    | Paid(amount) => <span> {React.string(amount)} </span>
+    | PaidElsewhere(recent) =>
+      let monthName = monthNames->Array.get(recent.month - 1)->Option.getWithDefault("")
+      <span className={styles["notDue"]}>
+        {React.string("Paid in " ++ monthName ++ " " ++ Js.Int.toString(recent.year))}
+      </span>
+    | Missing => <span> {React.string("---")} </span>
+    | LoadingCell => <span> {React.string("...")} </span>
+    }
+
+  @react.component
+  let make = (~bankApi: Api.t, ~detail: MemberData.detail) => {
+    let joinDate = detail.onboardingFinishAt->Option.getWithDefault(detail.createdAt)
+    let joinYear = yearOf(joinDate)
+    let joinMonth = monthOf(joinDate)
+    let now = Js.Date.make()
+    let currentYear = now->yearOf
+    let currentMonth = now->monthOf
+
+    let years = Array.makeBy(max(currentYear - joinYear + 1, 1), i => joinYear + i)
+
+    let yearHandlers = Tabbed.make(currentYear)
+
+    let (paymentsData: Api.webData<array<PaymentData.transaction>>, _, _) =
+      bankApi->Hook.getData(
+        ~path="/payments/" ++ Int.toString(detail.memberNumber) ++ "/history",
+        ~decoder=PaymentData.Decode.history,
+      )
+
+    <div className={styles["payments"]}>
+      <Tabbed.Tabs>
+        {years
+        ->Array.map(year =>
+          <Tabbed.Tab key={year->Js.Int.toString} value=year handlers=yearHandlers>
+            {React.string(year->Js.Int.toString)}
+          </Tabbed.Tab>
+        )
+        ->React.array}
+      </Tabbed.Tabs>
+      {switch paymentsData {
+      | Failure(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      | _ => React.null
+      }}
+      {years
+      ->Array.map(year =>
+        <Tabbed.Content key={year->Js.Int.toString} tab=year handlers=yearHandlers>
+          <table className={styles["paymentsTable"]}>
+            <tbody>
+              {monthNames
+              ->Array.mapWithIndex((idx, name) => {
+                let month = idx + 1
+                let status = cellStatus(
+                  ~year,
+                  ~month,
+                  ~joinYear,
+                  ~joinMonth,
+                  ~currentYear,
+                  ~currentMonth,
+                  ~paymentsData,
+                )
+                <tr key={idx->Js.Int.toString}>
+                  <td> {React.string(name)} </td>
+                  <td> {viewCellStatus(status)} </td>
+                </tr>
+              })
+              ->React.array}
+            </tbody>
+          </table>
+        </Tabbed.Content>
+      )
+      ->React.array}
+    </div>
+  }
+}
+
 type tabs =
   | Metadata
   | Files
   | Occupations
+  | Payments
   | Workplace
 
 let viewOccupation = (
@@ -681,13 +857,33 @@ let addOccupationModal = (~api, ~modal, ~id, ~current, ~setOccupationsData): Mod
 }
 
 @react.component
-let make = (~api, ~id, ~modal) => {
+let make = (~api, ~bankApi, ~id, ~modal) => {
   let (detail: Api.webData<MemberData.detail>, setDetail, _) =
     api->Hook.getData(~path="/members/" ++ Uuid.toString(id), ~decoder=MemberData.Decode.detail)
 
   let status = RemoteData.map(detail, MemberData.getStatus)
 
-  let tabHandlers = Tabbed.make(Occupations)
+  /* A workplace executive reaches this page through /my-workplace and holds none
+     of the staff roles. Orca serves them a redacted record for members of their
+     own workplace only, so the page has to be shown without the staff sections
+     rather than not shown at all. */
+  let session = React.useContext(SessionContext.context)
+
+  let isStaff =
+    session->RemoteData.unwrap(~default=false, s =>
+      Session.hasRole(s, ~role=Session.ListMembers) || Session.hasRole(s, ~role=Session.ViewMember)
+    )
+
+  /* Payment history stays gated on the payment-history bank role for staff,
+     but a workplace executive gets it too -- for their own workplace's
+     members only, which Orca already enforced by serving this page at all. */
+  let canSeePayments =
+    session->RemoteData.unwrap(~default=false, s =>
+      Session.hasBankRole(s, ~role=Session.PaymentHistory) ||
+      Session.hasRole(s, ~role=Session.ListOwnWorkplaceMembers)
+    )
+
+  let tabHandlers = Tabbed.make(isStaff ? Occupations : Payments)
 
   let (filesData, _, _) =
     api->Hook.getData(
@@ -793,18 +989,32 @@ let make = (~api, ~id, ~modal) => {
         },
       ]}
     />
-    {if isStaff {
-      <>
-        <Tabbed.Tabs>
-      <Tabbed.Tab value=Occupations handlers=tabHandlers>
-        {React.string("Occupations")}
-      </Tabbed.Tab>
-      <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
-      /* Files are scanned membership applications -- signatures and identity
-         documents. Staff only, regardless of workplace scope. */
-      <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
+    <Tabbed.Tabs>
+      {if isStaff {
+        <Tabbed.Tab value=Occupations handlers=tabHandlers>
+          {React.string("Occupations")}
+        </Tabbed.Tab>
+      } else {
+        React.null
+      }}
+      {if canSeePayments {
+        <Tabbed.Tab value=Payments handlers=tabHandlers> {React.string("Payments")} </Tabbed.Tab>
+      } else {
+        React.null
+      }}
+      {if isStaff {
+        <>
+          <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
+          /* Files are scanned membership applications -- signatures and identity
+           documents. Staff only, regardless of workplace scope. */
+          <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
+        </>
+      } else {
+        React.null
+      }}
       // <Tabbed.Tab value=Workplace handlers=tabHandlers> {React.string("Workplace")} </Tabbed.Tab>
     </Tabbed.Tabs>
+{if isStaff {
     <Tabbed.Content tab=Occupations handlers=tabHandlers>
       <div className={styles["occupations"]}>
         <table>
@@ -836,34 +1046,51 @@ let make = (~api, ~id, ~modal) => {
         </SessionContext.RequireRole>
       </div>
     </Tabbed.Content>
-    <Tabbed.Content tab=Metadata handlers=tabHandlers>
-      <div className={styles["metadata"]}>
-        <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
-      </div>
-    </Tabbed.Content>
-    <Tabbed.Content tab=Files handlers=tabHandlers>
-      <DataGrid
-        data=filesData
-        layout={[
-          {
-            label: "",
-            cells: [
+    } else {
+      React.null
+    }}
+    {if canSeePayments {
+    <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+      <Tabbed.Content tab=Payments handlers=tabHandlers>
+        {switch detail {
+        | Success(d) => <PaymentsTab bankApi detail=d />
+        | _ => <Loading />
+        }}
+      </Tabbed.Content>
+    </SessionContext.RequireBankRole>
+    } else {
+      React.null
+    }}
+    {if isStaff {
+      <>
+        <Tabbed.Content tab=Metadata handlers=tabHandlers>
+          <div className={styles["metadata"]}>
+            <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
+          </div>
+        </Tabbed.Content>
+        <Tabbed.Content tab=Files handlers=tabHandlers>
+          <DataGrid
+            data=filesData
+            layout={[
               {
-                label: "Files",
-                minmax: ("150px,", "600px"),
-                view: files => View.filesTable(~api, ~files),
+                label: "",
+                cells: [
+                  {
+                    label: "Files",
+                    minmax: ("150px,", "600px"),
+                    view: files => View.filesTable(~api, ~files),
+                  },
+                ],
               },
-            ],
-          },
-        ]}
-      />
-    </Tabbed.Content>
+            ]}
+          />
+        </Tabbed.Content>
       </>
     } else {
       React.null
     }}
     /* Accept / remove / create-account all need staff roles server side; a
-       workplace executive would only get a 403 out of them. */
+     workplace executive would only get a 403 out of them. */
     <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
       {switch (status, detail) {
       | (Success(s), Success(d)) =>

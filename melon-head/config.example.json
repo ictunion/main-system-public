@@ -3,6 +3,7 @@
   "keycloak_realm": "members",
   "keycloak_client_id": "orca",
   "api_url": "/api",
+  "bank_api_url": "http://localhost:25987",
   "profile_url": "https://member.ictunion.cz",
   "keycloak_members_group_id": "f2d3fe95-05e0-4d00-9e8c-9a189fdbf495"
 }
