@@ -8,6 +8,7 @@
 # Nix
 result*
 *.envrc
+.direnv/
 /.idea/
 /.zed/
 /.vscode/
