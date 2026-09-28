@@ -143,6 +143,14 @@
         opacity: 0.5;
         font-style: italic;
     }
+
+    .paid {
+        color: var(--success-color);
+    }
+
+    .missing {
+        color: var(--error-color);
+    }
 }
 
 .modal-body {

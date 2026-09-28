@@ -35,6 +35,17 @@ type commentedTransaction = {
   adminComment: string,
 }
 
+/* Union-wide dues summary for the current liability window, as returned by
+   the bank API's GET /payments/stats. percentPaid is null when there are no
+   liable members to divide by. */
+type paymentStats = {
+  windowFrom: string,
+  windowTo: string,
+  liableMembers: int,
+  paidMembers: int,
+  percentPaid: option<float>,
+}
+
 module Decode = {
   open Json.Decode
 
@@ -71,4 +82,12 @@ module Decode = {
   })
 
   let commented = array(commentedTransaction)
+
+  let paymentStats = object(field => {
+    windowFrom: field.required(. "window_from", string),
+    windowTo: field.required(. "window_to", string),
+    liableMembers: field.required(. "liable_members", int),
+    paidMembers: field.required(. "paid_members", int),
+    percentPaid: field.required(. "percent_paid", option(float)),
+  })
 }

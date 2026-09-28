@@ -611,6 +611,7 @@ module PaymentsTab = {
     | NotMember
     | Future
     | Paid(string)
+    | Waived
     | PaidElsewhere(PaymentData.coveredMonth)
     | Missing
     | LoadingCell
@@ -622,6 +623,7 @@ module PaymentsTab = {
     ~joinMonth,
     ~currentYear,
     ~currentMonth,
+    ~leftYearMonth: option<(int, int)>,
     ~paymentsData: Api.webData<array<PaymentData.transaction>>,
   ) => {
     let transactionMatch = switch paymentsData {
@@ -634,15 +636,20 @@ module PaymentsTab = {
     switch transactionMatch {
     | Some(t) =>
       switch mostRecentCoveredMonth(t) {
-      | Some(recent) if recent.year == year && recent.month == month => Paid(viewAmount(t))
+      | Some(recent) if recent.year == year && recent.month == month =>
+        t.amount == "Waived" ? Waived : Paid(viewAmount(t))
       | Some(recent) => PaidElsewhere(recent)
-      | None => Paid(viewAmount(t))
+      | None => t.amount == "Waived" ? Waived : Paid(viewAmount(t))
       }
     | None =>
       if year < joinYear || (year == joinYear && month < joinMonth) {
         NotMember
       } else if year > currentYear || (year == currentYear && month >= currentMonth) {
-        Future
+        switch leftYearMonth {
+        | Some((leftYear, leftMonth))
+          if year > leftYear || (year == leftYear && month >= leftMonth) => NotMember
+        | _ => Future
+        }
       } else {
         switch paymentsData {
         | Loading => LoadingCell
@@ -658,17 +665,18 @@ module PaymentsTab = {
     switch status {
     | NotMember => <span className={styles["notDue"]}> {React.string("NOT MEMBER")} </span>
     | Future => <span className={styles["notDue"]}> {React.string("FUTURE")} </span>
-    | Paid(amount) => <span> {React.string(amount)} </span>
+    | Paid(amount) => <span className={styles["paid"]}> {React.string(amount)} </span>
+    | Waived => <span className={styles["notDue"]}> {React.string("Waived")} </span>
     | PaidElsewhere(recent) =>
       let monthName = monthNames->Array.get(recent.month - 1)->Option.getWithDefault("")
-      <span className={styles["notDue"]}>
+      <span className={styles["paid"]}>
         {React.string("Paid in " ++ monthName ++ " " ++ Js.Int.toString(recent.year))}
       </span>
-    | Missing => <span> {React.string("---")} </span>
+    | Missing => <span className={styles["missing"]}> {React.string("---")} </span>
     | LoadingCell => <span> {React.string("...")} </span>
     }
 
-  @react.component
+  @react.component 
   let make = (~bankApi: Api.t, ~detail: MemberData.detail) => {
     let joinDate = detail.onboardingFinishAt->Option.getWithDefault(detail.createdAt)
     let joinYear = yearOf(joinDate)
@@ -676,6 +684,7 @@ module PaymentsTab = {
     let now = Js.Date.make()
     let currentYear = now->yearOf
     let currentMonth = now->monthOf
+    let leftYearMonth = detail.leftAt->Option.map(d => (yearOf(d), monthOf(d)))
 
     let years = Array.makeBy(max(currentYear - joinYear + 1, 1), i => joinYear + i)
 
@@ -716,6 +725,7 @@ module PaymentsTab = {
                   ~joinMonth,
                   ~currentYear,
                   ~currentMonth,
+                  ~leftYearMonth,
                   ~paymentsData,
                 )
                 <tr key={idx->Js.Int.toString}>

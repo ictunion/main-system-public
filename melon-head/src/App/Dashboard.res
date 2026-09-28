@@ -41,11 +41,33 @@ let workplacesRows: array<RowBasedTable.row<StatsData.Workplaces.basic>> = [
   ("All", s => React.string(StatsData.Workplaces.all(s)->Int.toString)),
 ]
 
+let viewPercent = (p: option<float>): string =>
+  switch p {
+  | Some(p) => Js.Float.toFixedWithPrecision(p, ~digits=1)
+  | None => "--"
+  }
+
+let duesRows: array<RowBasedTable.row<PaymentData.paymentStats>> = [
+  (
+    "Members who paid their dues",
+    s =>
+      React.string(
+        s.paidMembers->Int.toString ++
+        " / " ++
+        s.liableMembers->Int.toString ++
+        " (" ++
+        viewPercent(s.percentPaid) ++
+        "%)",
+      ),
+  ),
+]
+
 @react.component
 let make = (
   ~session: Api.webData<Session.t>,
   ~setSessionState,
   ~api: Api.t,
+  ~bankApi: Api.t,
   ~modal: Modal.Interface.t,
 ) => {
   let (applicationsBasicStats, _, _) =
@@ -59,6 +81,9 @@ let make = (
 
   let (workplacesBasicStats, _, _) =
     api->Hook.getData(~path="/stats/workplaces/basic", ~decoder=StatsData.Workplaces.Decode.basic)
+
+  let (paymentStats, _, _) =
+    bankApi->Hook.getData(~path="/payments/stats", ~decoder=PaymentData.Decode.paymentStats)
 
   let openLink = (path: string, _) => {
     RescriptReactRouter.push(path)
@@ -183,6 +208,15 @@ let make = (
           {React.string("See Workplaces")}
         </a>
       </div>
+      <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+        <div className={styles["gridItem"]}>
+          <h2 className={styles["itemTitle"]}> {React.string("Dues")} </h2>
+          <RowBasedTable rows=duesRows data=paymentStats title=Some("Dues Stats") />
+          <a onClick={openLink("/missing-dues")} className={styles["pageLink"]}>
+            {React.string("See Missing Dues")}
+          </a>
+        </div>
+      </SessionContext.RequireBankRole>
     </div>
   </Page>
 }

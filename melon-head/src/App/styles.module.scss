@@ -57,6 +57,8 @@ $colors-light: (
   --warning-bgcolor: #{color.mix(map.get($colors-light, color5), map.get($colors-light, color2), $weight: 15%)};
   --info-color: #{map.get($colors-light, color4)};
   --info-bgcolor: #{color.mix(map.get($colors-light, color4), map.get($colors-light, color2), $weight: 15%)};
+  --success-color: #{map.get($colors-light, color6)};
+  --success-bgcolor: #{color.mix(map.get($colors-light, color6), map.get($colors-light, color2), $weight: 15%)};
 }
 
 .root {

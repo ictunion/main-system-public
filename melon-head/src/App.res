@@ -37,7 +37,7 @@ module ConfiguredApp = {
           />
           /* Routing to pages */
           {switch url.path {
-          | list{} => <Dashboard session=sessionState setSessionState api modal />
+          | list{} => <Dashboard session=sessionState setSessionState api bankApi modal />
           | list{"applications"} => <Applications api modal />
           | list{"applications", id} =>
             <ApplicationDetail id={Data.Uuid.unsafeFromString(id)} api modal />
