@@ -171,6 +171,56 @@ module CommentedList = {
   }
 }
 
+/* Split out so a change of tab remounts it (via `key` in the parent) and
+   re-fetches the member list for that status. */
+module Body = {
+  @react.component
+  let make = (
+    ~api: Api.t,
+    ~bankApi: Api.t,
+    ~tab: option<MemberData.status>,
+    ~year: int,
+    ~month: option<int>,
+    ~onlyNeverPaid: bool,
+    ~hideSingleMissing: bool,
+  ) => {
+    let membersPath = switch tab {
+    | None => "/members"
+    | Some(CurrentMember) => "/members/current"
+    | Some(PastMember) => "/members/past"
+    | Some(NewMember) => "/members/new"
+    }
+
+    let (members, _, _) =
+      api->Hook.getData(~path=membersPath, ~decoder=Json.Decode.array(MemberData.Decode.summary))
+
+    let monthKey = month->Option.mapWithDefault("all", Int.toString)
+
+    <>
+      <MissingList
+        key={Int.toString(year) ++ "-" ++ monthKey}
+        bankApi
+        year
+        month
+        members
+        onlyNeverPaid
+        hideSingleMissing
+      />
+      <CommentedList
+        key={"commented-" ++ Int.toString(year) ++ "-" ++ monthKey} bankApi year month members
+      />
+    </>
+  }
+}
+
+let tabKey = (tab: option<MemberData.status>) =>
+  switch tab {
+  | None => "all"
+  | Some(CurrentMember) => "current"
+  | Some(PastMember) => "past"
+  | Some(NewMember) => "new"
+  }
+
 @react.component
 let make = (~api: Api.t, ~bankApi: Api.t) => {
   let currentYear = Js.Date.make()->Js.Date.getFullYear->Float.toInt
@@ -181,8 +231,8 @@ let make = (~api: Api.t, ~bankApi: Api.t) => {
   let (onlyNeverPaid, setOnlyNeverPaid) = React.useState(_ => false)
   let (hideSingleMissing, setHideSingleMissing) = React.useState(_ => false)
 
-  let (members, _, _) =
-    api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+  let tabHandlers = Tabbed.make(Some(MemberData.CurrentMember))
+  let (activeTab, _) = tabHandlers
 
   <Page requireAnyRole=[ListMembers]>
     <Page.Title>
@@ -196,22 +246,22 @@ let make = (~api: Api.t, ~bankApi: Api.t) => {
           checked=hideSingleMissing onChange={() => setHideSingleMissing(v => !v)}
         />
       </Button.Panel>
-      <MissingList
-        key={Int.toString(year) ++ "-" ++ month->Option.mapWithDefault("all", Int.toString)}
-        bankApi
-        year
-        month
-        members
-        onlyNeverPaid
-        hideSingleMissing
-      />
-      <CommentedList
-        key={"commented-" ++
-        Int.toString(year) ++ "-" ++ month->Option.mapWithDefault("all", Int.toString)}
-        bankApi
-        year
-        month
-        members
+      <Tabbed.Tabs>
+        <Tabbed.Tab
+          value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
+          <span> {React.string("Current")} </span>
+        </Tabbed.Tab>
+        <Tabbed.Tab
+          value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
+          <span> {React.string("Past")} </span>
+        </Tabbed.Tab>
+        <Tabbed.TabSpacer />
+        <Tabbed.Tab value=None handlers=tabHandlers color=Some("var(--color1)")>
+          <span> {React.string("All")} </span>
+        </Tabbed.Tab>
+      </Tabbed.Tabs>
+      <Body
+        key={tabKey(activeTab)} api bankApi tab=activeTab year month onlyNeverPaid hideSingleMissing
       />
     </SessionContext.RequireBankRole>
   </Page>
