@@ -391,15 +391,6 @@
           "clientRole": true,
           "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
           "attributes": {}
-        },
-        {
-          "id": "fe393397-a3d4-439c-abfa-d48bda17d880",
-          "name": "view-member",
-          "description": "Access detail of individual member (by uuid)",
-          "composite": false,
-          "clientRole": true,
-          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
-          "attributes": {}
         }
       ],
       "security-admin-console": [],
@@ -598,7 +589,6 @@
           "view-application",
           "manage-workplaces",
           "manage-members",
-          "view-member",
           "list-members",
           "list-workplaces",
           "resolve-applications",

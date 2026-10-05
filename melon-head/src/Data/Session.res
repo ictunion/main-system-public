@@ -6,7 +6,6 @@ type orcaRole =
   | ViewApplication
   | ResolveApplications
   | ListMembers
-  | ViewMember
   | ManageMembers
   | ListWorkplaces
   | ManageWorkplaces
@@ -21,7 +20,6 @@ let showOrcaRole = (r: orcaRole): string =>
   | ViewApplication => "view-application"
   | ResolveApplications => "resolve-applications"
   | ListMembers => "list-members"
-  | ViewMember => "view-member"
   | ManageMembers => "manage-members"
   | ListWorkplaces => "list-workplaces"
   | ManageWorkplaces => "manage-workplaces"
@@ -99,7 +97,6 @@ module Decode = {
     | "view-application" => ViewApplication
     | "resolve-applications" => ResolveApplications
     | "list-members" => ListMembers
-    | "view-member" => ViewMember
     | "manage-members" => ManageMembers
     | "list-workplaces" => ListWorkplaces
     | "manage-workplaces" => ManageWorkplaces

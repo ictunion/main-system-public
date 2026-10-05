@@ -62,17 +62,20 @@ The permissions to many admin features are granular.
 Orca is using [Keycloak's client roles](https://www.keycloak.org/docs/latest/server_admin/#core-concepts-and-terms)
 which needs to be configured for the `keycloak_client_id` set in the `Rocket.toml`:
 
-| Role Name            | Ability Description                                 |
-|----------------------|-----------------------------------------------------|
-| list-applications    | List of applications/registrations in various state |
-| view-application     | Access detail of individual applications (by uuid)  |
-| resolve-applications | Resolve (Accept / Reject) applications              |
-| list-members         | List of all past and current members                |
-| view-member          | Accept detail of individual member (by uuid)        |
-| manage-members       | Manage (Create, Remove) members                     |
-| list-workplaces      | List of all workplaces                              |
-| manage-workplaces    | Manage (Create, Edit) workplaces                    |
-| super-powers         | Dangerous actions like hard delete of data          |
+| Role Name                  | Ability Description                                                   |
+|----------------------------|-----------------------------------------------------------------------|
+| list-applications          | List of applications/registrations in various state                   |
+| view-application           | Access detail of individual applications (by uuid)                    |
+| resolve-applications       | Resolve (Accept / Reject) applications                                |
+| list-members               | List of all past and current members                                  |
+| manage-members             | Manage (Create, Remove) members                                       |
+| list-workplaces            | List of all workplaces                                                |
+| manage-workplaces          | Manage (Create, Edit) workplaces                                      |
+| list-own-workplace-members | List members of the caller's own workplace only (executive committee) |
+| list-own-workplace         | Detail of the caller's own workplace only (executive committee)       |
+| super-powers               | Dangerous actions like hard delete of data                            |
+
+The `list-own-*` roles are scoped: the role grants the capability, and the workplace is resolved per request from the caller's Keycloak executive group membership (matched against `workplaces.keycloak_executive_group_id`). Out-of-scope targets are refused with the same 403 as a caller without the role.
 
 ## Developing
 

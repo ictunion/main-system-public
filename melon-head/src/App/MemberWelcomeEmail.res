@@ -125,7 +125,7 @@ let make = (~api, ~id, ~modal, ~preferences: welcomeEmailPreferences) => {
 
   let status = RemoteData.map(detail, MemberData.getStatus)
 
-  <Page requireAnyRole=[ListMembers, ViewMember] mainResource=detail>
+  <Page requireAnyRole=[ListMembers] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Member ")}

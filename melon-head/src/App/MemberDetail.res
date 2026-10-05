@@ -881,7 +881,7 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
 
   let isStaff =
     session->RemoteData.unwrap(~default=false, s =>
-      Session.hasRole(s, ~role=Session.ListMembers) || Session.hasRole(s, ~role=Session.ViewMember)
+      Session.hasRole(s, ~role=Session.ListMembers)
     )
 
   /* Payment history stays gated on the payment-history bank role for staff,
@@ -925,11 +925,11 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
   let isStaff =
     session
     ->RemoteData.unwrap(~default=false, s =>
-      Session.hasRole(s, ~role=Session.ListMembers) || Session.hasRole(s, ~role=Session.ViewMember)
+      Session.hasRole(s, ~role=Session.ListMembers)
     )
 
   <Page
-    requireAnyRole=[ListMembers, ViewMember, ListOwnWorkplaceMembers] mainResource=detail>
+    requireAnyRole=[ListMembers, ListOwnWorkplaceMembers] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Member ")}
@@ -945,7 +945,7 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
           <Page.BackButton name="members" path={status->RemoteData.toOption->Members.tabToUrl} />
         </SessionContext.RequireRole>
         <SessionContext.RequireRole anyOf=[Session.ListWorkplaces]>
-          <SessionContext.RequireRole anyOf=[Session.ViewMember]>
+          <SessionContext.RequireRole anyOf=[Session.ListMembers]>
             {switch detail {
             | Success(d) =>
               switch d.workplaceId {

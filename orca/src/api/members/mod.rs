@@ -249,7 +249,7 @@ async fn member_read_scope(
     token: &JwtToken<'_>,
     id: Id<Member>,
 ) -> Result<MemberReadScope, ApiError> {
-    let staff_roles = [Role::ListMembers, Role::ViewMember];
+    let staff_roles = [Role::ListMembers];
 
     let Err(staff_denial) = oid_provider.require_any_role(token, &staff_roles) else {
         return Ok(MemberReadScope::Full);

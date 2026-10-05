@@ -36,10 +36,7 @@ async fn list_all(
     oid_provider: &State<Provider>,
     token: JwtToken<'_>,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
-    // We should restrict this only for Admins/Board (people with ManageWorkplaces), until we have permissions to ViewMember separated by workplace
-    // If we allowed access to this EP to anyone with ListWorkplaces, reps could see members from other workplaces
-    // We still need to be careful when sharing links to specific workplaces, because every rep will have combination of ListWorkplaces and ViewMember, which allow them to open link to list of members of any workplace
-    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+    oid_provider.require_role(&token, Role::ListWorkplaces)?;
 
     let summaries = query::list_summaries(db_pool.inner()).await?;
 
@@ -435,7 +432,7 @@ async fn get_all_workplace_members(
     workplace_id: Id<Workplace>,
 ) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
-    oid_provider.require_role(&token, Role::ViewMember)?;
+    oid_provider.require_role(&token, Role::ListMembers)?;
 
     let summaries = query::get_all_workplace_members(db_pool.inner(), workplace_id).await?;
 
