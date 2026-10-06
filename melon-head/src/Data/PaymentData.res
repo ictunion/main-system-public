@@ -88,6 +88,6 @@ module Decode = {
     windowTo: field.required(. "window_to", string),
     liableMembers: field.required(. "liable_members", int),
     paidMembers: field.required(. "paid_members", int),
-    percentPaid: field.required(. "percent_paid", option(float)),
+    percentPaid: field.required(. "percent_paid", option(Json.Decode.float)),
   })
 }

@@ -106,6 +106,79 @@
 .payments {
     background: var(--background-color);
     padding-left: 8px;
+
+    .not-due {
+        opacity: 0.5;
+        font-style: italic;
+    }
+
+    .paid {
+        color: var(--success-color);
+    }
+
+    .missing {
+        color: var(--error-color);
+    }
+}
+
+/* Narrow screens get the year tabs, wide screens the all-years grid. */
+.payments-wide {
+    display: none;
+    overflow-x: auto;
+}
+
+@media screen and (min-width: 901px) {
+    .payments-narrow {
+        display: none;
+    }
+
+    .payments-wide {
+        display: block;
+    }
+}
+
+.payments-grid {
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 14px;
+
+    th,
+    td {
+        padding: 2px 6px;
+        line-height: 2em;
+        border-bottom: 1px solid var(--color4);
+        white-space: nowrap;
+    }
+
+    th {
+        font-weight: 600;
+        text-align: right;
+    }
+
+    td {
+        min-width: 8em;
+        text-align: right;
+        font-family: monospace;
+    }
+
+    /* Month names stay in view while the years scroll under them. */
+    th:first-child,
+    td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--background-color);
+        text-align: left;
+        font-family: inherit;
+    }
+
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    tbody tr:nth-child(even) td {
+        background: var(--color2);
+    }
 }
 
 .payments-table {
@@ -139,18 +212,6 @@
         background: var(--color2);
     }
 
-    .not-due {
-        opacity: 0.5;
-        font-style: italic;
-    }
-
-    .paid {
-        color: var(--success-color);
-    }
-
-    .missing {
-        color: var(--error-color);
-    }
 }
 
 .modal-body {

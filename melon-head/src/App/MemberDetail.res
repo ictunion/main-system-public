@@ -577,6 +577,9 @@ module PaymentsTab = {
     )
   )
 
+  @get external scrollWidth: Dom.element => int = "scrollWidth"
+  @set external setScrollLeft: (Dom.element, int) => unit = "scrollLeft"
+
   let yearOf = (date: Js.Date.t): int => date->Js.Date.getFullYear->Float.toInt
   let monthOf = (date: Js.Date.t): int => date->Js.Date.getMonth->Float.toInt + 1
 
@@ -603,13 +606,15 @@ module PaymentsTab = {
 
   /* A member owes dues starting the month they joined, and a given month's
      due is paid the month after it (a payment landing in September covers
-     August) -- so the current calendar month, and anything after it, can
-     never have a payment yet and shouldn't read as a missing payment. A real
+     August), with that whole following month as the deadline -- September is
+     payable until the end of October. So the previous calendar month (Due),
+     the current one, and anything after it (Future) are not yet missing. A real
      transaction match always wins over both of those, though, in case a
      member paid ahead. */
   type cellStatus =
     | NotMember
     | Future
+    | Due
     | Paid(string)
     | Waived
     | PaidElsewhere(PaymentData.coveredMonth)
@@ -633,6 +638,10 @@ module PaymentsTab = {
     | Failure(_) => None
     }
 
+    // Oldest month still inside its payment window: the previous calendar month.
+    let (graceYear, graceMonth) =
+      currentMonth == 1 ? (currentYear - 1, 12) : (currentYear, currentMonth - 1)
+
     switch transactionMatch {
     | Some(t) =>
       switch mostRecentCoveredMonth(t) {
@@ -644,11 +653,11 @@ module PaymentsTab = {
     | None =>
       if year < joinYear || (year == joinYear && month < joinMonth) {
         NotMember
-      } else if year > currentYear || (year == currentYear && month >= currentMonth) {
+      } else if year > graceYear || (year == graceYear && month >= graceMonth) {
         switch leftYearMonth {
         | Some((leftYear, leftMonth))
           if year > leftYear || (year == leftYear && month >= leftMonth) => NotMember
-        | _ => Future
+        | _ => year == graceYear && month == graceMonth ? Due : Future
         }
       } else {
         switch paymentsData {
@@ -665,6 +674,7 @@ module PaymentsTab = {
     switch status {
     | NotMember => <span className={styles["notDue"]}> {React.string("NOT MEMBER")} </span>
     | Future => <span className={styles["notDue"]}> {React.string("FUTURE")} </span>
+    | Due => <span className={styles["notDue"]}> {React.string("DUE")} </span>
     | Paid(amount) => <span className={styles["paid"]}> {React.string(amount)} </span>
     | Waived => <span className={styles["notDue"]}> {React.string("Waived")} </span>
     | PaidElsewhere(recent) =>
@@ -672,12 +682,51 @@ module PaymentsTab = {
       <span className={styles["paid"]}>
         {React.string("Paid in " ++ monthName ++ " " ++ Js.Int.toString(recent.year))}
       </span>
-    | Missing => <span className={styles["missing"]}> {React.string("---")} </span>
+    | Missing => <span className={styles["missing"]}> {React.string("MISSING")} </span>
     | LoadingCell => <span> {React.string("...")} </span>
     }
 
+  /* True when any month since joining reads as Missing in the Payments tab.
+     Only a loaded history counts: while loading, or after a failure, there is
+     nothing to say the member owes anything. */
+  let hasMissingMonth = (
+    ~detail: MemberData.detail,
+    ~paymentsData: Api.webData<array<PaymentData.transaction>>,
+  ) =>
+    switch paymentsData {
+    | Success(_) =>
+      let joinDate = detail.onboardingFinishAt->Option.getWithDefault(detail.createdAt)
+      let joinYear = yearOf(joinDate)
+      let joinMonth = monthOf(joinDate)
+      let now = Js.Date.make()
+      let currentYear = now->yearOf
+      let currentMonth = now->monthOf
+      let leftYearMonth = detail.leftAt->Option.map(d => (yearOf(d), monthOf(d)))
+
+      Array.makeBy(max(currentYear - joinYear + 1, 1), i => joinYear + i)->Array.some(year =>
+        Array.makeBy(12, i => i + 1)->Array.some(month =>
+          switch cellStatus(
+            ~year,
+            ~month,
+            ~joinYear,
+            ~joinMonth,
+            ~currentYear,
+            ~currentMonth,
+            ~leftYearMonth,
+            ~paymentsData,
+          ) {
+          | Missing => true
+          | _ => false
+          }
+        )
+      )
+    | Idle
+    | Loading
+    | Failure(_) => false
+    }
+
   @react.component 
-  let make = (~bankApi: Api.t, ~detail: MemberData.detail) => {
+  let make = (~paymentsData: Api.webData<array<PaymentData.transaction>>, ~detail: MemberData.detail) => {
     let joinDate = detail.onboardingFinishAt->Option.getWithDefault(detail.createdAt)
     let joinYear = yearOf(joinDate)
     let joinMonth = monthOf(joinDate)
@@ -688,58 +737,112 @@ module PaymentsTab = {
 
     let years = Array.makeBy(max(currentYear - joinYear + 1, 1), i => joinYear + i)
 
-    let yearHandlers = Tabbed.make(currentYear)
-
-    let (paymentsData: Api.webData<array<PaymentData.transaction>>, _, _) =
-      bankApi->Hook.getData(
-        ~path="/payments/" ++ Int.toString(detail.memberNumber) ++ "/history",
-        ~decoder=PaymentData.Decode.history,
+    let statusOf = (~year, ~month) =>
+      cellStatus(
+        ~year,
+        ~month,
+        ~joinYear,
+        ~joinMonth,
+        ~currentYear,
+        ~currentMonth,
+        ~leftYearMonth,
+        ~paymentsData,
       )
 
+    let yearHandlers = Tabbed.make(currentYear)
+
+    /* The wide grid lists years oldest to newest, so keep it scrolled to the
+       right edge where the current year is. Re-run when the data arrives,
+       since filled-in cells can widen the columns. */
+    let wideRef = React.useRef(Js.Nullable.null)
+    React.useEffect1(() => {
+      wideRef.current->Js.Nullable.toOption->Option.forEach(el => el->setScrollLeft(el->scrollWidth))
+      None
+    }, [paymentsData])
+
     <div className={styles["payments"]}>
-      <Tabbed.Tabs>
-        {years
-        ->Array.map(year =>
-          <Tabbed.Tab key={year->Js.Int.toString} value=year handlers=yearHandlers>
-            {React.string(year->Js.Int.toString)}
-          </Tabbed.Tab>
-        )
-        ->React.array}
-      </Tabbed.Tabs>
       {switch paymentsData {
       | Failure(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
       | _ => React.null
       }}
-      {years
-      ->Array.map(year =>
-        <Tabbed.Content key={year->Js.Int.toString} tab=year handlers=yearHandlers>
-          <table className={styles["paymentsTable"]}>
-            <tbody>
-              {monthNames
-              ->Array.mapWithIndex((idx, name) => {
-                let month = idx + 1
-                let status = cellStatus(
-                  ~year,
-                  ~month,
-                  ~joinYear,
-                  ~joinMonth,
-                  ~currentYear,
-                  ~currentMonth,
-                  ~leftYearMonth,
-                  ~paymentsData,
+      /* Narrow screens: one year at a time, picked by tab. */
+      <div className={styles["paymentsNarrow"]}>
+        <Tabbed.Tabs>
+          {years
+          ->Array.map(year =>
+            <Tabbed.Tab key={year->Js.Int.toString} value=year handlers=yearHandlers>
+              {React.string(year->Js.Int.toString)}
+            </Tabbed.Tab>
+          )
+          ->React.array}
+        </Tabbed.Tabs>
+        {years
+        ->Array.map(year =>
+          <Tabbed.Content key={year->Js.Int.toString} tab=year handlers=yearHandlers>
+            <table className={styles["paymentsTable"]}>
+              <tbody>
+                {monthNames
+                ->Array.mapWithIndex((idx, name) =>
+                  <tr key={idx->Js.Int.toString}>
+                    <td> {React.string(name)} </td>
+                    <td> {viewCellStatus(statusOf(~year, ~month=idx + 1))} </td>
+                  </tr>
                 )
-                <tr key={idx->Js.Int.toString}>
-                  <td> {React.string(name)} </td>
-                  <td> {viewCellStatus(status)} </td>
-                </tr>
-              })
+                ->React.array}
+              </tbody>
+            </table>
+          </Tabbed.Content>
+        )
+        ->React.array}
+      </div>
+      /* Wide screens: every year side by side, scrolling horizontally. */
+      <div className={styles["paymentsWide"]} ref={ReactDOM.Ref.domRef(wideRef)}>
+        <table className={styles["paymentsGrid"]}>
+          <thead>
+            <tr>
+              <th />
+              {years
+              ->Array.map(year =>
+                <th key={year->Js.Int.toString}> {React.string(year->Js.Int.toString)} </th>
+              )
               ->React.array}
-            </tbody>
-          </table>
-        </Tabbed.Content>
-      )
-      ->React.array}
+            </tr>
+          </thead>
+          <tbody>
+            {monthNames
+            ->Array.mapWithIndex((idx, name) =>
+              <tr key={idx->Js.Int.toString}>
+                <td> {React.string(name)} </td>
+                {years
+                ->Array.map(year =>
+                  <td key={year->Js.Int.toString}>
+                    {viewCellStatus(statusOf(~year, ~month=idx + 1))}
+                  </td>
+                )
+                ->React.array}
+              </tr>
+            )
+            ->React.array}
+          </tbody>
+        </table>
+      </div>
     </div>
+  }
+}
+
+/* Back link to the Missing Dues page, shown only when the member actually has
+   an unpaid month. Shares the payment history request with PaymentsTab.
+   Nothing is shown while loading or on failure. */
+module MissingDuesButton = {
+  @react.component
+  let make = (~paymentsData: Api.webData<array<PaymentData.transaction>>, ~detail: MemberData.detail) => {
+    let hasMissing = PaymentsTab.hasMissingMonth(~detail, ~paymentsData)
+
+    if hasMissing {
+      <Page.BackButton name="missing dues" path="/missing-dues" />
+    } else {
+      React.null
+    }
   }
 }
 
@@ -895,6 +998,27 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
 
   let tabHandlers = Tabbed.make(isStaff ? Occupations : Payments)
 
+  /* Single payment history request, shared by the Payments tab and the Missing
+     Dues back button. Both are gated on the payment-history bank role, so skip
+     the request without it (and until the member number is known). */
+  let canFetchPayments =
+    session->RemoteData.unwrap(~default=false, s =>
+      Session.hasBankRole(s, ~role=Session.PaymentHistory)
+    )
+
+  let (paymentsData, _, _) =
+    bankApi->Hook.getData(
+      ~enabled=canFetchPayments &&
+      switch detail {
+      | Success(_) => true
+      | _ => false
+      },
+      ~path="/payments/" ++
+      detail->RemoteData.unwrap(~default="", d => Int.toString(d.memberNumber)) ++
+      "/history",
+      ~decoder=PaymentData.Decode.history,
+    )
+
   let (filesData, _, _) =
     api->Hook.getData(
       ~path="/members/" ++ Uuid.toString(id) ++ "/files",
@@ -958,6 +1082,14 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
             | _ => React.null
             }}
           </SessionContext.RequireRole>
+        </SessionContext.RequireRole>
+        <SessionContext.RequireRole anyOf=[Session.ListMembers]>
+          <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+            {switch detail {
+            | Success(d) => <MissingDuesButton paymentsData detail=d />
+            | _ => React.null
+            }}
+          </SessionContext.RequireBankRole>
         </SessionContext.RequireRole>
         {if isStaff {
           React.null
@@ -1063,7 +1195,7 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
     <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
       <Tabbed.Content tab=Payments handlers=tabHandlers>
         {switch detail {
-        | Success(d) => <PaymentsTab bankApi detail=d />
+        | Success(d) => <PaymentsTab paymentsData detail=d />
         | _ => <Loading />
         }}
       </Tabbed.Content>
