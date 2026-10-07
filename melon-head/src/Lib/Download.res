@@ -11,7 +11,10 @@ let triggerDownload: (
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Mobile Safari aborts the download if the URL is revoked synchronously.
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }`)
 
 let csv = (~filename, ~content) => triggerDownload(filename, content, "text/csv;charset=utf-8;")
+
+let vcard = (~filename, ~content) => triggerDownload(filename, content, "text/vcard;charset=utf-8")

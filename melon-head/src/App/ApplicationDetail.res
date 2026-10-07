@@ -580,10 +580,12 @@ module Actions = {
     ~modal: Modal.Interface.t,
     ~setDetail,
     ~openApplications,
+    ~vcardButton,
   ) => {
     switch status {
     | ApplicationData.Unverified =>
       <Button.Panel>
+        vcardButton
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(
@@ -615,6 +617,7 @@ module Actions = {
       </Button.Panel>
     | ApplicationData.Processing =>
       <Button.Panel>
+        vcardButton
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(
@@ -642,6 +645,7 @@ module Actions = {
       </Button.Panel>
     | ApplicationData.Rejected =>
       <Button.Panel>
+        vcardButton
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(unRejectModal(~id, ~api, ~setDetail, ~modal))}
@@ -649,9 +653,10 @@ module Actions = {
           {React.string("Re-Evaluate")}
         </Button>
       </Button.Panel>
-    | ApplicationData.Accepted => React.null
+    | ApplicationData.Accepted => <Button.Panel> vcardButton </Button.Panel>
     | ApplicationData.Invalid =>
       <Button.Panel>
+        vcardButton
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(unInvalidateModal(~id, ~api, ~setDetail, ~modal))}
@@ -855,8 +860,17 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
         <RowBasedTable rows=metadataRows data=detail title=Some("Metadata") />
       </div>
     </Tabbed.Content>
-    {switch RemoteData.map(detail, ApplicationData.getStatus) {
-    | Success(status) => <Actions id api modal setDetail status openApplications />
+    {switch detail {
+    | Success(d) =>
+      <Actions
+        id
+        api
+        modal
+        setDetail
+        status={ApplicationData.getStatus(d)}
+        openApplications
+        vcardButton={<VCard.Application detail=d />}
+      />
     | _ => React.null
     }}
   </Page>

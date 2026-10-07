@@ -346,7 +346,7 @@ module Actions = {
   }
 
   @react.component
-  let make = (~status, ~modal, ~api, ~id, ~setDetail, ~hasSub) => {
+  let make = (~status, ~modal, ~api, ~id, ~setDetail, ~hasSub, ~vcardButton) => {
     let (oidError, setOidError) = React.useState(() => None)
     let (oidScheduled, setOidScheduled) = React.useState(() => false)
 
@@ -381,6 +381,7 @@ module Actions = {
       {switch status {
       | NewMember =>
         <Button.Panel>
+          vcardButton
           <Button
             variant=Button.Cta
             onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
@@ -408,6 +409,7 @@ module Actions = {
         </Button.Panel>
       | CurrentMember =>
         <Button.Panel>
+          vcardButton
           createOidButton
           <Button
             variant=Button.Danger
@@ -416,7 +418,7 @@ module Actions = {
             {React.string("Remove member")}
           </Button>
         </Button.Panel>
-      | PastMember => React.null
+      | PastMember => <Button.Panel> vcardButton </Button.Panel>
       }}
     </>
   }
@@ -1052,6 +1054,9 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
       Session.hasRole(s, ~role=Session.ListMembers)
     )
 
+  let canManageMembers =
+    session->RemoteData.unwrap(~default=false, s => Session.hasRole(s, ~role=Session.ManageMembers))
+
   <Page
     requireAnyRole=[ListMembers, ListOwnWorkplaceMembers] mainResource=detail>
     <header className={styles["header"]}>
@@ -1232,13 +1237,17 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
       React.null
     }}
     /* Accept / remove / create-account all need staff roles server side; a
-     workplace executive would only get a 403 out of them. */
-    <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
-      {switch (status, detail) {
-      | (Success(s), Success(d)) =>
-        <Actions status=s modal api id setDetail hasSub={d.sub->Option.isSome} />
-      | _ => React.null
-      }}
-    </SessionContext.RequireRole>
+     workplace executive would only get a 403 out of them. The vCard download
+     is for anyone who can open the page. */
+    {switch (status, detail) {
+    | (Success(s), Success(d)) =>
+      let vcardButton = <VCard.Member detail=d />
+      if canManageMembers {
+        <Actions status=s modal api id setDetail hasSub={d.sub->Option.isSome} vcardButton />
+      } else {
+        <Button.Panel> vcardButton </Button.Panel>
+      }
+    | _ => React.null
+    }}
   </Page>
 }
