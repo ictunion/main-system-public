@@ -17,4 +17,8 @@ let triggerDownload: (
 
 let csv = (~filename, ~content) => triggerDownload(filename, content, "text/csv;charset=utf-8;")
 
-let vcard = (~filename, ~content) => triggerDownload(filename, content, "text/vcard;charset=utf-8")
+/* Android WebView browsers (DuckDuckGo, ...) ignore the download attribute on
+   blob links and appear to derive the extension from the MIME type alone,
+   which failed for "text/vcard;charset=utf-8". "text/x-vcard" is the type
+   Android maps to ".vcf". Blob strings are encoded as UTF-8 anyway. */
+let vcard = (~filename, ~content) => triggerDownload(filename, content, "text/x-vcard")
