@@ -7,18 +7,6 @@
 open Data
 open Belt
 
-let newNoteModal = (
-  ~api,
-  ~modal,
-  ~refreshMembers,
-  uuid,
-  ~isApplication,
-  initialNote,
-): Modal.modalContent => {
-  title: "Update note",
-  content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
-}
-
 module Processing = {
   @react.component
   let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
@@ -31,14 +19,7 @@ module Processing = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=refreshApplications,
-          uuid,
-          ~isApplication=true,
-          note,
-        ),
+        NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
     <DataTable
@@ -113,14 +94,7 @@ module Unverified = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=refreshApplications,
-          uuid,
-          ~isApplication=true,
-          note,
-        ),
+        NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
     <DataTable
@@ -198,14 +172,7 @@ module Accepted = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=refreshApplications,
-          uuid,
-          ~isApplication=true,
-          note,
-        ),
+        NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
     <DataTable
@@ -280,14 +247,7 @@ module Rejected = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=refreshApplications,
-          uuid,
-          ~isApplication=true,
-          note,
-        ),
+        NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
     <DataTable
@@ -362,14 +322,7 @@ module Invalid = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=refreshApplications,
-          uuid,
-          ~isApplication=true,
-          note,
-        ),
+        NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
     <DataTable
@@ -444,14 +397,7 @@ module All = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=refreshApplications,
-          uuid,
-          ~isApplication=true,
-          note,
-        ),
+        NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
     <DataTable

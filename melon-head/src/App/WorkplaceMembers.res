@@ -3,18 +3,6 @@
 open Data
 open Belt
 
-let newNoteModal = (
-  ~api,
-  ~modal,
-  ~refreshMembers,
-  uuid,
-  ~isApplication,
-  initialNote,
-): Modal.modalContent => {
-  title: "Update note",
-  content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
-}
-
 @react.component
 let make = (~api: Api.t, ~id, ~modal) => {
   let (currentWorkplace, _, _) =
@@ -32,14 +20,7 @@ let make = (~api: Api.t, ~id, ~modal) => {
   let openNewNoteModal = (uuid, note) =>
     Modal.Interface.openModal(
       modal,
-      newNoteModal(
-        ~api,
-        ~modal,
-        ~refreshMembers=refreshWorkplaceMembers,
-        uuid,
-        ~isApplication=false,
-        note,
-      ),
+      NewNote.Member.modal(~api, ~modal, ~refresh=refreshWorkplaceMembers, uuid, note),
     )
 
   let onExportCsv = (members: array<MemberData.summary>, _) => {

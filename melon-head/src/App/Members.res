@@ -136,18 +136,6 @@ let newMemberModal = (~api, ~modal, ~refreshMembers): Modal.modalContent => {
   content: <NewMember api modal refreshMembers />,
 }
 
-let newNoteModal = (
-  ~api,
-  ~modal,
-  ~refreshMembers,
-  uuid,
-  ~isApplication,
-  initialNote,
-): Modal.modalContent => {
-  title: "Update note",
-  content: <NewNote api modal refreshMembers uuid isApplication initialNote />,
-}
-
 let urlToTab = (url: RescriptReactRouter.url): option<MemberData.status> => {
   open MemberData
 
@@ -201,7 +189,7 @@ module All = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+        NewNote.Member.modal(~api, ~modal, ~refresh=refreshMembers, uuid, note),
       )
 
     <div className={styles["membersTab"]}>
@@ -247,7 +235,7 @@ module New = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+        NewNote.Member.modal(~api, ~modal, ~refresh=refreshMembers, uuid, note),
       )
 
     <div className={styles["membersTab"]}>
@@ -300,7 +288,7 @@ module Current = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+        NewNote.Member.modal(~api, ~modal, ~refresh=refreshMembers, uuid, note),
       )
 
     <div className={styles["membersTab"]}>
@@ -361,7 +349,7 @@ module Past = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        newNoteModal(~api, ~modal, ~refreshMembers, uuid, ~isApplication=false, note),
+        NewNote.Member.modal(~api, ~modal, ~refresh=refreshMembers, uuid, note),
       )
 
     <div className={styles["membersTab"]}>

@@ -247,17 +247,3 @@ module Decode = {
     verificationSentAt: field.required(. "verification_sent_at", option(date)),
   })
 }
-
-module Encode = {
-  open Json.Encode
-
-  let strOption = str => {
-    if str == "" {
-      null
-    } else {
-      string(str)
-    }
-  }
-
-  let newNote = (newNote: string) => object([("note", strOption(newNote))])
-}

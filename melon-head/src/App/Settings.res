@@ -325,14 +325,7 @@ module DataVerificationContent = {
     let openNewNoteModal = (uuid, note) =>
       Modal.Interface.openModal(
         modal,
-        Members.newNoteModal(
-          ~api,
-          ~modal,
-          ~refreshMembers=reloadMembers,
-          uuid,
-          ~isApplication=false,
-          note,
-        ),
+        NewNote.Member.modal(~api, ~modal, ~refresh=reloadMembers, uuid, note),
       )
 
     switch detailView {

@@ -1,71 +1,84 @@
-open Data
+module Editor = {
+  @react.component
+  let make = (
+    ~modal: Modal.Interface.t,
+    ~saveNote: string => Future.t<result<'a, Api.error>>,
+    ~onSaved: unit => unit,
+    ~initialNote: option<string>,
+  ) => {
+    let (note, setNote) = React.useState(_ =>
+      switch initialNote {
+      | None => ""
+      | Some(v) => v
+      }
+    )
+    let (error, setError) = React.useState(() => None)
 
-@react.component
-let make = (
-  ~api: Api.t,
-  ~modal: Modal.Interface.t,
-  ~refreshMembers,
-  ~uuid: Uuid.t,
-  // could be Enum? Application, Member
-  // Does this language support Enums?
-  ~isApplication: bool,
-  ~initialNote: option<string>,
-) => {
-  let (note, setNote) = React.useState(_ =>
-    switch initialNote {
-    | None => ""
-    | Some(v) => v
-    }
-  )
-  let (error, setError) = React.useState(() => None)
-
-  let onSubmit = _ => {
-    let body: Js.Json.t = ApplicationData.Encode.newNote(note)
-
-    // We need to use different PATH and different DECODER. I was not able to figure out how to write it better, but I hope that it is possible.
-    if isApplication {
-      let path = "/applications/" ++ Uuid.toString(uuid) ++ "/note"
-      let req = api->Api.patchJson(~path, ~decoder=ApplicationData.Decode.detail, ~body)
-      req->Future.get(res => {
+    let onSubmit = _ => {
+      saveNote(note)->Future.get(res => {
         switch res {
         | Ok(_data) => {
-            let _ = refreshMembers()
-            Modal.Interface.closeModal(modal)
-          }
-        | Error(e) => setError(_ => Some(e))
-        }
-      })
-    } else {
-      let path = "/members/" ++ Uuid.toString(uuid) ++ "/note"
-      let req = api->Api.patchJson(~path, ~decoder=MemberData.Decode.detail, ~body)
-      req->Future.get(res => {
-        switch res {
-        | Ok(_data) => {
-            let _ = refreshMembers()
+            onSaved()
             Modal.Interface.closeModal(modal)
           }
         | Error(e) => setError(_ => Some(e))
         }
       })
     }
+
+    <Form onSubmit>
+      <Form.TextField
+        label="Note"
+        placeholder="...some text..."
+        value=note
+        onInput={updated => setNote(_ => updated)}
+      />
+      <Button.Panel>
+        <Button
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          {React.string("Cancel")}
+        </Button>
+        <Button type_="submit" variant=Button.Cta> {React.string("Update note")} </Button>
+      </Button.Panel>
+      {switch error {
+      | None => React.null
+      | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+      }}
+    </Form>
+  }
+}
+
+let modalContent = (~modal, ~saveNote, ~refresh, initialNote): Modal.modalContent => {
+  let onSaved = () => {
+    let _ = refresh()
   }
 
-  <Form onSubmit>
-    <Form.TextField
-      label="Note"
-      placeholder="...some text..."
-      value=note
-      onInput={updated => setNote(_ => updated)}
-    />
-    <Button.Panel>
-      <Button type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
-        {React.string("Cancel")}
-      </Button>
-      <Button type_="submit" variant=Button.Cta> {React.string("Update note")} </Button>
-    </Button.Panel>
-    {switch error {
-    | None => React.null
-    | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
-    }}
-  </Form>
+  {
+    title: "Update note",
+    content: <Editor modal saveNote onSaved initialNote />,
+  }
+}
+
+module Member = {
+  let modal = (~api: Api.t, ~modal, ~refresh, uuid, initialNote) => {
+    let saveNote = note =>
+      api->Api.patchJson(
+        ~path="/members/" ++ Data.Uuid.toString(uuid) ++ "/note",
+        ~decoder=MemberData.Decode.detail,
+        ~body=NoteData.Encode.note(note),
+      )
+    modalContent(~modal, ~saveNote, ~refresh, initialNote)
+  }
+}
+
+module Application = {
+  let modal = (~api: Api.t, ~modal, ~refresh, uuid, initialNote) => {
+    let saveNote = note =>
+      api->Api.patchJson(
+        ~path="/applications/" ++ Data.Uuid.toString(uuid) ++ "/note",
+        ~decoder=ApplicationData.Decode.detail,
+        ~body=NoteData.Encode.note(note),
+      )
+    modalContent(~modal, ~saveNote, ~refresh, initialNote)
+  }
 }
