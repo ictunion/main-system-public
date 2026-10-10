@@ -107,8 +107,10 @@ let make = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
 let makeBank = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
   {
     // The bank API serves everything under an /api prefix; request paths stay
-    // prefix-free (e.g. "/payments/...").
-    host: config.bankApiUrl ++ "/api",
+    // prefix-free (e.g. "/payments/..."). When bank_api_url is unset the host
+    // is meaningless -- callers must gate requests on Config.bankEnabled
+    // instead of relying on this falling back to a dead URL.
+    host: config.bankApiUrl->Belt.Option.getWithDefault("") ++ "/api",
     oidcUser,
   }
 }

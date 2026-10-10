@@ -1,7 +1,6 @@
 @module external styles: {..} = "./WorkplaceDetail/styles.module.scss"
 
 open Data
-open RemoteData
 
 let layout: DataGrid.t<WorkplaceData.summary> = [
   {
@@ -205,6 +204,52 @@ let statusButtons = (
   }
 }
 
+module Representatives = {
+  @react.component
+  let make = (~api: Api.t, ~id: Uuid.t) => {
+    let (representatives, _, _) =
+      api->Hook.getData(
+        ~path="/workplaces/" ++ Uuid.toString(id) ++ "/representatives",
+        ~decoder=Json.Decode.array(WorkplaceData.DecodeMine.member),
+      )
+
+    let columns: array<DataTable.column<WorkplaceData.mineMember>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/members/" ++ uuid} />,
+      },
+      {
+        name: "Member Number",
+        minMax: ("200px", "1fr"),
+        view: r =>
+          MemberSummaryTable.viewPaddedNumber(
+            r.memberNumber,
+            ~isRepresentative=Some(r.isRepresentative),
+            (),
+          ),
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.lastName->View.option(React.string),
+      },
+    ]
+
+    <div className={styles["info"]}>
+      <h2> {React.string("Representatives")} </h2>
+      <DataTable data=representatives columns>
+        <p> {React.string("No representatives yet.")} </p>
+      </DataTable>
+    </div>
+  }
+}
+
 module View = {
   @react.component
   let make = (
@@ -290,6 +335,10 @@ module View = {
       <div className={styles["info"]}>
         <DataGrid layout data=detail />
       </div>
+      {switch detail {
+      | Success(d) => <Representatives api id=d.id />
+      | _ => React.null
+      }}
       {switch error {
       | None => React.null
       | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>

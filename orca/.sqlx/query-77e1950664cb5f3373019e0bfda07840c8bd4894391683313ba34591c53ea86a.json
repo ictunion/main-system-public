@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , COUNT(mw.member_id) AS \"member_count!: i64\"\nFROM workplaces\nLEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id\nWHERE workplaces.cancelled_at IS NULL\nGROUP BY workplaces.id\n    , workplaces.name\n    , workplaces.email\n    , workplaces.created_at\n    , workplaces.keycloak_group_id\n    , workplaces.keycloak_executive_group_id\n    , workplaces.announced_at\n    , workplaces.established_at\n    , workplaces.cancelled_at\n    , workplaces.newsletter_id\nORDER BY workplaces.created_at DESC\n",
+  "query": "\nSELECT id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , COUNT(mw.member_id) AS \"member_count!: i64\"\nFROM workplaces\nLEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id\nWHERE workplaces.established_at IS NULL\n  AND workplaces.cancelled_at IS NULL\nGROUP BY workplaces.id\n    , workplaces.name\n    , workplaces.email\n    , workplaces.created_at\n    , workplaces.keycloak_group_id\n    , workplaces.keycloak_executive_group_id\n    , workplaces.announced_at\n    , workplaces.established_at\n    , workplaces.cancelled_at\n    , workplaces.newsletter_id\nORDER BY workplaces.created_at DESC\n",
   "describe": {
     "columns": [
       {
@@ -76,5 +76,5 @@
       null
     ]
   },
-  "hash": "95a8f5a44ee29c26c108ef2ec1ca43cd090b3ef7969215940d91a0efd698b159"
+  "hash": "77e1950664cb5f3373019e0bfda07840c8bd4894391683313ba34591c53ea86a"
 }

@@ -94,7 +94,7 @@ module MissingList = {
 }
 
 @react.component
-let make = (~api: Api.t, ~bankApi: Api.t) => {
+let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
   let currentYear = Js.Date.make()->Js.Date.getFullYear->Float.toInt
 
   let url = RescriptReactRouter.useUrl()
@@ -106,17 +106,19 @@ let make = (~api: Api.t, ~bankApi: Api.t) => {
     <Page.Title>
       {React.string("Missing Dues (data synced once per day every morning)")}
     </Page.Title>
-    <YearMonthFilter basePath="/my-workplace-missing-dues" year month currentYear />
-    <Button.Panel>
-      <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />
-    </Button.Panel>
-    <MissingList
-      key={Int.toString(year) ++ "-" ++ month->Option.mapWithDefault("all", Int.toString)}
-      bankApi
-      api
-      year
-      month
-      onlyNeverPaid
-    />
+    <RequireFeature enabled=bankEnabled>
+      <YearMonthFilter basePath="/my-workplace-missing-dues" year month currentYear />
+      <Button.Panel>
+        <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />
+      </Button.Panel>
+      <MissingList
+        key={Int.toString(year) ++ "-" ++ month->Option.mapWithDefault("all", Int.toString)}
+        bankApi
+        api
+        year
+        month
+        onlyNeverPaid
+      />
+    </RequireFeature>
   </Page>
 }

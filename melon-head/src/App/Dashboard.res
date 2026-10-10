@@ -68,6 +68,7 @@ let make = (
   ~setSessionState,
   ~api: Api.t,
   ~bankApi: Api.t,
+  ~bankEnabled: bool,
   ~modal: Modal.Interface.t,
 ) => {
   let (applicationsBasicStats, _, _) =
@@ -83,7 +84,11 @@ let make = (
     api->Hook.getData(~path="/stats/workplaces/basic", ~decoder=StatsData.Workplaces.Decode.basic)
 
   let (paymentStats, _, _) =
-    bankApi->Hook.getData(~path="/payments/stats", ~decoder=PaymentData.Decode.paymentStats)
+    bankApi->Hook.getData(
+      ~enabled=bankEnabled,
+      ~path="/payments/stats",
+      ~decoder=PaymentData.Decode.paymentStats,
+    )
 
   let openLink = (path: string, _) => {
     RescriptReactRouter.push(path)
@@ -208,15 +213,17 @@ let make = (
           {React.string("See Workplaces")}
         </a>
       </div>
-      <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
-        <div className={styles["gridItem"]}>
-          <h2 className={styles["itemTitle"]}> {React.string("Dues")} </h2>
-          <RowBasedTable rows=duesRows data=paymentStats title=Some("Dues Stats") />
-          <a onClick={openLink("/missing-dues")} className={styles["pageLink"]}>
-            {React.string("See Missing Dues")}
-          </a>
-        </div>
-      </SessionContext.RequireBankRole>
+      <RequireFeature enabled=bankEnabled>
+        <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+          <div className={styles["gridItem"]}>
+            <h2 className={styles["itemTitle"]}> {React.string("Dues")} </h2>
+            <RowBasedTable rows=duesRows data=paymentStats title=Some("Dues Stats") />
+            <a onClick={openLink("/missing-dues")} className={styles["pageLink"]}>
+              {React.string("See Missing Dues")}
+            </a>
+          </div>
+        </SessionContext.RequireBankRole>
+      </RequireFeature>
     </div>
   </Page>
 }

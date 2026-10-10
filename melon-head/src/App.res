@@ -6,6 +6,7 @@ module ConfiguredApp = {
     let oidcUser = Oidc.getUser(oidc)
     let api = Api.make(~config, ~oidcUser)
     let bankApi = Api.makeBank(~config, ~oidcUser)
+    let bankEnabled = config->Config.bankEnabled
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
 
@@ -37,13 +38,14 @@ module ConfiguredApp = {
           />
           /* Routing to pages */
           {switch url.path {
-          | list{} => <Dashboard session=sessionState setSessionState api bankApi modal />
+          | list{} =>
+            <Dashboard session=sessionState setSessionState api bankApi bankEnabled modal />
           | list{"applications"} => <Applications api modal />
           | list{"applications", id} =>
             <ApplicationDetail id={Data.Uuid.unsafeFromString(id)} api modal />
           | list{"members"} => <Members api modal />
           | list{"members", id} =>
-            <MemberDetail api bankApi id={Data.Uuid.unsafeFromString(id)} modal />
+            <MemberDetail api bankApi bankEnabled id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"members", id, "welcome"} =>
             <MemberWelcome api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"members", id, "workplacewelcome"} =>
@@ -56,8 +58,9 @@ module ConfiguredApp = {
             <WorkplaceMembers api id={Data.Uuid.unsafeFromString(id)} modal />
           | list{"my-workplace"} => <MyWorkplace api />
           | list{"my-workplace-settings"} => <MyWorkplaceSettings api modal />
-          | list{"missing-dues"} => <MissingDues api bankApi />
-          | list{"my-workplace-missing-dues"} => <MyWorkplaceMissingDues api bankApi />
+          | list{"missing-dues"} => <MissingDues api bankApi bankEnabled />
+          | list{"my-workplace-missing-dues"} =>
+            <MyWorkplaceMissingDues api bankApi bankEnabled />
           | _ =>
             <Page>
               <ErrorPage.NotFound />

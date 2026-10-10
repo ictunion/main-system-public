@@ -59,7 +59,47 @@ SELECT id
     , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
-WHERE workplaces.cancelled_at IS NULL
+WHERE workplaces.established_at IS NOT NULL
+  AND workplaces.cancelled_at IS NULL
+GROUP BY workplaces.id
+    , workplaces.name
+    , workplaces.email
+    , workplaces.created_at
+    , workplaces.keycloak_group_id
+    , workplaces.keycloak_executive_group_id
+    , workplaces.announced_at
+    , workplaces.established_at
+    , workplaces.cancelled_at
+    , workplaces.newsletter_id
+ORDER BY workplaces.created_at DESC
+"#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Workplaces that have not been established yet -- freshly created and still
+/// being set up. Distinct from `cancelled`, which can happen from this state
+/// too (see `cancel_workplace`), so it's excluded here same as in `active`.
+pub async fn list_in_preparation_summaries(pool: &DbPool) -> sqlx::Result<Vec<WorkplaceSummary>> {
+    sqlx::query_as!(
+        WorkplaceSummary,
+        r#"
+SELECT id
+    , name
+    , email
+    , created_at
+    , keycloak_group_id
+    , keycloak_executive_group_id
+    , announced_at
+    , established_at
+    , cancelled_at
+    , newsletter_id
+    , COUNT(mw.member_id) AS "member_count!: i64"
+FROM workplaces
+LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
+WHERE workplaces.established_at IS NULL
+  AND workplaces.cancelled_at IS NULL
 GROUP BY workplaces.id
     , workplaces.name
     , workplaces.email
@@ -493,6 +533,38 @@ WHERE mw.workplace_id = ANY($1)
 ORDER BY m.last_name NULLS LAST, m.first_name NULLS LAST
 "#,
         workplace_ids
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Just the executive committee of one workplace, for the workplace detail
+/// page. Same shape as `list_members_of_workplaces` so the frontend can reuse
+/// its decoder; same past-member exclusion for the same reason.
+pub async fn list_representatives(
+    pool: &DbPool,
+    workplace_id: Id<Workplace>,
+) -> sqlx::Result<Vec<WorkplaceMemberSummary>> {
+    sqlx::query_as!(
+        WorkplaceMemberSummary,
+        r#"
+SELECT m.id AS "id: Id<Member>"
+    , m.member_number
+    , mw.workplace_id AS "workplace_id: Id<Workplace>"
+    , m.first_name
+    , m.last_name
+    , m.email
+    , m.phone_number
+    , m.created_at
+    , (mw.became_representative_at IS NOT NULL) AS "is_representative!"
+FROM members m
+JOIN members_workplaces mw ON mw.member_id = m.id
+WHERE mw.workplace_id = $1
+  AND mw.became_representative_at IS NOT NULL
+  AND m.left_at IS NULL
+ORDER BY mw.became_representative_at
+"#,
+        workplace_id as _
     )
     .fetch_all(pool)
     .await

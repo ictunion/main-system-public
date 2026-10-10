@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15.2-alpine
+        image: public.ecr.aws/docker/library/postgres:15.2-alpine
         env:
           # Enable password authentication even for local connections
           POSTGRES_USER: postgres

@@ -47,3 +47,20 @@ Defined in [`orca/src/api/registration/mod.rs`](../orca/src/api/registration/mod
 
 Success returns `200` with a confirmation payload. The confirmation token is
 generated server-side.
+
+## Refresh the sqlx offline query cache
+
+Run from `orca/` (inside `nix develop .#orca`, for the `cargo sqlx` subcommand)
+after adding or changing a `query!`/`query_as!` macro call. Needed because the
+repo checks in a `.sqlx` directory so CI can compile without a live database;
+skipping this after a query change means CI builds against stale metadata.
+This also recompiles the crate against the live DB, so it doubles as a normal
+rebuild.
+
+```bash
+DATABASE_URL="postgres://orca@localhost/ictunion" cargo sqlx prepare
+```
+
+`orca` is a real role in the dev database with no password, since the
+`postgres` container runs with `POSTGRES_HOST_AUTH_METHOD=trust` -- same
+connection string as the `postgres` field in `Rocket.toml`.

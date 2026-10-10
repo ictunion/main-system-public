@@ -2,7 +2,7 @@
 
 open Belt
 
-type tab = Active | Inactive
+type tab = InPreparation | Active | Inactive
 
 module NewWorkplace = {
   open WorkplaceData
@@ -140,6 +140,28 @@ let columns: array<DataTable.column<WorkplaceData.summary>> = [
   },
 ]
 
+module InPreparation = {
+  @react.component
+  let make = (~api, ~refreshKey: int) => {
+    let (workplaces, _, send) =
+      api->Hook.getData(
+        ~path="/workplaces/in_preparation",
+        ~decoder=Json.Decode.array(WorkplaceData.Decode.summary),
+      )
+
+    React.useEffect1(() => {
+      if refreshKey > 0 {
+        let _ = send()
+      }
+      None
+    }, [refreshKey])
+
+    <DataTable data=workplaces columns>
+      <p> {React.string("There are no workplaces in preparation.")} </p>
+    </DataTable>
+  }
+}
+
 module Active = {
   @react.component
   let make = (~api, ~refreshKey: int) => {
@@ -210,6 +232,7 @@ let urlToTab = (url: RescriptReactRouter.url): option<tab> => {
   switch url.hash {
   | "all" => None
   | "inactive" => Some(Inactive)
+  | "in-preparation" => Some(InPreparation)
   | _ => Some(Active)
   }
 }
@@ -219,6 +242,7 @@ let tabToUrl = (tab: option<tab>): string => {
   | None => "all"
   | Some(Active) => "active"
   | Some(Inactive) => "inactive"
+  | Some(InPreparation) => "in-preparation"
   }
   "/workplaces#" ++ hash
 }
@@ -257,6 +281,9 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
         <Tabbed.Tab value={Some(Active)} handlers={tabHandlers}>
           {React.string("Active")}
         </Tabbed.Tab>
+        <Tabbed.Tab value={Some(InPreparation)} handlers={tabHandlers}>
+          {React.string("In preparation")}
+        </Tabbed.Tab>
         <Tabbed.Tab value={Some(Inactive)} handlers={tabHandlers}>
           {React.string("Inactive")}
         </Tabbed.Tab>
@@ -267,6 +294,9 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
       </Tabbed.Tabs>
       <Tabbed.Content tab={Some(Active)} handlers={tabHandlers}>
         <Active api refreshKey />
+      </Tabbed.Content>
+      <Tabbed.Content tab={Some(InPreparation)} handlers={tabHandlers}>
+        <InPreparation api refreshKey />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(Inactive)} handlers={tabHandlers}>
         <Inactive api refreshKey />

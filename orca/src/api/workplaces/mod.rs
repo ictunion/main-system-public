@@ -151,6 +151,19 @@ async fn list_active(
     Ok(Json(summaries))
 }
 
+#[get("/in_preparation")]
+async fn list_in_preparation(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+) -> Response<Json<Vec<WorkplaceSummary>>> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    let summaries = query::list_in_preparation_summaries(db_pool.inner()).await?;
+
+    Ok(Json(summaries))
+}
+
 #[get("/inactive")]
 async fn list_inactive(
     db_pool: &State<DbPool>,
@@ -190,6 +203,30 @@ async fn detail(
     let detail = query::detail(db_pool.inner(), workplace_id).await?;
 
     Ok(Json(detail))
+}
+
+#[get("/<workplace_id>/representatives")]
+async fn list_representatives(
+    db_pool: &State<DbPool>,
+    oid_provider: &State<Provider>,
+    token: JwtToken<'_>,
+    workplace_id: Id<Workplace>,
+) -> Response<Json<Vec<WorkplaceMemberSummary>>> {
+    // Same scope as `detail`: staff may look up any workplace's reps, an
+    // executive only their own.
+    if let Err(staff_denial) = oid_provider.require_role(&token, Role::ListWorkplaces) {
+        oid_provider.require_role(&token, Role::ListOwnWorkplace)?;
+
+        let own =
+            executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+        if !own.contains(&Uuid::from(workplace_id)) {
+            return Err(staff_denial.into());
+        }
+    }
+
+    let reps = query::list_representatives(db_pool.inner(), workplace_id).await?;
+
+    Ok(Json(reps))
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -446,8 +483,10 @@ pub fn routes() -> Vec<Route> {
         list_mine,
         list_mine_members,
         list_active,
+        list_in_preparation,
         list_inactive,
         detail,
+        list_representatives,
         update,
         establish,
         announce,

@@ -972,7 +972,7 @@ let addOccupationModal = (~api, ~modal, ~id, ~current, ~setOccupationsData): Mod
 }
 
 @react.component
-let make = (~api, ~bankApi, ~id, ~modal) => {
+let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
   let (detail: Api.webData<MemberData.detail>, setDetail, _) =
     api->Hook.getData(~path="/members/" ++ Uuid.toString(id), ~decoder=MemberData.Decode.detail)
 
@@ -991,8 +991,11 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
 
   /* Payment history stays gated on the payment-history bank role for staff,
      but a workplace executive gets it too -- for their own workplace's
-     members only, which Orca already enforced by serving this page at all. */
+     members only, which Orca already enforced by serving this page at all.
+     Also requires the bank feature itself to be configured -- a role alone
+     isn't enough when there's no bank backend to call. */
   let canSeePayments =
+    bankEnabled &&
     session->RemoteData.unwrap(~default=false, s =>
       Session.hasBankRole(s, ~role=Session.PaymentHistory) ||
       Session.hasRole(s, ~role=Session.ListOwnWorkplaceMembers)
@@ -1004,6 +1007,7 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
      Dues back button. Both are gated on the payment-history bank role, so skip
      the request without it (and until the member number is known). */
   let canFetchPayments =
+    bankEnabled &&
     session->RemoteData.unwrap(~default=false, s =>
       Session.hasBankRole(s, ~role=Session.PaymentHistory)
     )
@@ -1088,14 +1092,16 @@ let make = (~api, ~bankApi, ~id, ~modal) => {
             }}
           </SessionContext.RequireRole>
         </SessionContext.RequireRole>
-        <SessionContext.RequireRole anyOf=[Session.ListMembers]>
-          <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
-            {switch detail {
-            | Success(d) => <MissingDuesButton paymentsData detail=d />
-            | _ => React.null
-            }}
-          </SessionContext.RequireBankRole>
-        </SessionContext.RequireRole>
+        <RequireFeature enabled=bankEnabled>
+          <SessionContext.RequireRole anyOf=[Session.ListMembers]>
+            <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+              {switch detail {
+              | Success(d) => <MissingDuesButton paymentsData detail=d />
+              | _ => React.null
+              }}
+            </SessionContext.RequireBankRole>
+          </SessionContext.RequireRole>
+        </RequireFeature>
         {if isStaff {
           React.null
         } else {

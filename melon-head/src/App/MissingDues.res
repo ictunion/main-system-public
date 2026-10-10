@@ -222,7 +222,7 @@ let tabKey = (tab: option<MemberData.status>) =>
   }
 
 @react.component
-let make = (~api: Api.t, ~bankApi: Api.t) => {
+let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
   let currentYear = Js.Date.make()->Js.Date.getFullYear->Float.toInt
 
   let url = RescriptReactRouter.useUrl()
@@ -238,31 +238,40 @@ let make = (~api: Api.t, ~bankApi: Api.t) => {
     <Page.Title>
       {React.string("Missing Dues (data synced once per day every morning)")}
     </Page.Title>
-    <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
-      <YearMonthFilter basePath="/missing-dues" year month currentYear />
-      <Button.Panel>
-        <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />
-        <HideSingleMissingFilter
-          checked=hideSingleMissing onChange={() => setHideSingleMissing(v => !v)}
+    <RequireFeature enabled=bankEnabled>
+      <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+        <YearMonthFilter basePath="/missing-dues" year month currentYear />
+        <Button.Panel>
+          <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />
+          <HideSingleMissingFilter
+            checked=hideSingleMissing onChange={() => setHideSingleMissing(v => !v)}
+          />
+        </Button.Panel>
+        <Tabbed.Tabs>
+          <Tabbed.Tab
+            value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
+            <span> {React.string("Current")} </span>
+          </Tabbed.Tab>
+          <Tabbed.Tab
+            value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
+            <span> {React.string("Past")} </span>
+          </Tabbed.Tab>
+          <Tabbed.TabSpacer />
+          <Tabbed.Tab value=None handlers=tabHandlers color=Some("var(--color1)")>
+            <span> {React.string("All")} </span>
+          </Tabbed.Tab>
+        </Tabbed.Tabs>
+        <Body
+          key={tabKey(activeTab)}
+          api
+          bankApi
+          tab=activeTab
+          year
+          month
+          onlyNeverPaid
+          hideSingleMissing
         />
-      </Button.Panel>
-      <Tabbed.Tabs>
-        <Tabbed.Tab
-          value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
-          <span> {React.string("Current")} </span>
-        </Tabbed.Tab>
-        <Tabbed.Tab
-          value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
-          <span> {React.string("Past")} </span>
-        </Tabbed.Tab>
-        <Tabbed.TabSpacer />
-        <Tabbed.Tab value=None handlers=tabHandlers color=Some("var(--color1)")>
-          <span> {React.string("All")} </span>
-        </Tabbed.Tab>
-      </Tabbed.Tabs>
-      <Body
-        key={tabKey(activeTab)} api bankApi tab=activeTab year month onlyNeverPaid hideSingleMissing
-      />
-    </SessionContext.RequireBankRole>
+      </SessionContext.RequireBankRole>
+    </RequireFeature>
   </Page>
 }
