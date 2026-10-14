@@ -1,15 +1,19 @@
-use super::{ApiError, SuccessResponse};
+use super::{ApiError, AppState, SuccessResponse};
 use crate::api::Response;
+use crate::api::extract::{ApiJson, ApiPath};
 use crate::api::members::MemberSummary;
 use crate::api::members::query::get_status_data;
 use crate::data::{Id, Member, MemberNumber, Workplace};
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider, Role};
 use crate::validation::Validated;
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::routing::{get, patch, put};
+use axum::{Json, Router};
 use chrono::{DateTime, Utc};
-use rocket::serde::json::Json;
-use rocket::{Route, State, delete, get, patch, post, put, routes};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -30,15 +34,14 @@ pub struct WorkplaceSummary {
     member_count: i64,
 }
 
-#[get("/")]
 async fn list_all(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
 
-    let summaries = query::list_summaries(db_pool.inner()).await?;
+    let summaries = query::list_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -73,7 +76,7 @@ pub struct WorkplaceMemberSummary {
 pub(crate) async fn executive_workplace_id_list(
     db_pool: &DbPool,
     oid_provider: &Provider,
-    token: &JwtToken<'_>,
+    token: &JwtToken,
 ) -> Response<Vec<Uuid>> {
     let group_ids = oid_provider.get_own_groups(token).await?;
 
@@ -93,22 +96,21 @@ pub(crate) async fn executive_workplace_id_list(
 /// Keycloak executive group membership. By union process a rep sits on exactly
 /// one committee; if the resolver ever returns several, the first by name is
 /// used. A caller not linked to any workplace gets a 404.
-#[get("/mine")]
 async fn list_mine(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_any_role(&token, &[Role::ListOwnWorkplace])?;
 
     // each executive member should have only one workplace, we don't want someone to be rep at multiple workplaces
-    let own = executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+    let own = executive_workplace_id_list(&db_pool, &oid_provider, &token).await?;
 
     let Some(workplace_id) = own.first().copied() else {
-        return Err(ApiError::Status(rocket::http::Status::NotFound));
+        return Err(ApiError::Status(StatusCode::NOT_FOUND));
     };
 
-    let detail = query::detail(db_pool.inner(), Id::from(workplace_id)).await?;
+    let detail = query::detail(&db_pool, Id::from(workplace_id)).await?;
 
     Ok(Json(detail))
 }
@@ -118,71 +120,65 @@ async fn list_mine(
 /// There is no workplace ID in the path on purpose: the caller cannot name a
 /// workplace, so there is no parameter to tamper with and no way to reach a
 /// roster outside their own committee.
-#[get("/mine/members")]
 async fn list_mine_members(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<WorkplaceMemberSummary>>> {
     oid_provider.require_role(&token, Role::ListOwnWorkplaceMembers)?;
 
-    let workplace_ids =
-        executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+    let workplace_ids = executive_workplace_id_list(&db_pool, &oid_provider, &token).await?;
 
     if workplace_ids.is_empty() {
         return Ok(Json(Vec::new()));
     }
 
-    let members = query::list_members_of_workplaces(db_pool.inner(), &workplace_ids).await?;
+    let members = query::list_members_of_workplaces(&db_pool, &workplace_ids).await?;
 
     Ok(Json(members))
 }
 
-#[get("/active")]
 async fn list_active(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let summaries = query::list_active_summaries(db_pool.inner()).await?;
+    let summaries = query::list_active_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
 
-#[get("/in_preparation")]
 async fn list_in_preparation(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let summaries = query::list_in_preparation_summaries(db_pool.inner()).await?;
+    let summaries = query::list_in_preparation_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
 
-#[get("/inactive")]
 async fn list_inactive(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let summaries = query::list_inactive_summaries(db_pool.inner()).await?;
+    let summaries = query::list_inactive_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
 
-#[get("/<workplace_id>")]
 async fn detail(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
 ) -> Response<Json<WorkplaceSummary>> {
     // Staff (`list-workplaces`) may open any workplace. A rep with
     // `list-own-workplace` may open only workplaces whose executive committee
@@ -193,38 +189,35 @@ async fn detail(
     if let Err(staff_denial) = oid_provider.require_role(&token, Role::ListWorkplaces) {
         oid_provider.require_role(&token, Role::ListOwnWorkplace)?;
 
-        let own =
-            executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+        let own = executive_workplace_id_list(&db_pool, &oid_provider, &token).await?;
         if !own.contains(&Uuid::from(workplace_id)) {
             return Err(staff_denial.into());
         }
     }
 
-    let detail = query::detail(db_pool.inner(), workplace_id).await?;
+    let detail = query::detail(&db_pool, workplace_id).await?;
 
     Ok(Json(detail))
 }
 
-#[get("/<workplace_id>/representatives")]
 async fn list_representatives(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
 ) -> Response<Json<Vec<WorkplaceMemberSummary>>> {
     // Same scope as `detail`: staff may look up any workplace's reps, an
     // executive only their own.
     if let Err(staff_denial) = oid_provider.require_role(&token, Role::ListWorkplaces) {
         oid_provider.require_role(&token, Role::ListOwnWorkplace)?;
 
-        let own =
-            executive_workplace_id_list(db_pool.inner(), oid_provider.inner(), &token).await?;
+        let own = executive_workplace_id_list(&db_pool, &oid_provider, &token).await?;
         if !own.contains(&Uuid::from(workplace_id)) {
             return Err(staff_denial.into());
         }
     }
 
-    let reps = query::list_representatives(db_pool.inner(), workplace_id).await?;
+    let reps = query::list_representatives(&db_pool, workplace_id).await?;
 
     Ok(Json(reps))
 }
@@ -242,18 +235,16 @@ pub struct NewWorkplace {
     newsletter_id: Option<i32>,
 }
 
-#[post("/", format = "json", data = "<new_workplace>")]
 async fn create_workplace(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    new_workplace: Validated<Json<NewWorkplace>>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    new_workplace: Validated<NewWorkplace>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
     // Create new workplace
-    let workplace =
-        query::create_workplace(db_pool.inner(), &new_workplace.into_inner().into_inner()).await?;
+    let workplace = query::create_workplace(&db_pool, &new_workplace.into_inner()).await?;
 
     Ok(Json(workplace))
 }
@@ -263,32 +254,29 @@ pub struct UpdateWorkplace {
     newsletter_id: Option<i32>,
 }
 
-#[patch("/<workplace_id>", format = "json", data = "<update>")]
 async fn update(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
-    update: Json<UpdateWorkplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
+    ApiJson(update): ApiJson<UpdateWorkplace>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let workplace =
-        query::update_workplace(db_pool.inner(), workplace_id, &update.into_inner()).await?;
+    let workplace = query::update_workplace(&db_pool, workplace_id, &update).await?;
 
     Ok(Json(workplace))
 }
 
-#[patch("/<workplace_id>/establish")]
 async fn establish(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let workplace = query::establish_workplace(db_pool.inner(), workplace_id)
+    let workplace = query::establish_workplace(&db_pool, workplace_id)
         .await?
         .ok_or_else(|| {
             ApiError::data_conflict("Workplace cannot be established in its current state")
@@ -297,16 +285,15 @@ async fn establish(
     Ok(Json(workplace))
 }
 
-#[patch("/<workplace_id>/announce")]
 async fn announce(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let workplace = query::announce_workplace(db_pool.inner(), workplace_id)
+    let workplace = query::announce_workplace(&db_pool, workplace_id)
         .await?
         .ok_or_else(|| {
             ApiError::data_conflict("Workplace cannot be announced in its current state")
@@ -315,16 +302,15 @@ async fn announce(
     Ok(Json(workplace))
 }
 
-#[patch("/<workplace_id>/cancel")]
 async fn cancel(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
-    let workplace = query::cancel_workplace(db_pool.inner(), workplace_id)
+    let workplace = query::cancel_workplace(&db_pool, workplace_id)
         .await?
         .ok_or_else(|| {
             ApiError::data_conflict("Workplace cannot be cancelled in its current state")
@@ -334,36 +320,35 @@ async fn cancel(
 }
 
 async fn assign_member_to_workplace_impl(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+    token: &JwtToken,
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,
     is_representative: bool,
 ) -> Response<SuccessResponse> {
-    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+    oid_provider.require_role(token, Role::ManageWorkplaces)?;
 
-    let was_representative =
-        query::get_is_representative(db_pool.inner(), workplace_id, member_id).await?;
+    let was_representative = query::get_is_representative(db_pool, workplace_id, member_id).await?;
 
     let rows_affected = query::create_connection_between_member_and_workplace(
-        db_pool.inner(),
+        db_pool,
         workplace_id,
         member_id,
         is_representative,
     )
     .await?;
 
-    let workplace_details = query::detail(db_pool.inner(), workplace_id).await?;
+    let workplace_details = query::detail(db_pool, workplace_id).await?;
 
-    let user_data = get_status_data(db_pool.inner(), member_id).await?;
+    let user_data = get_status_data(db_pool, member_id).await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
         ApiError::keycloak_push(&format!("keycloak ID for user {member_id} not assigned"))
     })?;
 
     oid_provider
-        .connect_keycloak_user_and_group(&token, keycloak_id, workplace_details.keycloak_group_id)
+        .connect_keycloak_user_and_group(token, keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
     // Only touch the executive group on an actual transition -- most PUTs here
@@ -373,11 +358,11 @@ async fn assign_member_to_workplace_impl(
     if let Some(keycloak_executive_group_id) = workplace_details.keycloak_executive_group_id {
         if is_representative && !was_representative {
             oid_provider
-                .connect_keycloak_user_and_group(&token, keycloak_id, keycloak_executive_group_id)
+                .connect_keycloak_user_and_group(token, keycloak_id, keycloak_executive_group_id)
                 .await?;
         } else if !is_representative && was_representative {
             oid_provider
-                .remove_keycloak_user_from_group(&token, keycloak_id, keycloak_executive_group_id)
+                .remove_keycloak_user_from_group(token, keycloak_id, keycloak_executive_group_id)
                 .await?;
         }
     }
@@ -389,53 +374,58 @@ async fn assign_member_to_workplace_impl(
     }
 }
 
-#[put("/<workplace_id>/members/<member_id>")]
 async fn assign_member_to_workplace(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
-    member_id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath((workplace_id, member_id)): ApiPath<(Id<Workplace>, Id<Member>)>,
 ) -> Response<SuccessResponse> {
-    assign_member_to_workplace_impl(db_pool, oid_provider, token, workplace_id, member_id, false)
-        .await
+    assign_member_to_workplace_impl(
+        &db_pool,
+        &oid_provider,
+        &token,
+        workplace_id,
+        member_id,
+        false,
+    )
+    .await
 }
 
-#[put("/<workplace_id>/members/<member_id>/is_representative")]
 async fn assign_member_to_workplace_rep(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
-    member_id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath((workplace_id, member_id)): ApiPath<(Id<Workplace>, Id<Member>)>,
 ) -> Response<SuccessResponse> {
-    assign_member_to_workplace_impl(db_pool, oid_provider, token, workplace_id, member_id, true)
-        .await
+    assign_member_to_workplace_impl(
+        &db_pool,
+        &oid_provider,
+        &token,
+        workplace_id,
+        member_id,
+        true,
+    )
+    .await
 }
 
-#[delete("/<workplace_id>/members/<member_id>")]
 async fn remove_member_from_workplace(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
-    member_id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath((workplace_id, member_id)): ApiPath<(Id<Workplace>, Id<Member>)>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
     let was_representative =
-        query::get_is_representative(db_pool.inner(), workplace_id, member_id).await?;
+        query::get_is_representative(&db_pool, workplace_id, member_id).await?;
 
-    let rows_affected = query::remove_connection_between_member_and_workplace(
-        db_pool.inner(),
-        workplace_id,
-        member_id,
-    )
-    .await?;
+    let rows_affected =
+        query::remove_connection_between_member_and_workplace(&db_pool, workplace_id, member_id)
+            .await?;
 
-    let workplace_details = query::detail(db_pool.inner(), workplace_id).await?;
+    let workplace_details = query::detail(&db_pool, workplace_id).await?;
 
-    let user_data = get_status_data(db_pool.inner(), member_id).await?;
+    let user_data = get_status_data(&db_pool, member_id).await?;
 
     let keycloak_id = user_data.sub().ok_or_else(|| {
         ApiError::keycloak_push(&format!("keycloak ID for user {member_id} not assigned"))
@@ -461,40 +451,40 @@ async fn remove_member_from_workplace(
     }
 }
 
-#[get("/<workplace_id>/members")]
 async fn get_all_workplace_members(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    workplace_id: Id<Workplace>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
 ) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::get_all_workplace_members(db_pool.inner(), workplace_id).await?;
+    let summaries = query::get_all_workplace_members(&db_pool, workplace_id).await?;
 
     Ok(Json(summaries))
 }
 
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn routes() -> Vec<Route> {
-    routes![
-        list_all,
-        list_mine,
-        list_mine_members,
-        list_active,
-        list_in_preparation,
-        list_inactive,
-        detail,
-        list_representatives,
-        update,
-        establish,
-        announce,
-        cancel,
-        create_workplace,
-        assign_member_to_workplace,
-        assign_member_to_workplace_rep,
-        remove_member_from_workplace,
-        get_all_workplace_members,
-    ]
+pub(crate) fn router() -> Router<AppState> {
+    Router::new()
+        .route("/", get(list_all).post(create_workplace))
+        .route("/mine", get(list_mine))
+        .route("/mine/members", get(list_mine_members))
+        .route("/active", get(list_active))
+        .route("/in_preparation", get(list_in_preparation))
+        .route("/inactive", get(list_inactive))
+        .route("/{workplace_id}", get(detail).patch(update))
+        .route("/{workplace_id}/representatives", get(list_representatives))
+        .route("/{workplace_id}/establish", patch(establish))
+        .route("/{workplace_id}/announce", patch(announce))
+        .route("/{workplace_id}/cancel", patch(cancel))
+        .route(
+            "/{workplace_id}/members/{member_id}",
+            put(assign_member_to_workplace).delete(remove_member_from_workplace),
+        )
+        .route(
+            "/{workplace_id}/members/{member_id}/is_representative",
+            put(assign_member_to_workplace_rep),
+        )
+        .route("/{workplace_id}/members", get(get_all_workplace_members))
 }

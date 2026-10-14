@@ -1,8 +1,10 @@
+use axum::extract::State;
+use axum::routing::{delete, get, patch, post};
+use axum::{Json, Router};
 use chrono::{DateTime, NaiveDate, Utc};
 use log::error;
-use rocket::serde::json::Json;
-use rocket::{Route, State, delete, get, patch, post, routes};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -18,7 +20,8 @@ use crate::server::oid::{JwtToken, Provider, Role};
 
 use crate::listmonk::subscribe_to_listmonk;
 
-use super::{ApiError, SuccessResponse};
+use super::{ApiError, AppState, SuccessResponse};
+use crate::api::extract::{ApiJson, ApiPath};
 
 mod query;
 
@@ -36,15 +39,14 @@ pub struct ApplicationSummary {
     created_at: DateTime<Utc>,
 }
 
-#[get("/")]
 async fn list(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<ApplicationSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_summaries(db_pool.inner()).await?;
+    let summaries = query::list_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -64,15 +66,14 @@ pub struct ApplicationUnverifiedSummary {
     verification_sent_at: Option<DateTime<Utc>>,
 }
 
-#[get("/unverified")]
 async fn list_unverified(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<ApplicationUnverifiedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_unverified_summaries(db_pool.inner()).await?;
+    let summaries = query::list_unverified_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -93,15 +94,14 @@ pub struct ApplicationAcceptedSummary {
     member_id: Id<Member>,
 }
 
-#[get("/accepted")]
 async fn list_accepted(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<ApplicationAcceptedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_accepted_summaries(db_pool.inner()).await?;
+    let summaries = query::list_accepted_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -121,15 +121,14 @@ pub struct ApplicationRejectedSummary {
     rejected_at: DateTime<Utc>,
 }
 
-#[get("/rejected")]
 async fn list_rejected(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<ApplicationRejectedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_rejected_summaries(db_pool.inner()).await?;
+    let summaries = query::list_rejected_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -149,15 +148,14 @@ pub struct ApplicationProcessingSummary {
     confirmed_at: DateTime<Utc>,
 }
 
-#[get("/processing")]
 async fn list_processing(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<ApplicationProcessingSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_processing_summaries(db_pool.inner()).await?;
+    let summaries = query::list_processing_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -177,15 +175,14 @@ pub struct ApplicationInvalidSummary {
     invalidated_at: DateTime<Utc>,
 }
 
-#[get("/invalid")]
 async fn list_invalid(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<ApplicationInvalidSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_invalid_summaries(db_pool.inner()).await?;
+    let summaries = query::list_invalid_summaries(&db_pool).await?;
 
     Ok(Json(summaries))
 }
@@ -217,16 +214,15 @@ pub struct ApplicationDetail {
     pub(crate) language: Option<String>,
 }
 
-#[get("/<id>")]
 async fn detail(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_any_role(&token, &[Role::ViewApplication])?;
 
-    let detail = query::get_application(db_pool.inner(), id).await?;
+    let detail = query::get_application(&db_pool, id).await?;
 
     Ok(Json(detail))
 }
@@ -325,18 +321,17 @@ impl ApplicationStatus {
     }
 }
 
-#[delete("/<id>")]
 async fn reject(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx = db_pool.begin().await?;
 
     // check that the application status is in processing
     query::get_application_status_data(&mut *tx, id)
@@ -351,16 +346,15 @@ async fn reject(
     Ok(Json(detail))
 }
 
-#[patch("/<id>/invalidate")]
 async fn invalidate(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx = db_pool.begin().await?;
 
     query::get_application_status_data(&mut *tx, id)
         .await?
@@ -374,18 +368,17 @@ async fn invalidate(
     Ok(Json(detail))
 }
 
-#[patch("/<id>/unreject")]
 async fn unreject(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx = db_pool.begin().await?;
 
     // check that the application status is rejected
     query::get_application_status_data(&mut *tx, id)
@@ -398,16 +391,15 @@ async fn unreject(
     Ok(Json(detail))
 }
 
-#[patch("/<id>/uninvalidate")]
 async fn uninvalidate(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx = db_pool.begin().await?;
 
     // check that the application status is rejected
     query::get_application_status_data(&mut *tx, id)
@@ -423,26 +415,24 @@ async fn uninvalidate(
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "rocket::serde")]
 struct NewMember {
     member_number: Option<MemberNumber>,
 }
 
-#[post("/<id>/accept", format = "json", data = "<new_member>")]
 async fn accept(
-    config: &State<Config>,
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    queue: &State<QueueSender>,
-    id: Id<RegistrationRequest>,
-    new_member: Json<NewMember>,
+    State(config): State<Arc<Config>>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    State(queue): State<QueueSender>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
+    ApiJson(new_member): ApiJson<NewMember>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx = db_pool.begin().await?;
 
     // check that application status is in processing
     query::get_application_status_data(&mut *tx, id)
@@ -494,52 +484,46 @@ async fn accept(
         .as_deref()
         .is_some_and(|h| !h.is_empty())
     {
-        subscribe_to_listmonk(&detail, member_number, config, tx, member_id).await?;
+        subscribe_to_listmonk(&detail, member_number, &config, tx, member_id).await?;
     } else {
         tx.commit().await?;
     }
 
     queue
-        .inner()
         .send(Command::NewMemberCreated(
             member_id,
             Some(token.as_str().to_owned()),
         ))
         .await?;
 
-    queue
-        .inner()
-        .send(Command::SendNotificationToTreasurer)
-        .await?;
+    queue.send(Command::SendNotificationToTreasurer).await?;
 
     Ok(Json(detail))
 }
 
-#[get("/<id>/files")]
 async fn list_files(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<Vec<FileInfo>>> {
     oid_provider.require_role(&token, Role::ViewApplication)?;
 
-    let files = query::list_application_files(db_pool.inner(), id).await?;
+    let files = query::list_application_files(&db_pool, id).await?;
     Ok(Json(files))
 }
 
-#[patch("/<id>/verify")]
 async fn verify(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
-    let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = db_pool.inner().begin().await?;
+    let mut tx: sqlx::Transaction<'_, sqlx::Postgres> = db_pool.begin().await?;
 
     // check that the application status is in processing
     query::get_application_status_data(&mut *tx, id)
@@ -554,39 +538,34 @@ async fn verify(
     Ok(Json(detail))
 }
 
-#[post("/<id>/resend-email")]
 async fn resend_email(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    queue: &State<QueueSender>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    State(queue): State<QueueSender>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    query::get_application_status_data(db_pool.inner(), id)
+    query::get_application_status_data(&db_pool, id)
         .await?
         .to_status()
         .assert_waiting_for_confirmation()?;
 
-    queue
-        .inner()
-        .send(Command::ResentRegistrationEmail(id))
-        .await?;
+    queue.send(Command::ResentRegistrationEmail(id)).await?;
 
     Ok(SuccessResponse::Accepted)
 }
 
-#[delete("/<id>/hard")]
 async fn hard_delete(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::SuperPowers)?;
 
-    let mut tx = db_pool.inner().begin().await?;
+    let mut tx = db_pool.begin().await?;
 
     // check that the application status is rejected
     query::get_application_status_data(&mut *tx, id)
@@ -603,45 +582,40 @@ async fn hard_delete(
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "rocket::serde")]
 pub struct Note {
     note: Option<String>,
 }
 
-#[patch("/<id>/note", format = "json", data = "<note>")]
 async fn update_note(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<RegistrationRequest>,
-    note: Json<Note>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
+    ApiJson(note): ApiJson<Note>,
 ) -> Response<Json<ApplicationDetail>> {
     oid_provider.require_role(&token, Role::ResolveApplications)?;
 
-    let detail = query::update_registration_note(db_pool.inner(), id, &note).await?;
+    let detail = query::update_registration_note(&db_pool, id, &note).await?;
 
     Ok(Json(detail))
 }
 
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn routes() -> Vec<Route> {
-    routes![
-        list,
-        list_unverified,
-        list_processing,
-        list_accepted,
-        list_invalid,
-        resend_email,
-        list_rejected,
-        detail,
-        list_files,
-        reject,
-        invalidate,
-        unreject,
-        uninvalidate,
-        verify,
-        accept,
-        hard_delete,
-        update_note,
-    ]
+pub(crate) fn router() -> Router<AppState> {
+    Router::new()
+        .route("/", get(list))
+        .route("/unverified", get(list_unverified))
+        .route("/accepted", get(list_accepted))
+        .route("/rejected", get(list_rejected))
+        .route("/processing", get(list_processing))
+        .route("/invalid", get(list_invalid))
+        .route("/{id}", get(detail).delete(reject))
+        .route("/{id}/invalidate", patch(invalidate))
+        .route("/{id}/unreject", patch(unreject))
+        .route("/{id}/uninvalidate", patch(uninvalidate))
+        .route("/{id}/accept", post(accept))
+        .route("/{id}/files", get(list_files))
+        .route("/{id}/verify", patch(verify))
+        .route("/{id}/resend-email", post(resend_email))
+        .route("/{id}/hard", delete(hard_delete))
+        .route("/{id}/note", patch(update_note))
 }

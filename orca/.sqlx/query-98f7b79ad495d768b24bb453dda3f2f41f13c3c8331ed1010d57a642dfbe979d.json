@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT data AS \"data!\", file_type FROM files WHERE id = $1",
+  "query": "SELECT data AS \"data!\", file_type AS \"file_type: FileType\" FROM files WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -10,7 +10,7 @@
       },
       {
         "ordinal": 1,
-        "name": "file_type",
+        "name": "file_type: FileType",
         "type_info": "Text"
       }
     ],
@@ -24,5 +24,5 @@
       false
     ]
   },
-  "hash": "872715a403c6475f1d9c1a58173f12a1a9ef1a770911d9b15cf2e0f41daab5e5"
+  "hash": "98f7b79ad495d768b24bb453dda3f2f41f13c3c8331ed1010d57a642dfbe979d"
 }

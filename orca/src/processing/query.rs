@@ -4,7 +4,7 @@ use crate::db::DbPool;
 use crate::server::oid;
 
 use super::RegistrationDetails;
-use crate::data::{Id, Member, RegistrationRequest};
+use crate::data::{FileType, Id, Member, RegistrationRequest};
 
 pub async fn query_registration(
     pool: &DbPool,
@@ -46,16 +46,17 @@ WITH rows AS
     ( name
     , file_type
     , data
-    ) VALUES ('registration', 'pdf', $1)
+    ) VALUES ('registration', $1, $2)
     RETURNING id
 )
 INSERT INTO registration_requests_files
     ( registration_request_id
     , file_id
     )
-    SELECT $2 as registration_request_id, id
+    SELECT $3 as registration_request_id, id
     FROM rows
 "#,
+        FileType::Pdf as _,
         data,
         id as _,
     )

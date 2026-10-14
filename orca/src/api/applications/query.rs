@@ -8,7 +8,7 @@ use super::{
     ApplicationProcessingSummary, ApplicationRejectedSummary, ApplicationStatusData,
     ApplicationSummary, ApplicationUnverifiedSummary, FileInfo, Note,
 };
-use crate::data::{Id, RegistrationRequest};
+use crate::data::{FileType, Id, RegistrationRequest};
 
 pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<ApplicationSummary>> {
     sqlx::query_as!(
@@ -209,7 +209,7 @@ pub async fn list_application_files(
         r#"
 SELECT f.id
 , f.name
-, f.file_type
+, f.file_type AS "file_type: FileType"
 , f.created_at
 FROM registration_requests_files AS rrf
 INNER JOIN files AS f ON f.id = rrf.file_id

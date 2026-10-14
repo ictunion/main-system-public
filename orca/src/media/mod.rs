@@ -1,6 +1,6 @@
 use base64::prelude::*;
 use chrono::{DateTime, NaiveDate, Utc};
-use rocket::serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tokio::io;
 
@@ -14,20 +14,19 @@ use thiserror::Error;
 /// Manipulating Base64 images
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct RawBase64<'r>(pub &'r str);
+pub struct RawBase64(pub String);
 
-impl<'a> From<&'a str> for RawBase64<'a> {
-    fn from(value: &'a str) -> Self {
-        Self(value)
+impl From<&str> for RawBase64 {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
     }
 }
 
-impl RawBase64<'_> {
+impl RawBase64 {
     pub fn to_image_data(&self) -> Result<ImageData, Error> {
         // this is how prefix looks like
         // `data:image/png;base64,.....`
-        let value = self.0;
+        let value = self.0.as_str();
 
         // check that we have data:image prefix
         if !value.starts_with("data:image/") {

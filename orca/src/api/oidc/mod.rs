@@ -1,9 +1,12 @@
-use rocket::serde::json::Json;
-use rocket::{Route, State, get, routes};
+use axum::extract::State;
+use axum::routing::get;
+use axum::{Json, Router};
 use serde::Serialize;
+use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::api::{ApiError, Response};
+use crate::api::extract::ApiPath;
+use crate::api::{ApiError, AppState, Response};
 use crate::server::oid::{self, JwtToken, Provider, Role};
 
 #[derive(Debug, Serialize)]
@@ -11,15 +14,14 @@ pub struct OidGroupMember {
     id: Uuid,
 }
 
-#[get("/<group_id>")]
 async fn list_oid_group_members(
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    group_id: &str,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(group_id): ApiPath<String>,
 ) -> Response<Json<Vec<OidGroupMember>>> {
     oid_provider.require_role(&token, Role::SuperPowers)?;
 
-    let group_id = Uuid::parse_str(group_id).map_err(|_err| ApiError::invalid_group_id())?;
+    let group_id = Uuid::parse_str(&group_id).map_err(|_err| ApiError::invalid_group_id())?;
     let ids = oid_provider
         .get_group_members(&token, group_id)
         .await
@@ -31,7 +33,6 @@ async fn list_oid_group_members(
     Ok(Json(members))
 }
 
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn routes() -> Vec<Route> {
-    routes![list_oid_group_members]
+pub(crate) fn router() -> Router<AppState> {
+    Router::new().route("/{group_id}", get(list_oid_group_members))
 }

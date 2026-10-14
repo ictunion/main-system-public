@@ -59,6 +59,7 @@ impl std::fmt::Display for Command {
     }
 }
 
+#[derive(Clone)]
 pub struct QueueSender(Sender<Command>);
 
 #[derive(Debug, Error)]
@@ -206,7 +207,7 @@ async fn process_new_member_created(
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
     let token_string = token_opt.ok_or(ProcessingError::MissingOidToken)?;
-    let token = JwtToken::new(&token_string);
+    let token = JwtToken::new(token_string);
     let oid_user = query::get_member_for_oid(db_pool, member_id).await?;
 
     let sub_uuid = match oid_provider.create_user(&token, &oid_user).await {

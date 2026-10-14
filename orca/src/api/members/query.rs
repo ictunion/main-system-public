@@ -4,7 +4,7 @@ use super::{
     MemberDetail, MemberStatusData, MemberSummary, NewMember, Note, Occupation, UpdateMember,
 };
 use crate::api::files::FileInfo;
-use crate::data::{Id, Member, MemberNumber};
+use crate::data::{FileType, Id, Member, MemberNumber};
 use crate::db::DbPool;
 
 pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<MemberSummary>> {
@@ -286,7 +286,7 @@ where
         r#"
 SELECT f.id
 , f.name
-, f.file_type
+, f.file_type AS "file_type: FileType"
 , f.created_at
 FROM members_files AS mf
 INNER JOIN files AS f ON f.id = mf.file_id

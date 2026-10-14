@@ -1,14 +1,13 @@
-use log::error;
-use rocket::data::FromData;
-use rocket::data::Outcome;
-use rocket::http::Status;
-use rocket::serde::json::Json;
-use rocket::{Data, Request};
-use std::fmt::Debug;
-use thiserror::Error;
-use validator::{Validate, ValidationErrors};
+use axum::extract::{FromRequest, Request};
+use axum::response::Response;
+use serde::de::DeserializeOwned;
+use validator::Validate;
 
-pub(crate) type ValidationErrorsCache = Option<ValidationErrors>;
+use crate::api::errors::validation_error_response;
+use crate::api::extract::ApiJson;
+
+/// JSON request body that passed `validator` checks.
+/// Failed validation is a 422 listing the errors per field.
 pub(crate) struct Validated<T> {
     inner: T,
 }
@@ -23,34 +22,20 @@ impl<T> Validated<T> {
     }
 }
 
-#[derive(Debug, Error)]
-pub(crate) enum ValidatorError {
-    #[error("Deserialization error: {0}")]
-    Deserialization(String),
-    #[error("Validation error: {0}")]
-    ValidationErrors(#[from] ValidationErrors),
-}
+impl<S, T> FromRequest<S> for Validated<T>
+where
+    T: DeserializeOwned + Validate,
+    S: Send + Sync,
+{
+    type Rejection = Response;
 
-#[rocket::async_trait]
-impl<'r, T: rocket::serde::Deserialize<'r> + Validate> FromData<'r> for Validated<Json<T>> {
-    type Error = ValidatorError;
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        let ApiJson(value) = ApiJson::<T>::from_request(req, state).await?;
 
-    async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self, Self::Error> {
-        <Json<T> as FromData<'r>>::from_data(req, data)
-            .await
-            .map_error(|(s, e)| {
-                error!("Failed to parse request: {e}");
-                (s, Self::Error::Deserialization(e.to_string()))
-            })
-            .and_then(|value| {
-                if let Err(e) = value.validate() {
-                    req.local_cache(|| Some(e.clone()));
-                    return Outcome::Error((
-                        Status::UnprocessableEntity,
-                        Self::Error::ValidationErrors(e),
-                    ));
-                }
-                Outcome::Success(Self::new(value))
-            })
+        if let Err(errors) = value.validate() {
+            return Err(validation_error_response(Some(&errors)));
+        }
+
+        Ok(Self::new(value))
     }
 }

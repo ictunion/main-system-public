@@ -74,10 +74,10 @@ module DataVerificationContent = {
   @react.component
   let make = (~api: Api.t, ~modal: Modal.Interface.t, ~membersGroupId: option<Data.Uuid.t>) => {
     let (members, _, reloadMembers) =
-      api->Hook.getData(~path="/members/", ~decoder=Json.Decode.array(MemberData.Decode.summary))
+      api->Hook.getData(~path="/members", ~decoder=Json.Decode.array(MemberData.Decode.summary))
     let (workplaces, _, _) =
       api->Hook.getData(
-        ~path="/workplaces/",
+        ~path="/workplaces",
         ~decoder=Json.Decode.array(WorkplaceData.Decode.summary),
       )
     let (detailView, setDetailView) = React.useState(_ => Overview)

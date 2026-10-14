@@ -1,11 +1,15 @@
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::routing::get;
+use axum::{Json, Router};
 use chrono::NaiveDate;
-use rocket::http::Status;
-use rocket::serde::json::Json;
-use rocket::{Route, State, get, routes, serde::Serialize};
+use serde::Serialize;
+use std::sync::Arc;
 
 mod query;
 
 use super::Response;
+use crate::api::AppState;
 use crate::config::Config;
 use crate::data::MemberNumber;
 use crate::db::DbPool;
@@ -45,27 +49,25 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
         == 0
 }
 
-#[get("/bank/members")]
 async fn list_bank_members(
-    db_pool: &State<DbPool>,
-    config: &State<Config>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(config): State<Arc<Config>>,
+    token: JwtToken,
 ) -> Response<Json<BankSyncMembersResponse>> {
     let expected_token = config
         .bank_sync_token
         .as_deref()
-        .ok_or(Status::Unauthorized)?;
+        .ok_or(StatusCode::UNAUTHORIZED)?;
 
     if !constant_time_eq(token.as_str().as_bytes(), expected_token.as_bytes()) {
-        return Err(Status::Unauthorized.into());
+        return Err(StatusCode::UNAUTHORIZED.into());
     }
 
-    let members = query::list_bank_sync_members(db_pool.inner()).await?;
+    let members = query::list_bank_sync_members(&db_pool).await?;
 
     Ok(Json(BankSyncMembersResponse { members }))
 }
 
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn routes() -> Vec<Route> {
-    routes![list_bank_members]
+pub(crate) fn router() -> Router<AppState> {
+    Router::new().route("/bank/members", get(list_bank_members))
 }

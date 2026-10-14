@@ -1,18 +1,21 @@
 use std::collections::HashMap;
 
+use axum::extract::State;
+use axum::http::StatusCode;
+use axum::routing::{delete, get, patch, post, put};
+use axum::{Json, Router};
 use chrono::{DateTime, NaiveDate, Utc};
 use handlebars::Handlebars;
-use rocket::serde::json::Json;
-use rocket::{Route, State, delete, get, patch, post, put, routes};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
 pub mod query;
 
-use super::ApiError;
-use super::SuccessResponse;
+use super::{ApiError, AppState, SuccessResponse};
 use crate::api::Response;
+use crate::api::extract::{ApiJson, ApiPath};
 use crate::api::files::FileInfo;
 use crate::api::workplaces;
 use crate::data::{Id, Member, MemberNumber};
@@ -40,51 +43,47 @@ pub struct MemberSummary {
     pub(crate) sub: Option<Uuid>,
 }
 
-#[get("/")]
 async fn list_all(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_summaries(db_pool.inner()).await?;
+    let summaries = query::list_summaries(&db_pool).await?;
     Ok(Json(summaries))
 }
 
-#[get("/past")]
 async fn list_past(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_past_summaries(db_pool.inner()).await?;
+    let summaries = query::list_past_summaries(&db_pool).await?;
     Ok(Json(summaries))
 }
 
-#[get("/new")]
 async fn list_new(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_new_summaries(db_pool.inner()).await?;
+    let summaries = query::list_new_summaries(&db_pool).await?;
     Ok(Json(summaries))
 }
 
-#[get("/current")]
 async fn list_current(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<Vec<MemberSummary>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let summaries = query::list_current_summaries(db_pool.inner()).await?;
+    let summaries = query::list_current_summaries(&db_pool).await?;
     Ok(Json(summaries))
 }
 
@@ -104,12 +103,11 @@ pub struct NewMember {
     language: String,
 }
 
-#[post("/", format = "json", data = "<new_member>")]
 async fn create_member(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    new_member: Validated<Json<NewMember>>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    new_member: Validated<NewMember>,
 ) -> Response<Json<MemberSummary>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
@@ -132,7 +130,6 @@ async fn create_member(
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "rocket::serde")]
 pub struct EmailInfo {
     subject: String,
     body: String,
@@ -142,19 +139,17 @@ pub struct EmailInfo {
 const WRAPPER_CS: &str = include_str!("../../../email_templates/member_email_cs.mjml");
 const WRAPPER_EN: &str = include_str!("../../../email_templates/member_email_en.mjml");
 
-#[post("/<id>/send_email", format = "json", data = "<request_email_info>")]
 async fn send_email(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    queue: &State<QueueSender>,
-    token: JwtToken<'_>,
-    request_email_info: Json<EmailInfo>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    State(queue): State<QueueSender>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
+    ApiJson(email_info): ApiJson<EmailInfo>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let email_info = request_email_info.into_inner();
-    let member_detail = query::detail(db_pool.inner(), id).await?;
+    let member_detail = query::detail(&db_pool, id).await?;
 
     let wrapper = match member_detail.language.as_deref() {
         Some("cs") => WRAPPER_CS,
@@ -175,7 +170,6 @@ async fn send_email(
     let email = member_detail.email.as_deref().unwrap_or("").to_string();
 
     queue
-        .inner()
         .send(Command::SendEmailAsTreasurer(
             full_name,
             email_info.subject,
@@ -246,7 +240,7 @@ enum MemberReadScope {
 async fn member_read_scope(
     db_pool: &DbPool,
     oid_provider: &Provider,
-    token: &JwtToken<'_>,
+    token: &JwtToken,
     id: Id<Member>,
 ) -> Result<MemberReadScope, ApiError> {
     let staff_roles = [Role::ListMembers];
@@ -272,16 +266,15 @@ async fn member_read_scope(
     Err(staff_denial.into())
 }
 
-#[get("/<id>")]
 async fn detail(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<MemberDetail>> {
-    let scope = member_read_scope(db_pool.inner(), oid_provider.inner(), &token, id).await?;
+    let scope = member_read_scope(&db_pool, &oid_provider, &token, id).await?;
 
-    let detail = query::detail(db_pool.inner(), id).await?;
+    let detail = query::detail(&db_pool, id).await?;
 
     Ok(Json(match scope {
         MemberReadScope::Full => detail,
@@ -302,16 +295,15 @@ impl MemberStatusData {
     }
 }
 
-#[patch("/<id>/accept")]
 async fn accept(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<MemberDetail>> {
     oid_provider.require_realm_role(&token, RealmManagementRole::ManageUsers)?;
 
-    let status = query::get_status_data(db_pool.inner(), id).await?;
+    let status = query::get_status_data(&db_pool, id).await?;
 
     if status.onboarding_finished_at.is_some() {
         return Err(ApiError::data_conflict("Member is accepted already"));
@@ -321,21 +313,20 @@ async fn accept(
         return Err(ApiError::data_conflict("Past members can't be activated"));
     }
 
-    let detail = query::set_onboarding_finished(db_pool.inner(), id).await?;
+    let detail = query::set_onboarding_finished(&db_pool, id).await?;
 
     Ok(Json(detail))
 }
 
-#[get("/<id>/files")]
 async fn list_files(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<Vec<FileInfo>>> {
     oid_provider.require_role(&token, Role::ListMembers)?;
 
-    let files = query::list_member_files(db_pool.inner(), id).await?;
+    let files = query::list_member_files(&db_pool, id).await?;
 
     Ok(Json(files))
 }
@@ -375,30 +366,26 @@ impl OccupationSource {
     }
 }
 
-#[get("/<id>/occupations")]
 async fn list_occupations(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<Vec<Occupation>>> {
     // Staff see the full employment history; a workplace executive sees only the
     // member's current occupation -- enough to know where a colleague works now,
     // without a record of previous employers.
-    let scope = member_read_scope(db_pool.inner(), oid_provider.inner(), &token, id).await?;
+    let scope = member_read_scope(&db_pool, &oid_provider, &token, id).await?;
 
     let occupations = match scope {
-        MemberReadScope::Full => query::list_occupations(db_pool.inner(), id).await?,
-        MemberReadScope::WorkplaceExecutive => {
-            query::latest_occupation(db_pool.inner(), id).await?
-        }
+        MemberReadScope::Full => query::list_occupations(&db_pool, id).await?,
+        MemberReadScope::WorkplaceExecutive => query::latest_occupation(&db_pool, id).await?,
     };
 
     Ok(Json(occupations))
 }
 
 #[derive(Debug, Deserialize, Validate)]
-#[serde(crate = "rocket::serde")]
 pub struct NewOccupation {
     #[validate(required)]
     #[validate(custom(function = "super::validate_non_empty"))]
@@ -411,19 +398,18 @@ pub struct NewOccupation {
     source: Option<String>,
 }
 
-#[post("/<id>/occupations", format = "json", data = "<data>")]
 async fn create_occupation(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
-    data: Validated<Json<NewOccupation>>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
+    data: Validated<NewOccupation>,
 ) -> Response<Json<Occupation>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let data = data.into_inner().into_inner();
+    let data = data.into_inner();
     let occupation = query::create_occupation(
-        db_pool.inner(),
+        &db_pool,
         id,
         data.company_name.as_deref().expect("validated"),
         data.position.as_deref().expect("validated"),
@@ -434,44 +420,39 @@ async fn create_occupation(
     Ok(Json(occupation))
 }
 
-#[delete("/<id>/occupations/<occupation_id>")]
 async fn delete_occupation(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
-    occupation_id: Id<Occupation>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath((id, occupation_id)): ApiPath<(Id<Member>, Id<Occupation>)>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    query::delete_occupation(db_pool.inner(), id, occupation_id).await?;
+    query::delete_occupation(&db_pool, id, occupation_id).await?;
 
     Ok(SuccessResponse::Accepted)
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "rocket::serde")]
 pub struct Note {
     note: Option<String>,
 }
 
-#[patch("/<id>/note", format = "json", data = "<note>")]
 async fn update_note(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
-    note: Json<Note>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
+    ApiJson(note): ApiJson<Note>,
 ) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::update_member_note(db_pool.inner(), id, &note).await?;
+    let detail = query::update_member_note(&db_pool, id, &note).await?;
 
     Ok(Json(detail))
 }
 
 #[derive(Debug, Deserialize, Validate)]
-#[serde(crate = "rocket::serde")]
 pub struct UpdateMember {
     first_name: Option<String>,
     last_name: Option<String>,
@@ -487,27 +468,25 @@ pub struct UpdateMember {
     language: String,
 }
 
-#[patch("/<id>", format = "json", data = "<data>")]
 async fn update_member(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
-    data: Validated<Json<UpdateMember>>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
+    data: Validated<UpdateMember>,
 ) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let result = query::update_member(db_pool.inner(), id, data.into_inner().into_inner()).await?;
+    let result = query::update_member(&db_pool, id, data.into_inner()).await?;
 
     Ok(Json(result))
 }
 
-#[delete("/<id>", format = "json")]
 async fn remove_member(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
@@ -517,7 +496,7 @@ async fn remove_member(
 
     // Remove from keycloak if paired
     if let Some(uuid) = status.sub {
-        oid_provider.inner().remove_user(&token, uuid).await?;
+        oid_provider.remove_user(&token, uuid).await?;
     }
 
     if status.left_at.is_some() {
@@ -535,16 +514,15 @@ async fn remove_member(
     Ok(Json(detail))
 }
 
-#[get("/<id>/list_candidate_users")]
 async fn list_candidate_users(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<Vec<User>>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::detail(db_pool.inner(), id).await?;
+    let detail = query::detail(&db_pool, id).await?;
 
     match detail.email {
         Some(email) => Ok(Json(oid_provider.get_matching_users(&token, email).await?)),
@@ -553,29 +531,26 @@ async fn list_candidate_users(
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(crate = "rocket::serde")]
 struct PairRequest {
     sub: Uuid,
 }
 
-#[post("/<id>/create_oid_account")]
 async fn create_oid_account(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    queue: &State<QueueSender>,
-    id: Id<Member>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    State(queue): State<QueueSender>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let status = query::get_status_data(db_pool.inner(), id).await?;
+    let status = query::get_status_data(&db_pool, id).await?;
 
     if status.sub().is_some() {
         return Err(ApiError::data_conflict("Member already has an OID account"));
     }
 
     queue
-        .inner()
         .send(Command::NewMemberCreated(
             id,
             Some(token.as_str().to_owned()),
@@ -585,19 +560,17 @@ async fn create_oid_account(
     Ok(SuccessResponse::Accepted)
 }
 
-#[put("/<id>/oidc_groups/<group_id>")]
 async fn add_to_oid_group(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
-    group_id: &str,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath((id, group_id)): ApiPath<(Id<Member>, String)>,
 ) -> Response<SuccessResponse> {
     oid_provider.require_role(&token, Role::SuperPowers)?;
 
-    let group_id = Uuid::parse_str(group_id).map_err(|_err| rocket::http::Status::BadRequest)?;
+    let group_id = Uuid::parse_str(&group_id).map_err(|_err| StatusCode::BAD_REQUEST)?;
 
-    let status = query::get_status_data(db_pool.inner(), id).await?;
+    let status = query::get_status_data(&db_pool, id).await?;
     let sub = status
         .sub()
         .ok_or_else(|| ApiError::data_conflict("Member has no OID account"))?;
@@ -609,42 +582,44 @@ async fn add_to_oid_group(
     Ok(SuccessResponse::Accepted)
 }
 
-#[patch("/<id>/pair_oid", format = "json", data = "<data>")]
 async fn pair_oid(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
-    id: Id<Member>,
-    data: Json<PairRequest>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Member>>,
+    ApiJson(data): ApiJson<PairRequest>,
 ) -> Response<Json<MemberDetail>> {
     oid_provider.require_role(&token, Role::ManageMembers)?;
 
-    let detail = query::assign_member_oid_sub(db_pool.inner(), id, data.sub).await?;
+    let detail = query::assign_member_oid_sub(&db_pool, id, data.sub).await?;
 
     Ok(Json(detail))
 }
 
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn routes() -> Vec<Route> {
-    routes![
-        list_all,
-        list_past,
-        list_new,
-        list_current,
-        create_member,
-        send_email,
-        list_files,
-        list_occupations,
-        create_occupation,
-        delete_occupation,
-        detail,
-        accept,
-        update_note,
-        update_member,
-        remove_member,
-        list_candidate_users,
-        add_to_oid_group,
-        pair_oid,
-        create_oid_account,
-    ]
+pub(crate) fn router() -> Router<AppState> {
+    Router::new()
+        .route("/", get(list_all).post(create_member))
+        .route("/past", get(list_past))
+        .route("/new", get(list_new))
+        .route("/current", get(list_current))
+        .route("/{id}/send_email", post(send_email))
+        .route(
+            "/{id}",
+            get(detail).patch(update_member).delete(remove_member),
+        )
+        .route("/{id}/accept", patch(accept))
+        .route("/{id}/files", get(list_files))
+        .route(
+            "/{id}/occupations",
+            get(list_occupations).post(create_occupation),
+        )
+        .route(
+            "/{id}/occupations/{occupation_id}",
+            delete(delete_occupation),
+        )
+        .route("/{id}/note", patch(update_note))
+        .route("/{id}/list_candidate_users", get(list_candidate_users))
+        .route("/{id}/create_oid_account", post(create_oid_account))
+        .route("/{id}/oidc_groups/{group_id}", put(add_to_oid_group))
+        .route("/{id}/pair_oid", patch(pair_oid))
 }

@@ -1,12 +1,14 @@
-//! We use rocket and sqlx so please refer to documentation of these 2 creates
+//! We use axum and sqlx so please refer to documentation of these 2 crates
+//!
+//! ## Client IP
+//! The client IP recorded for registrations is taken from the `X-Real-IP`
+//! header when present, otherwise from the connection. The header is always
+//! trusted, so Orca must only be reachable through a reverse proxy that sets it.
 //!
 //! ## Features
-//! some configuration is done by compile time configuration
-//!
 //! ### Reverse Proxy Support
-//! If your server runs behind reverse proxy you trust
-//! You should enable `proxy-support` feature.
-//! This means value from `X-Real-IP` header will be trusted.
+//! The `proxy-support` feature only reports `proxy_support_enabled` in `/status`;
+//! it does not change how the client IP is read.
 //! ```
 //! cargo build --features proxy-support
 //! ```
@@ -14,7 +16,7 @@
 use orca::config::Config;
 use orca::{StartupError, start};
 
-#[rocket::main]
+#[tokio::main]
 async fn main() -> Result<(), Box<StartupError>> {
     // Read cofiguration
     let config = Config::get();

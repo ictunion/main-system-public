@@ -1,6 +1,4 @@
-use rocket::serde::Deserializer;
-use rocket::{request::FromParam, serde::Serialize};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer, Serialize};
 use sqlx::encode::IsNull;
 use sqlx::{Decode, Encode, Postgres, Type};
 use std::error::Error;
@@ -10,7 +8,7 @@ use uuid::Uuid;
 
 type EncodeResult = Result<IsNull, Box<dyn Error + Sync + Send>>;
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy)]
 pub struct Id<T>(Uuid, PhantomData<T>);
 
 impl<T> From<Uuid> for Id<T> {
@@ -46,11 +44,13 @@ impl<T> Serialize for Id<T> {
     }
 }
 
-impl<'a, T> FromParam<'a> for Id<T> {
-    type Error = uuid::Error;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        let uuid = Uuid::parse_str(param)?;
+/// Deserializes from a UUID string, the same way it serializes
+impl<'de, T> Deserialize<'de> for Id<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let uuid = Uuid::deserialize(deserializer)?;
         Ok(Id(uuid, PhantomData))
     }
 }
@@ -165,5 +165,101 @@ impl<'q> Encode<'q, Postgres> for MemberNumber {
         buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
     ) -> EncodeResult {
         <i32 as Encode<Postgres>>::encode(self.0, buf)
+    }
+}
+
+/// Every file type we know how to store in and serve from the `files` table.
+/// Stored as a normalized extension (see gray-whale V3 migration).
+///
+/// Adding a variant here is the one place to change when we start storing
+/// a new kind of file (together with the `files_file_type_check` constraint
+/// in the database). Unknown values fail loudly: encoding can't produce them
+/// and decoding one from the database is a column decode error (500).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileType {
+    Png,
+    Jpg,
+    Pdf,
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("unsupported file type '{0}'")]
+pub struct UnsupportedFileType(pub String);
+
+impl FileType {
+    pub fn extension(self) -> &'static str {
+        match self {
+            FileType::Png => "png",
+            FileType::Jpg => "jpg",
+            FileType::Pdf => "pdf",
+        }
+    }
+
+    pub fn mime_type(self) -> &'static str {
+        match self {
+            FileType::Png => "image/png",
+            FileType::Jpg => "image/jpeg",
+            FileType::Pdf => "application/pdf",
+        }
+    }
+}
+
+impl std::str::FromStr for FileType {
+    type Err = UnsupportedFileType;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "png" => Ok(FileType::Png),
+            "jpg" | "jpeg" => Ok(FileType::Jpg),
+            "pdf" => Ok(FileType::Pdf),
+            other => Err(UnsupportedFileType(other.to_string())),
+        }
+    }
+}
+
+impl Display for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        f.write_str(self.extension())
+    }
+}
+
+impl Serialize for FileType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.extension().serialize(serializer)
+    }
+}
+
+impl Type<Postgres> for FileType {
+    fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
+        <&str as Type<Postgres>>::type_info()
+    }
+
+    fn compatible(ty: &<Postgres as sqlx::Database>::TypeInfo) -> bool {
+        <&str as Type<Postgres>>::compatible(ty)
+    }
+}
+
+impl<'r> Decode<'r, Postgres> for FileType
+where
+    &'r str: Decode<'r, Postgres>,
+{
+    fn decode(
+        value: <Postgres as sqlx::Database>::ValueRef<'r>,
+    ) -> Result<FileType, Box<dyn Error + 'static + Send + Sync>> {
+        let value = <&str as Decode<Postgres>>::decode(value)?;
+
+        Ok(value.parse()?)
+    }
+}
+
+impl<'q> Encode<'q, Postgres> for FileType {
+    fn encode_by_ref(
+        &self,
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> EncodeResult {
+        <&str as Encode<Postgres>>::encode(self.extension(), buf)
     }
 }

@@ -1,28 +1,34 @@
 use core::fmt::Display;
 use std::convert::Infallible;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 
 pub mod cors;
 pub mod jwk;
 pub mod oid;
 
-#[cfg(feature = "proxy-support")]
-use std::str::FromStr;
-
-use rocket::request::{FromRequest, Outcome, Request};
+use axum::extract::{ConnectInfo, FromRequestParts};
+use axum::http::StatusCode;
+use axum::http::header::USER_AGENT;
+use axum::http::request::Parts;
+use log::error;
 use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, sqlx::Type)]
+use crate::api::ApiError;
+
+#[derive(Debug, Clone, sqlx::Type)]
 #[sqlx(transparent)]
-pub struct UserAgent<'a>(Option<&'a str>);
+pub struct UserAgent(Option<String>);
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for UserAgent<'r> {
-    type Error = Infallible;
+impl<S: Send + Sync> FromRequestParts<S> for UserAgent {
+    type Rejection = Infallible;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let key = request.headers().get_one("user-agent");
-        Outcome::Success(UserAgent(key))
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let key = parts
+            .headers
+            .get(USER_AGENT)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string);
+        Ok(UserAgent(key))
     }
 }
 
@@ -45,31 +51,29 @@ impl Serialize for IpAddress {
     }
 }
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for IpAddress {
-    type Error = Infallible;
+impl<S: Send + Sync> FromRequestParts<S> for IpAddress {
+    type Rejection = ApiError;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        cfg_if::cfg_if! {
-            // Trust x-real-ip header if present
-            if #[cfg(feature="proxy-support")] {
-                let header_val: Option<IpAddress> = request
-                    .headers()
-                    .get_one("x-real-ip")
-                    .and_then(|val| IpAddr::from_str(val).ok())
-                    .map(IpAddress);
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        // Trust x-real-ip header if present, regardless of the `proxy-support`
+        // feature. This is what Rocket did (its `ip_header` defaults to X-Real-IP).
+        let header_val: Option<IpAddress> = parts
+            .headers
+            .get("x-real-ip")
+            .and_then(|val| val.to_str().ok())
+            .and_then(|val| val.parse::<IpAddr>().ok())
+            .map(IpAddress);
 
-                match header_val {
-                    Some(val) => Outcome::Success(val),
-                    None => {
-                        let outcome = IpAddr::from_request(request).await;
-                        outcome.map(IpAddress)
-                    }
-                }
-            } else {
-                let outcome = IpAddr::from_request(request).await;
-                outcome.map(IpAddress)
-            }
+        if let Some(val) = header_val {
+            return Ok(val);
         }
+
+        // Present when served with `into_make_service_with_connect_info`
+        let Some(ConnectInfo(addr)) = parts.extensions.get::<ConnectInfo<SocketAddr>>() else {
+            error!("Client address is missing, is the server started with connect info?");
+            return Err(ApiError::Status(StatusCode::INTERNAL_SERVER_ERROR));
+        };
+
+        Ok(IpAddress(addr.ip()))
     }
 }

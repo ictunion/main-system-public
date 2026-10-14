@@ -1,32 +1,17 @@
-use rocket::fairing::{Fairing, Info, Kind};
-use rocket::http::{Header, Method, Status};
-use rocket::{Request, Response};
+use axum::http::Method;
+use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use tower_http::cors::{Any, CorsLayer};
 
-pub struct Cors;
-
-#[rocket::async_trait]
-impl Fairing for Cors {
-    fn info(&self) -> Info {
-        Info {
-            name: "Add CORS headers to responses",
-            kind: Kind::Response,
-        }
-    }
-
-    async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
-        if request.method() == Method::Options {
-            response.set_status(Status::NoContent);
-            response.set_header(Header::new(
-                "Access-Control-Allow-Methods",
-                "POST, PUT, PATCH, GET, DELETE",
-            ));
-            response.set_header(Header::new(
-                "Access-Control-Allow-Headers",
-                "Authorization, Content-Type, Accept",
-            ));
-        }
-
-        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
-        response.set_header(Header::new("Access-Control-Allow-Credentials", "false"));
-    }
+/// CORS headers for all responses, answers preflight requests
+pub fn layer() -> CorsLayer {
+    CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::GET,
+            Method::DELETE,
+        ])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT])
 }

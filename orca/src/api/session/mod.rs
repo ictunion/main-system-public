@@ -1,7 +1,11 @@
-use rocket::serde::{Serialize, json::Json};
-use rocket::{Route, State, get, post, routes};
+use axum::extract::State;
+use axum::routing::{get, post};
+use axum::{Json, Router};
+use serde::Serialize;
+use std::sync::Arc;
 
 use super::{ApiError, Response};
+use crate::api::AppState;
 use crate::data::{Id, Member};
 use crate::db::DbPool;
 use crate::server::oid::{JwtClaims, JwtToken, Provider};
@@ -12,15 +16,14 @@ struct SessionInfo {
     member_id: Option<Id<Member>>,
 }
 
-#[get("/current", format = "json")]
 async fn current(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<SessionInfo>> {
-    let token_data = oid_provider.inner().decode_jwt(&token)?;
+    let token_data = oid_provider.decode_jwt(&token)?;
 
-    let member_id = get_user_id(db_pool.inner(), &token_data.claims).await?;
+    let member_id = get_user_id(&db_pool, &token_data.claims).await?;
 
     let session_info = SessionInfo {
         token_claims: token_data.claims,
@@ -30,21 +33,20 @@ async fn current(
     Ok(Json(session_info))
 }
 
-#[post("/current/pair-by-email", format = "json")]
 async fn pair_by_email(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-    token: JwtToken<'_>,
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
 ) -> Response<Json<SessionInfo>> {
     // TODO: should we require some role for this action?
     // in a way we're already trusting token so maybe we can also just
     // let any member assing themselves.
-    let token_data = oid_provider.inner().decode_jwt(&token)?;
+    let token_data = oid_provider.decode_jwt(&token)?;
 
-    let member_id = get_user_id(db_pool.inner(), &token_data.claims).await?;
+    let member_id = get_user_id(&db_pool, &token_data.claims).await?;
 
     if member_id.is_none() {
-        let member_id = set_pairing_by_email(db_pool.inner(), &token_data.claims).await?;
+        let member_id = set_pairing_by_email(&db_pool, &token_data.claims).await?;
 
         let session_info = SessionInfo {
             token_claims: token_data.claims,
@@ -74,7 +76,8 @@ async fn set_pairing_by_email(pool: &DbPool, claims: &JwtClaims) -> sqlx::Result
     .await
     .map(Id::from)
 }
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn routes() -> Vec<Route> {
-    routes![current, pair_by_email]
+pub(crate) fn router() -> Router<AppState> {
+    Router::new()
+        .route("/current", get(current))
+        .route("/current/pair-by-email", post(pair_by_email))
 }

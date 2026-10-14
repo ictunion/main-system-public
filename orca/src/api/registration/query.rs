@@ -1,15 +1,15 @@
 use super::RegistrationRequest;
-use crate::data::{self, Id};
+use crate::data::{self, FileType, Id};
 use crate::db::DbPool;
 use crate::media::ImageData;
 use crate::server::{IpAddress, UserAgent};
 
-pub async fn create_join_request<'r>(
+pub async fn create_join_request(
     pool: &DbPool,
     ip_addr: IpAddress,
-    user_agent: UserAgent<'r>,
+    user_agent: &UserAgent,
     confirmation_token: String,
-    user: &RegistrationRequest<'r>,
+    user: &RegistrationRequest,
 ) -> sqlx::Result<Id<data::RegistrationRequest>> {
     sqlx::query_scalar!(
         r#"
@@ -73,6 +73,11 @@ pub async fn create_signature_file(
     reg_id: Id<data::RegistrationRequest>,
     image: &ImageData,
 ) -> sqlx::Result<()> {
+    let file_type: FileType = image
+        .image_type
+        .parse()
+        .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+
     sqlx::query!(
         r#"
 WITH rows AS
@@ -90,7 +95,7 @@ INSERT INTO registration_requests_files
     SELECT $3 as registration_request_id, id
     FROM rows
 "#,
-        &image.image_type,
+        file_type as _,
         image.to_vec(),
         reg_id as _,
     )

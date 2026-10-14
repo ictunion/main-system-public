@@ -33,9 +33,16 @@ Copy example configuration file
 cp Rocket.example.toml Rocket.toml
 ```
 
-Please refer to example configuration file and rocket documentation for documentation on configuration.
+Please refer to the example configuration file for the available settings.
+Values in the `[global]` table can be overridden with `ROCKET_*` environment
+variables (e.g. `ROCKET_PORT=8001`). The file and prefix keep their Rocket-era
+names for compatibility. Server settings: `address`, `port`, `log_level`
+(`off`, `critical`, `normal`, `debug`) and `limits.json` (max JSON body size
+in bytes, an integer).
 
-We also use cargo features for compile time configuration like:
+The client IP recorded for registrations comes from the `X-Real-IP` header
+when present (always trusted), otherwise from the connection. The
+`proxy-support` cargo feature only sets `proxy_support_enabled` in `/status`:
 
 ```
 cargo build --features proxy-support
@@ -99,7 +106,7 @@ rustup update
 Orca uses [Cargo](https://doc.rust-lang.org/cargo/) as a build tool.
 Main dependecies are:
 
-- [Rocket](https://rocket.rs/) web server framework
+- [axum](https://github.com/tokio-rs/axum) web server framework
 - [sqlx](https://crates.io/crates/sqlx) sql driver
 
 We use sqlx compile-time check for SQL queries `query_as!`. This requires you to run `DATABASE_URL=postgres://orca@localhost/ictunion cargo sqlx prepare` command after every scheme update/migration or when changing queries in the code. Don't forget to commit the files created be this command.

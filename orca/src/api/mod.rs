@@ -1,13 +1,20 @@
+use std::sync::Arc;
+
+use axum::extract::{DefaultBodyLimit, FromRef, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::routing::get;
+use axum::{Json, Router, middleware};
 use log::{error, warn};
-use rocket::response::{self, Responder};
-use rocket::serde::{Serialize, json::Json};
-use rocket::{Build, Request, Rocket, State, catchers, get, routes};
+use serde::Serialize;
+use serde_json::json;
 use thiserror::Error;
 use tokio::task::JoinError;
 use validator::ValidationError;
 
 pub(crate) mod applications;
-mod errors;
+pub(crate) mod errors;
+pub(crate) mod extract;
 mod files;
 mod members;
 mod oidc;
@@ -17,10 +24,46 @@ mod stats;
 mod sync;
 mod workplaces;
 
-use crate::api::errors::validation_error;
+use crate::api::errors::error_response;
+use crate::config::Config;
 use crate::db::{self, DbPool};
-use crate::processing::SenderError;
+use crate::processing::{QueueSender, SenderError};
 use crate::server::oid::{self, Provider};
+use crate::{logging, server};
+
+/// Shared state of all handlers; each field can be extracted on its own
+/// with `State<T>`
+#[derive(Clone)]
+pub(crate) struct AppState {
+    pub(crate) db: DbPool,
+    pub(crate) queue: QueueSender,
+    pub(crate) config: Arc<Config>,
+    pub(crate) provider: Arc<Provider>,
+}
+
+impl FromRef<AppState> for DbPool {
+    fn from_ref(input: &AppState) -> Self {
+        input.db.clone()
+    }
+}
+
+impl FromRef<AppState> for QueueSender {
+    fn from_ref(input: &AppState) -> Self {
+        input.queue.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<Config> {
+    fn from_ref(input: &AppState) -> Self {
+        Arc::clone(&input.config)
+    }
+}
+
+impl FromRef<AppState> for Arc<Provider> {
+    fn from_ref(input: &AppState) -> Self {
+        Arc::clone(&input.provider)
+    }
+}
 
 #[derive(Debug)]
 pub struct SqlError(sqlx::Error);
@@ -31,21 +74,20 @@ impl From<sqlx::Error> for SqlError {
     }
 }
 
-impl<'r> Responder<'r, 'static> for SqlError {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        use rocket::http::Status;
+impl IntoResponse for SqlError {
+    fn into_response(self) -> axum::response::Response {
         use sqlx::error::Error::{PoolTimedOut, RowNotFound};
 
         error!("SQL Error: {self:?}");
 
         if db::is_conflict(&self.0) {
-            return Err(Status::Conflict);
+            return error_response(StatusCode::CONFLICT);
         }
 
         match self.0 {
-            RowNotFound => Err(Status::NotFound),
-            PoolTimedOut => Err(Status::ServiceUnavailable),
-            _ => Err(Status::InternalServerError),
+            RowNotFound => error_response(StatusCode::NOT_FOUND),
+            PoolTimedOut => error_response(StatusCode::SERVICE_UNAVAILABLE),
+            _ => error_response(StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
 }
@@ -54,87 +96,84 @@ impl<'r> Responder<'r, 'static> for SqlError {
 #[error(transparent)]
 pub struct ThreadingError(#[from] JoinError);
 
-impl<'r> Responder<'r, 'static> for ThreadingError {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+impl IntoResponse for ThreadingError {
+    fn into_response(self) -> axum::response::Response {
         error!("Threading Error: {self:?}");
 
-        Err(rocket::http::Status::InternalServerError)
+        error_response(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 
-impl<'r> Responder<'r, 'static> for SenderError {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+impl IntoResponse for SenderError {
+    fn into_response(self) -> axum::response::Response {
         error!("Sender Error: {self:?}");
 
-        Err(rocket::http::Status::InternalServerError)
+        error_response(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 
-impl<'r> Responder<'r, 'static> for oid::Error {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
+impl IntoResponse for oid::Error {
+    fn into_response(self) -> axum::response::Response {
         use oid::Error::{
             BadKey, BadToken, Disabled, Http, MissingOneOfRoles, MissingRealmRole, MissingRole,
             Parsing, Proxy,
         };
-        use rocket::http::Status;
 
         warn!("JWT verification failed with {self:?}");
 
-        match self {
-            Disabled => Err(Status::NotFound),
-            BadKey(_) | Parsing(_) => Err(Status::InternalServerError),
-            MissingRole(_) | MissingRealmRole(_) | MissingOneOfRoles(_) => Err(Status::Forbidden),
-            BadToken(_) => Err(Status::Unauthorized),
-            Http(_) => Err(Status::BadGateway),
-            Proxy(status_code) => Err(Status {
-                code: status_code.as_u16(),
-            }),
-        }
+        let status = match self {
+            Disabled => StatusCode::NOT_FOUND,
+            BadKey(_) | Parsing(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            MissingRole(_) | MissingRealmRole(_) | MissingOneOfRoles(_) => StatusCode::FORBIDDEN,
+            BadToken(_) => StatusCode::UNAUTHORIZED,
+            Http(_) => StatusCode::BAD_GATEWAY,
+            Proxy(status_code) => StatusCode::from_u16(status_code.as_u16())
+                .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+        };
+
+        error_response(status)
     }
 }
 
 #[derive(Debug)]
 pub struct CustomError {
-    status: rocket::http::Status,
-    json: rocket::serde::json::Value,
+    status: StatusCode,
+    json: serde_json::Value,
 }
 
-impl<'r> Responder<'r, 'static> for CustomError {
-    fn respond_to(self, _request: &'r Request<'_>) -> response::Result<'static> {
-        use rocket::http::ContentType;
-        use rocket::response::Response;
-        use std::io::Cursor;
-
-        let body = self.json.to_string();
-
-        Response::build()
-            .header(ContentType::JSON)
-            .status(self.status)
-            .sized_body(body.len(), Cursor::new(body))
-            .ok()
+impl IntoResponse for CustomError {
+    fn into_response(self) -> axum::response::Response {
+        (self.status, Json(self.json)).into_response()
     }
 }
 
-#[derive(Debug, Responder)]
+#[derive(Debug)]
 pub enum ApiError {
     DbErr(SqlError),
-    Status(rocket::http::Status),
-    #[response(status = 500)]
+    Status(StatusCode),
     ThreadFail(ThreadingError),
-    #[response(status = 500)]
     QueueSender(Box<SenderError>),
-    #[response(status = 401)]
     InvalidToken(Box<oid::Error>),
     Custom(CustomError),
 }
 
+impl IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            Self::DbErr(err) => err.into_response(),
+            Self::Status(status) => error_response(status),
+            Self::ThreadFail(err) => err.into_response(),
+            Self::QueueSender(err) => err.into_response(),
+            Self::InvalidToken(err) => err.into_response(),
+            Self::Custom(err) => err.into_response(),
+        }
+    }
+}
+
 impl ApiError {
     pub fn data_conflict(description: &str) -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let custom_error = CustomError {
-            status: Status::Conflict,
+            status: StatusCode::CONFLICT,
             json: json!(
             {
                 "error": {
@@ -150,11 +189,8 @@ impl ApiError {
     }
 
     pub fn invalid_group_id() -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let custom_error = CustomError {
-            status: Status::BadRequest,
+            status: StatusCode::BAD_REQUEST,
             json: json!(
             {
                 "error": {
@@ -170,11 +206,8 @@ impl ApiError {
     }
 
     pub fn oidc_group_not_found() -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let custom_error = CustomError {
-            status: Status::BadRequest,
+            status: StatusCode::BAD_REQUEST,
             json: json!(
             {
                 "error": {
@@ -190,11 +223,8 @@ impl ApiError {
     }
 
     pub fn keycloak_push(description: &str) -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let custom_error = CustomError {
-            status: Status::InternalServerError,
+            status: StatusCode::INTERNAL_SERVER_ERROR,
             json: json!(
             {
                 "error": {
@@ -210,11 +240,8 @@ impl ApiError {
     }
 
     pub fn listmonk_error(description: &str) -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let custom_error = CustomError {
-            status: Status::InternalServerError,
+            status: StatusCode::INTERNAL_SERVER_ERROR,
             json: json!(
             {
                 "error": {
@@ -230,13 +257,10 @@ impl ApiError {
     }
 
     pub fn config_missing(item: &'static str) -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let description = format!("Missing {item}");
 
         let custom_error = CustomError {
-            status: Status::Conflict,
+            status: StatusCode::CONFLICT,
             json: json!(
             {
                 "error": {
@@ -250,13 +274,10 @@ impl ApiError {
         Self::Custom(custom_error)
     }
     pub fn data_missing(item: &'static str) -> ApiError {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
-
         let description = format!("Missing {item}");
 
         let custom_error = CustomError {
-            status: Status::Conflict,
+            status: StatusCode::CONFLICT,
             json: json!(
             {
                 "error": {
@@ -278,12 +299,10 @@ impl From<sqlx::Error> for ApiError {
 
 impl From<reqwest::Error> for ApiError {
     fn from(err: reqwest::Error) -> Self {
-        use rocket::http::Status;
-        use rocket::serde::json::json;
         let description = format!("Got {err}");
 
         let custom_error = CustomError {
-            status: Status::ServiceUnavailable,
+            status: StatusCode::SERVICE_UNAVAILABLE,
             json: json!(
             {
                 "error": {
@@ -298,8 +317,8 @@ impl From<reqwest::Error> for ApiError {
     }
 }
 
-impl From<rocket::http::Status> for ApiError {
-    fn from(status: rocket::http::Status) -> Self {
+impl From<StatusCode> for ApiError {
+    fn from(status: StatusCode) -> Self {
         Self::Status(status)
     }
 }
@@ -323,23 +342,22 @@ impl From<oid::Error> for ApiError {
 }
 
 #[derive(Debug, Serialize)]
-struct StatusResponse<'a> {
+struct StatusResponse {
     http_status: u32,
-    http_message: &'a str,
+    http_message: &'static str,
     authorization_connected: bool,
     database_connected: bool,
     proxy_support_enabled: bool,
 }
 
-#[get("/status")]
-async fn status_api<'a>(
-    db_pool: &State<DbPool>,
-    oid_provider: &State<Provider>,
-) -> Json<StatusResponse<'a>> {
+async fn status_api(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+) -> Json<StatusResponse> {
     let authorization_connected = oid_provider.is_connected();
 
     let database_connected = sqlx::query_scalar!("SELECT TRUE")
-        .fetch_one(db_pool.inner())
+        .fetch_one(&db_pool)
         .await
         .is_ok();
 
@@ -361,33 +379,40 @@ async fn status_api<'a>(
     })
 }
 
-#[expect(clippy::redundant_type_annotations, reason = "rocket macro expansion")]
-pub fn build() -> Rocket<Build> {
-    rocket::build()
-        .mount("/", routes![status_api])
-        .mount("/registration", registration::routes())
-        .register("/registration", catchers![validation_error])
-        .mount("/applications", applications::routes())
-        .register("/applications", errors::catchers())
-        .mount("/session", session::routes())
-        .register("/session", errors::catchers())
-        .mount("/stats", stats::routes())
-        .register("/stats", errors::catchers())
-        .mount("/members", members::routes())
-        .register("/members", errors::catchers())
-        .mount("/oidc", oidc::routes())
-        .register("/oidc", errors::catchers())
-        .mount("/workplaces", workplaces::routes())
-        .register("/workplaces", errors::catchers())
-        .mount("/sync", sync::routes())
-        .register("/sync", errors::catchers())
-        // Files use default catchers
-        .mount("/files", files::routes())
+async fn not_found() -> axum::response::Response {
+    error_response(StatusCode::NOT_FOUND)
+}
+
+async fn method_not_allowed() -> axum::response::Response {
+    error_response(StatusCode::METHOD_NOT_ALLOWED)
+}
+
+pub(crate) fn router(state: AppState) -> Router {
+    let json_limit = state.config.json_limit;
+
+    Router::new()
+        .route("/status", get(status_api))
+        .nest("/registration", registration::router())
+        .nest("/applications", applications::router())
+        .nest("/session", session::router())
+        .nest("/stats", stats::router())
+        .nest("/members", members::router())
+        .nest("/oidc", oidc::router())
+        .nest("/workplaces", workplaces::router())
+        .nest("/sync", sync::router())
+        .nest("/files", files::router())
+        .fallback(not_found)
+        // Must come after all routes: it only applies to routes added before it
+        .method_not_allowed_fallback(method_not_allowed)
+        .layer(DefaultBodyLimit::max(json_limit))
+        .layer(server::cors::layer())
+        .layer(middleware::from_fn(logging::log_request))
+        .with_state(state)
 }
 
 pub type Response<T> = Result<T, ApiError>;
 
-/// This is pretty much a wrapper for `Status`
+/// This is pretty much a wrapper for `StatusCode`
 /// which doesn't allow for response body content
 /// since it standardizes it for common cases.
 #[derive(Debug)]
@@ -403,25 +428,26 @@ pub struct OkResponse<'a> {
     message: &'a str,
 }
 
-impl<'r> Responder<'r, 'static> for SuccessResponse {
-    fn respond_to(self, request: &'r Request<'_>) -> response::Result<'static> {
-        use rocket::response::status;
-
+impl IntoResponse for SuccessResponse {
+    fn into_response(self) -> axum::response::Response {
         match self {
-            Self::Accepted => status::Accepted(Some(Json(OkResponse {
-                status: 202,
-                message: "Accepted",
-            })))
-            .respond_to(request),
-            Self::Created => status::Custom(
-                rocket::http::Status::Created,
+            Self::Accepted => (
+                StatusCode::ACCEPTED,
+                Json(OkResponse {
+                    status: 202,
+                    message: "Accepted",
+                }),
+            )
+                .into_response(),
+            Self::Created => (
+                StatusCode::CREATED,
                 Json(OkResponse {
                     status: 201,
                     message: "Created",
                 }),
             )
-            .respond_to(request),
-            Self::NoContent => status::NoContent.respond_to(request),
+                .into_response(),
+            Self::NoContent => StatusCode::NO_CONTENT.into_response(),
         }
     }
 }

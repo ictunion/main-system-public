@@ -1,5 +1,4 @@
 use reqwest::Client;
-use rocket::serde::json;
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
@@ -113,8 +112,8 @@ async fn get_subscriber_id_by_email(
         return Err(ApiError::listmonk_error(&text));
     }
 
-    let parsed: ListmonkSubscribersResponse =
-        json::from_str(&text).map_err(|_ignored| ApiError::data_missing("Listmonk.Subscribers"))?;
+    let parsed: ListmonkSubscribersResponse = serde_json::from_str(&text)
+        .map_err(|_ignored| ApiError::data_missing("Listmonk.Subscribers"))?;
 
     Ok(parsed.data.results.into_iter().next().map(|r| r.id))
 }
@@ -216,7 +215,7 @@ pub(crate) async fn subscribe_to_listmonk(
         error!("Error subscribing user to Listmonk: {text}");
         return Err(ApiError::listmonk_error(&text));
     } else {
-        json::from_str::<ListmonkResponse>(&text)
+        serde_json::from_str::<ListmonkResponse>(&text)
             .map(|r| r.data.id)
             .map_err(|_ignored| ApiError::data_missing("Listmonk.Id"))?
     };

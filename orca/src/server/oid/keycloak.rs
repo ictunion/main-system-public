@@ -3,7 +3,7 @@
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
 use log::{debug, error, warn};
 use reqwest::Url;
-use rocket::serde::json::json;
+use serde_json::json;
 use uuid::Uuid;
 
 use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role, User};
@@ -64,7 +64,7 @@ impl OidProvider for KeycloakProvider {
         &self,
         token: &JwtToken,
     ) -> Result<TokenData<JwtClaims>, jsonwebtoken::errors::Error> {
-        let res = jsonwebtoken::decode::<JwtClaims>(token.string, &self.key, &self.validation);
+        let res = jsonwebtoken::decode::<JwtClaims>(token.as_str(), &self.key, &self.validation);
         if let Err(err) = &res {
             warn!("Faild to decode JWT token {}", token.string);
             warn!("Error: {err:?}");
@@ -112,7 +112,7 @@ impl OidProvider for KeycloakProvider {
         Err(Error::MissingOneOfRoles(roles.to_vec()))
     }
 
-    async fn create_user(&self, token: &JwtToken<'_>, user: &User) -> Result<Uuid, Error> {
+    async fn create_user(&self, token: &JwtToken, user: &User) -> Result<Uuid, Error> {
         // Keycloak expects json body with data about user
         let json = json!({
             "firstName": user.first_name,
@@ -164,7 +164,7 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn remove_user(&self, token: &JwtToken<'_>, id: Uuid) -> Result<(), Error> {
+    async fn remove_user(&self, token: &JwtToken, id: Uuid) -> Result<(), Error> {
         // Send request to create a new user
         let client = reqwest::Client::new();
         let response = client
@@ -190,7 +190,7 @@ impl OidProvider for KeycloakProvider {
 
     async fn get_matching_users(
         &self,
-        token: &JwtToken<'_>,
+        token: &JwtToken,
         email: String,
     ) -> Result<Vec<User>, Error> {
         // query keycloak for user using email filtering
@@ -211,7 +211,7 @@ impl OidProvider for KeycloakProvider {
 
     async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken<'_>,
+        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
@@ -239,7 +239,7 @@ impl OidProvider for KeycloakProvider {
 
     async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken<'_>,
+        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
@@ -267,7 +267,7 @@ impl OidProvider for KeycloakProvider {
 
     async fn get_group_members(
         &self,
-        token: &JwtToken<'_>,
+        token: &JwtToken,
         group_id: Uuid,
     ) -> Result<Vec<Uuid>, Error> {
         #[derive(serde::Deserialize)]
@@ -296,7 +296,7 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn get_own_groups(&self, token: &JwtToken<'_>) -> Result<Vec<Uuid>, Error> {
+    async fn get_own_groups(&self, token: &JwtToken) -> Result<Vec<Uuid>, Error> {
         #[derive(serde::Deserialize)]
         struct Group {
             id: Uuid,

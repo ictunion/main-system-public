@@ -1,9 +1,12 @@
-use rocket::figment::{
+use figment::{
     Figment, Profile,
-    providers::{Env, Format, Serialized, Toml},
+    providers::{Env, Format, Toml},
 };
+use serde::de::{self, DeserializeOwned, Unexpected};
+use serde::{Deserialize, Deserializer};
 
 use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr};
 use uuid::Uuid;
 
 use self::templates::Templates;
@@ -25,8 +28,13 @@ pub struct Config {
     pub verify_redirects_to: HashMap<String, String>,
     pub notification_email: Option<String>,
     pub email_confirmation_subjects: HashMap<String, String>,
-    /// This is rocket level value, not logger one
-    pub log_level: rocket::config::LogLevel,
+    pub log_level: LogLevel,
+    /// Address the HTTP server binds to
+    pub address: IpAddr,
+    /// Port the HTTP server listens on
+    pub port: u16,
+    /// Maximum size of a JSON request body in bytes (`limits.json`)
+    pub json_limit: usize,
     pub smtp_host: String,
     pub smtp_user: String,
     pub smtp_password: String,
@@ -47,12 +55,13 @@ impl Config {
     ///
     /// # Panics
     ///
-    /// If one or more required configuration fields aren't present. It's pointless to continue execution.
+    /// If one or more required configuration fields aren't present or a value is invalid. It's pointless to continue execution.
     #[must_use]
     pub fn get() -> Self {
-        let figment = Figment::from(rocket::Config::default())
-            .merge(Serialized::defaults(rocket::Config::default()))
+        let figment = Figment::new()
+            // TODO: rename Rocket.toml to Orca.toml later, when we are sure that everything works
             .merge(Toml::file("Rocket.toml").nested())
+            // TODO: remove ROCKET_ prefix
             .merge(Env::prefixed("ROCKET_").split("__").global())
             .select(Profile::from_env_or("ROCKET_PROFILE", "default"));
 
@@ -94,9 +103,10 @@ impl Config {
             .extract_inner("email_confirmation_subjects")
             .unwrap_or_default();
 
-        let log_level = figment
-            .extract_inner("log_level")
-            .unwrap_or(rocket::config::LogLevel::Normal);
+        let log_level = extract_or(&figment, "log_level", LogLevel::build_default());
+        let address = extract_or(&figment, "address", IpAddr::V4(Ipv4Addr::LOCALHOST));
+        let port = extract_or(&figment, "port", 8000);
+        let json_limit = extract_or(&figment, "limits.json", 1_048_576);
 
         let smtp_host = figment
             .extract_inner("smtp_host")
@@ -150,6 +160,9 @@ impl Config {
             notification_email,
             email_confirmation_subjects,
             log_level,
+            address,
+            port,
+            json_limit,
             smtp_host,
             smtp_user,
             smtp_password,
@@ -186,6 +199,66 @@ impl Config {
                 .get("default")
                 .unwrap_or(&"Verify Email Address".to_string())
                 .clone(),
+        }
+    }
+}
+
+/// Like `extract_inner`, but only a missing key falls back to `default`.
+/// A present but invalid value stops the startup.
+fn extract_or<T: DeserializeOwned>(figment: &Figment, key: &str, default: T) -> T {
+    match figment.extract_inner(key) {
+        Ok(value) => value,
+        Err(err) if err.missing() => default,
+        Err(err) => panic!("Invalid `{key}` configuration: {err}"),
+    }
+}
+
+/// Log level with the same values and meaning as Rocket's `log_level` setting
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogLevel {
+    Critical,
+    Normal,
+    Debug,
+    Off,
+}
+
+impl LogLevel {
+    /// `normal` in debug builds, `critical` in release builds (same as Rocket)
+    fn build_default() -> Self {
+        if cfg!(debug_assertions) {
+            Self::Normal
+        } else {
+            Self::Critical
+        }
+    }
+}
+
+impl From<LogLevel> for log::LevelFilter {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Critical => Self::Warn,
+            LogLevel::Normal => Self::Info,
+            LogLevel::Debug => Self::Trace,
+            LogLevel::Off => Self::Off,
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for LogLevel {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        match value.to_ascii_lowercase().as_str() {
+            "critical" => Ok(Self::Critical),
+            "normal" => Ok(Self::Normal),
+            "debug" => Ok(Self::Debug),
+            "off" => Ok(Self::Off),
+            _ => Err(de::Error::invalid_value(
+                Unexpected::Str(&value),
+                &"one of `critical`, `normal`, `debug` or `off`",
+            )),
         }
     }
 }
