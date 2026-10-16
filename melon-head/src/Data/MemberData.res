@@ -121,7 +121,7 @@ module Decode = {
     memberNumber: field.required(. "member_number", int),
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
-    dateOfBirth: field.required(. "date_of_birth", option(date)),
+    dateOfBirth: field.required(. "date_of_birth", option(Data.Decode.day)),
     email: field.required(. "email", option(Email.decode)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
     note: field.required(. "note", option(string)),

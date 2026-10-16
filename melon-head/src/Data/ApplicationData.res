@@ -143,7 +143,7 @@ module Decode = {
     email: field.required(. "email", option(Email.decode)),
     firstName: field.required(. "first_name", option(string)),
     lastName: field.required(. "last_name", option(string)),
-    dateOfBirth: field.required(. "date_of_birth", option(date)),
+    dateOfBirth: field.required(. "date_of_birth", option(Data.Decode.day)),
     phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
     note: field.required(. "note", option(string)),
     city: field.required(. "city", option(string)),

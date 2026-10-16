@@ -1,10 +1,11 @@
 use uuid::Uuid;
 
 use super::{
-    MemberDetail, MemberStatusData, MemberSummary, NewMember, Note, Occupation, UpdateMember,
+    MemberDetail, MemberOffice, MemberOfficePatch, MemberStatusData, MemberSummary, NewMember,
+    NewMemberOffice, Note, Occupation, UpdateMember,
 };
 use crate::api::files::FileInfo;
-use crate::data::{FileType, Id, Member, MemberNumber};
+use crate::data::{FileType, Id, Member, MemberNumber, Office};
 use crate::db::DbPool;
 
 pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<MemberSummary>> {
@@ -404,6 +405,203 @@ RETURNING id
 "#,
         occupation_id as _,
         member_id as _,
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(())
+}
+
+/// Offices whose term hasn't ended yet. `term_ends_on` is the last day in
+/// office, so an office ending today is still current.
+pub async fn list_active_offices(pool: &DbPool) -> sqlx::Result<Vec<MemberOffice>> {
+    sqlx::query_as!(
+        MemberOffice,
+        r#"
+SELECT o.id
+    , o.member_id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , o.title
+    , o.elected_by
+    , o.elected_on
+    , o.term_ends_on
+    , o.created_at
+    , o.updated_at
+FROM member_offices AS o
+INNER JOIN members AS m ON m.id = o.member_id
+WHERE o.deleted_at IS NULL
+AND (o.term_ends_on IS NULL OR o.term_ends_on >= CURRENT_DATE)
+ORDER BY o.elected_on DESC, m.member_number
+"#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn list_past_offices(pool: &DbPool) -> sqlx::Result<Vec<MemberOffice>> {
+    sqlx::query_as!(
+        MemberOffice,
+        r#"
+SELECT o.id
+    , o.member_id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , o.title
+    , o.elected_by
+    , o.elected_on
+    , o.term_ends_on
+    , o.created_at
+    , o.updated_at
+FROM member_offices AS o
+INNER JOIN members AS m ON m.id = o.member_id
+WHERE o.deleted_at IS NULL
+AND o.term_ends_on < CURRENT_DATE
+ORDER BY o.term_ends_on DESC, m.member_number
+"#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_office<'a, E>(executor: E, id: Id<Office>) -> sqlx::Result<MemberOffice>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_as!(
+        MemberOffice,
+        r#"
+SELECT o.id
+    , o.member_id
+    , m.member_number
+    , m.first_name
+    , m.last_name
+    , o.title
+    , o.elected_by
+    , o.elected_on
+    , o.term_ends_on
+    , o.created_at
+    , o.updated_at
+FROM member_offices AS o
+INNER JOIN members AS m ON m.id = o.member_id
+WHERE o.id = $1
+AND o.deleted_at IS NULL
+"#,
+        id as _
+    )
+    .fetch_one(executor)
+    .await
+}
+
+/// Ends the member's current offices today, e.g. when they leave the union.
+/// Offices elected for a future date are left alone.
+pub async fn end_current_offices<'a, E>(executor: E, member_id: Id<Member>) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
+UPDATE member_offices
+SET term_ends_on = CURRENT_DATE
+    , updated_at = NOW()
+WHERE member_id = $1
+AND deleted_at IS NULL
+AND elected_on <= CURRENT_DATE
+AND (term_ends_on IS NULL OR term_ends_on > CURRENT_DATE)
+"#,
+        member_id as _,
+    )
+    .execute(executor)
+    .await?;
+
+    Ok(())
+}
+
+/// Selecting from `members` makes an unknown member id, or one who left the
+/// union, come back as `RowNotFound` (404) rather than a foreign key violation
+/// (500).
+pub async fn create_office<'a, E>(executor: E, office: &NewMemberOffice) -> sqlx::Result<Id<Office>>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query_scalar!(
+        r#"
+INSERT INTO member_offices
+    ( member_id
+    , title
+    , elected_by
+    , elected_on
+    , term_ends_on
+    )
+SELECT id, $2, $3, $4, $5
+FROM members
+WHERE id = $1
+AND left_at IS NULL
+RETURNING id
+"#,
+        office.member_id as _,
+        office.title,
+        office.elected_by,
+        office.elected_on,
+        office.term_ends_on,
+    )
+    .fetch_one(executor)
+    .await
+    .map(Id::from)
+}
+
+/// Only a current office can be updated; a past or deleted one comes back as
+/// `RowNotFound`. `member_id` and `deleted_at` are never changed here.
+pub async fn update_office<'a, E>(
+    executor: E,
+    id: Id<Office>,
+    patch: &MemberOfficePatch,
+) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
+UPDATE member_offices
+SET title = COALESCE($2, title)
+    , elected_by = COALESCE($3, elected_by)
+    , elected_on = COALESCE($4, elected_on)
+    , term_ends_on = CASE WHEN $5::BOOLEAN THEN $6::DATE ELSE term_ends_on END
+    , updated_at = NOW()
+WHERE id = $1
+AND deleted_at IS NULL
+AND (term_ends_on IS NULL OR term_ends_on >= CURRENT_DATE)
+RETURNING id
+"#,
+        id as _,
+        patch.title,
+        patch.elected_by,
+        patch.elected_on,
+        patch.term_ends_on.is_some(),
+        patch.term_ends_on.flatten(),
+    )
+    .fetch_one(executor)
+    .await?;
+
+    Ok(())
+}
+
+/// Soft delete; an already deleted record comes back as `RowNotFound`.
+pub async fn delete_office<'a, E>(executor: E, id: Id<Office>) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'a, Database = sqlx::Postgres>,
+{
+    sqlx::query!(
+        r#"
+UPDATE member_offices
+SET deleted_at = NOW()
+WHERE id = $1
+AND deleted_at IS NULL
+RETURNING id
+"#,
+        id as _,
     )
     .fetch_one(executor)
     .await?;

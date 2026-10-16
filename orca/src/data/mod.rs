@@ -99,6 +99,9 @@ pub struct Member;
 pub struct Workplace;
 
 #[derive(Debug, Clone, Copy)]
+pub struct Office;
+
+#[derive(Debug, Clone, Copy)]
 pub struct MemberNumber(i32);
 
 impl Display for MemberNumber {

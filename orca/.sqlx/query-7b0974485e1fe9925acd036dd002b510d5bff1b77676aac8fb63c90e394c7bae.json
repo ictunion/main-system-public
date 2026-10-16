@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT o.id\n    , o.member_id\n    , m.member_number\n    , m.first_name\n    , m.last_name\n    , o.title\n    , o.elected_by\n    , o.elected_on\n    , o.term_ends_on\n    , o.created_at\n    , o.updated_at\nFROM member_offices AS o\nINNER JOIN members AS m ON m.id = o.member_id\nWHERE o.deleted_at IS NULL\nAND (o.term_ends_on IS NULL OR o.term_ends_on >= CURRENT_DATE)\nORDER BY o.elected_on DESC, m.member_number\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "member_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "member_number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "elected_by",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "elected_on",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 8,
+        "name": "term_ends_on",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "7b0974485e1fe9925acd036dd002b510d5bff1b77676aac8fb63c90e394c7bae"
+}

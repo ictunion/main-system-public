@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO member_offices\n    ( member_id\n    , title\n    , elected_by\n    , elected_on\n    , term_ends_on\n    )\nSELECT id, $2, $3, $4, $5\nFROM members\nWHERE id = $1\nAND left_at IS NULL\nRETURNING id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3079b0aab927e3deba0ce4cebc94ca6d6519d1800c3eb437a11cf745f05927b7"
+}

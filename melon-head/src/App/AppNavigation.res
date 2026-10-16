@@ -102,6 +102,10 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
             requiredRole=Some(Session.ListOwnWorkplace)
           />
           <NavSeprator key="12" />
+          <NavItem
+            key="12.5" path="/board" text="Board" session requiredRole=Some(Session.ListMembers)
+          />
+          <NavSeprator key="12.6" />
           <NavItem key="13" path="/settings" text="Settings" session />
         </ul>
       | Loading =>

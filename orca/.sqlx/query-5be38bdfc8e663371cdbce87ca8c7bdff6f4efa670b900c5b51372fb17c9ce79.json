@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE member_offices\nSET title = COALESCE($2, title)\n    , elected_by = COALESCE($3, elected_by)\n    , elected_on = COALESCE($4, elected_on)\n    , term_ends_on = CASE WHEN $5::BOOLEAN THEN $6::DATE ELSE term_ends_on END\n    , updated_at = NOW()\nWHERE id = $1\nAND deleted_at IS NULL\nAND (term_ends_on IS NULL OR term_ends_on >= CURRENT_DATE)\nRETURNING id\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Date",
+        "Bool",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "5be38bdfc8e663371cdbce87ca8c7bdff6f4efa670b900c5b51372fb17c9ce79"
+}

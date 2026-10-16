@@ -96,6 +96,44 @@ module TextField = {
   }
 }
 
+/* Select from a fixed list of string values. The empty value shows the
+   placeholder; a current value missing from `options` (e.g. stored by an older
+   client or entered directly in the DB) is kept as an extra option so it isn't
+   silently lost. */
+module SelectField = {
+  @react.component
+  let make = (
+    ~label: string,
+    ~placeholder: string,
+    ~options: array<string>,
+    ~value: string,
+    ~onChange: string => unit,
+  ): React.element => {
+    let options = if value == "" || options->Js.Array2.includes(value) {
+      options
+    } else {
+      Array.concat(options, [value])
+    }
+
+    let select = event => {
+      let newVal = ReactEvent.Form.currentTarget(event)["value"]
+      onChange(newVal)
+    }
+
+    <Field>
+      <Label>
+        {React.string(label)}
+        <select className={styles["select"]} value onChange=select>
+          <option value="" disabled=true> {React.string(placeholder)} </option>
+          {options
+          ->Array.map(o => <option key=o value=o> {React.string(o)} </option>)
+          ->React.array}
+        </select>
+      </Label>
+    </Field>
+  }
+}
+
 module MemberNumber = {
   let inputEmpyErr = Some("Member number can't be empty.")
   let validate = (number: option<string>): option<string> => {

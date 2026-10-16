@@ -15,6 +15,7 @@ pub async fn connect(config: Config<'_>) -> sqlx::Result<PgPool> {
 /// Reference
 /// <https://www.postgresql.org/docs/current/errcodes-appendix.html>
 const UNIQUE_VIOLATION: &str = "23505";
+const CHECK_VIOLATION: &str = "23514";
 
 pub fn is_err_code(err: &sqlx::Error, code: &str) -> bool {
     matches!(err, sqlx::Error::Database(db_error) if db_error.code().is_some_and(|error_code| error_code == code))
@@ -22,6 +23,10 @@ pub fn is_err_code(err: &sqlx::Error, code: &str) -> bool {
 
 pub fn is_conflict(err: &sqlx::Error) -> bool {
     is_err_code(err, UNIQUE_VIOLATION)
+}
+
+pub fn is_check_violation(err: &sqlx::Error) -> bool {
+    is_err_code(err, CHECK_VIOLATION)
 }
 
 pub fn fail_duplicated<T>(res: &Result<T, sqlx::Error>) -> bool {

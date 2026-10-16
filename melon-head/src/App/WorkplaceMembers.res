@@ -50,7 +50,7 @@ let make = (~api: Api.t, ~id, ~modal) => {
       [email, name, attributes]
     })
     let csv = Papa.unparse(Belt.Array.concat([["email", "name", "attributes"]], rows))
-    let date = Js.Date.make()->Js.Date.toJSONUnsafe->Js.String.slice(~from=0, ~to_=10)
+    let date = Js.Date.make()->Data.Day.toString
     Download.csv(~filename="workplace-" ++ safeName ++ "-members-" ++ date ++ ".csv", ~content=csv)
   }
 

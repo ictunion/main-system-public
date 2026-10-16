@@ -18,7 +18,7 @@ use crate::api::Response;
 use crate::api::extract::{ApiJson, ApiPath};
 use crate::api::files::FileInfo;
 use crate::api::workplaces;
-use crate::data::{Id, Member, MemberNumber};
+use crate::data::{Id, Member, MemberNumber, Office};
 use crate::db::DbPool;
 use crate::processing::{Command, QueueSender};
 use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role, User};
@@ -433,6 +433,184 @@ async fn delete_occupation(
     Ok(SuccessResponse::Accepted)
 }
 
+/// Elected office a member holds within the organization (chairperson, board
+/// member, ...). Called "office" rather than "role" to keep it apart from
+/// Keycloak roles. An office is current until its `term_ends_on` has passed,
+/// then it is history. Records deleted as mistakes are never returned.
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct MemberOffice {
+    id: Id<Office>,
+    member_id: Id<Member>,
+    member_number: MemberNumber,
+    first_name: Option<String>,
+    last_name: Option<String>,
+    title: String,
+    elected_by: String,
+    elected_on: NaiveDate,
+    term_ends_on: Option<NaiveDate>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_term"))]
+pub struct NewMemberOffice {
+    member_id: Id<Member>,
+    #[serde(deserialize_with = "super::trimmed")]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    title: String,
+    #[serde(deserialize_with = "super::trimmed")]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    elected_by: String,
+    elected_on: NaiveDate,
+    term_ends_on: Option<NaiveDate>,
+}
+
+fn validate_term(office: &NewMemberOffice) -> Result<(), validator::ValidationError> {
+    match office.term_ends_on {
+        Some(ends_on) if ends_on < office.elected_on => {
+            Err(validator::ValidationError::new("term_ends_before_election"))
+        }
+        _ => Ok(()),
+    }
+}
+
+async fn list_active_offices(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<MemberOffice>>> {
+    oid_provider.require_role(&token, Role::ListMembers)?;
+
+    let offices = query::list_active_offices(&db_pool).await?;
+
+    Ok(Json(offices))
+}
+
+async fn list_past_offices(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<MemberOffice>>> {
+    oid_provider.require_role(&token, Role::ListMembers)?;
+
+    let offices = query::list_past_offices(&db_pool).await?;
+
+    Ok(Json(offices))
+}
+
+/// Current or past -- check `term_ends_on`.
+async fn get_office(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Office>>,
+) -> Response<Json<MemberOffice>> {
+    oid_provider.require_role(&token, Role::ListMembers)?;
+
+    let office = query::get_office(&db_pool, id).await?;
+
+    Ok(Json(office))
+}
+
+/// Assign an office. Dates may be in the past, e.g. to backfill history. Holding
+/// more than one office at a time isn't prevented here; that is left to the
+/// people managing the board.
+async fn create_office(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    data: Validated<NewMemberOffice>,
+) -> Response<Json<MemberOffice>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let data = data.into_inner();
+    let mut tx = db_pool.begin().await?;
+
+    let id = query::create_office(&mut *tx, &data).await?;
+    let office = query::get_office(&mut *tx, id).await?;
+
+    tx.commit().await?;
+
+    Ok(Json(office))
+}
+
+/// Partial update of a current office, e.g. fixing a typo in the title, or
+/// ending it early by setting `term_ends_on`. Past offices are read-only:
+/// patching one is a 404. Absent fields are left untouched; `term_ends_on`
+/// distinguishes absent from an explicit `null`, which clears the end of the
+/// term.
+#[derive(Debug, Deserialize, Validate)]
+pub struct MemberOfficePatch {
+    #[serde(default, deserialize_with = "super::trimmed_option")]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    title: Option<String>,
+    #[serde(default, deserialize_with = "super::trimmed_option")]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    elected_by: Option<String>,
+    elected_on: Option<NaiveDate>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    #[allow(
+        clippy::option_option,
+        reason = "absent (keep), null (clear) and a date (set) are three distinct PATCH cases"
+    )]
+    term_ends_on: Option<Option<NaiveDate>>,
+}
+
+/// Maps a present field (including `null`) to `Some`, so that together with
+/// `#[serde(default)]` an absent field stays `None`.
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
+}
+
+async fn update_office(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Office>>,
+    data: Validated<MemberOfficePatch>,
+) -> Response<Json<MemberOffice>> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    let mut tx = db_pool.begin().await?;
+
+    // Only one side of the term may be in the request, so the ordering of
+    // elected_on and term_ends_on is enforced by the DB check constraint.
+    match query::update_office(&mut *tx, id, &data.into_inner()).await {
+        Err(err) if crate::db::is_check_violation(&err) => {
+            return Err(ApiError::data_conflict(
+                "term_ends_on must not be earlier than elected_on",
+            ));
+        }
+        res => res?,
+    }
+    let office = query::get_office(&mut *tx, id).await?;
+
+    tx.commit().await?;
+
+    Ok(Json(office))
+}
+
+/// Soft delete for records entered by mistake, current or past. Deleted
+/// records are hidden everywhere. Ending an office is a PATCH of
+/// `term_ends_on`, not a delete.
+async fn delete_office(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<Office>>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ManageMembers)?;
+
+    query::delete_office(&db_pool, id).await?;
+
+    Ok(SuccessResponse::Accepted)
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Note {
     note: Option<String>,
@@ -505,8 +683,9 @@ async fn remove_member(
         )));
     }
 
-    // Mark in database and remove workplace associations
+    // Mark in database, remove workplace associations and end any office held
     super::workplaces::query::remove_member_workplace_associations(&mut *tx, id).await?;
+    query::end_current_offices(&mut *tx, id).await?;
     let detail = query::remove_member(&mut *tx, id).await?;
 
     tx.commit().await?;
@@ -616,6 +795,12 @@ pub(crate) fn router() -> Router<AppState> {
         .route(
             "/{id}/occupations/{occupation_id}",
             delete(delete_occupation),
+        )
+        .route("/offices", get(list_active_offices).post(create_office))
+        .route("/offices/past", get(list_past_offices))
+        .route(
+            "/offices/{id}",
+            get(get_office).patch(update_office).delete(delete_office),
         )
         .route("/{id}/note", patch(update_note))
         .route("/{id}/list_candidate_users", get(list_candidate_users))

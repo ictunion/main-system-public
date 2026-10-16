@@ -77,3 +77,10 @@
     font-weight: 600;
     padding: 12px;
 }
+
+// Match the global `button, input` font so selects don't fall back to the
+// browser's system font.
+.select {
+    font-family: 'Merriweather Sans', Helvetica, Arial, sans-serif;
+    color: inherit;
+}

@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router, middleware};
 use log::{error, warn};
-use serde::Serialize;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::json;
 use thiserror::Error;
 use tokio::task::JoinError;
@@ -458,4 +458,25 @@ pub fn validate_non_empty(val: &str) -> Result<(), ValidationError> {
     }
 
     Ok(())
+}
+
+/// Serde helper: `#[serde(deserialize_with = "super::trimmed")]` strips leading
+/// and trailing whitespace while parsing, so validation and storage both see
+/// the trimmed value.
+pub fn trimmed<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val = String::deserialize(deserializer)?;
+    Ok(val.trim().to_owned())
+}
+
+/// `trimmed` for optional fields. Pair it with `#[serde(default)]` so an absent
+/// field still becomes `None`.
+pub fn trimmed_option<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val = Option::<String>::deserialize(deserializer)?;
+    Ok(val.map(|val| val.trim().to_owned()))
 }
