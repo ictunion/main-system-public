@@ -17,11 +17,52 @@ type office = {
   updatedAt: Js.Date.t,
 }
 
-/* Values offered by the Board page. The API takes free text, so new values
-   need only a change here. */
-let titles = ["Chairperson", "Vice-chairperson", "Board member", "Audit committee", "Treasurer"]
+/* Offices the Elected Offices page offers, and the table each one is listed
+   in. The API takes free text, so a new office needs only a change here:
+   add the variant, and the compiler points at `titleToString` and
+   `groupOf`; then add it to `allTitles`. */
+type title =
+  | Chairperson
+  | ViceChairperson
+  | BoardMember
+  | Treasurer
+  | AuditCommittee
 
-let electedByOptions = ["All members meeting", "Monthly members meeting", "Workplaces Council"]
+type group =
+  | Board
+  | Finance
+
+// Display order, both in the office picker and within each table.
+let allTitles = [Chairperson, ViceChairperson, BoardMember, Treasurer, AuditCommittee]
+
+// The text the API stores, so changing one renames existing records' office.
+let titleToString = (title: title) =>
+  switch title {
+  | Chairperson => "Chairperson"
+  | ViceChairperson => "Vice-chairperson"
+  | BoardMember => "Board member"
+  | Treasurer => "Treasurer"
+  | AuditCommittee => "Audit committee"
+  }
+
+// None for free text entered before (or outside) this list.
+let titleFromString = (s: string): option<title> =>
+  allTitles->Js.Array2.find(t => titleToString(t) == s)
+
+let groupOf = (title: title) =>
+  switch title {
+  | Chairperson
+  | ViceChairperson
+  | BoardMember =>
+    Board
+  | Treasurer
+  | AuditCommittee =>
+    Finance
+  }
+
+let titles = allTitles->Array.map(titleToString)
+
+let electedByOptions =["All members meeting", "Monthly members meeting", "Workplaces Council"]
 
 let fullName = (office: office): string =>
   [office.firstName, office.lastName]->Array.keepMap(x => x)->Js.Array2.joinWith(" ")

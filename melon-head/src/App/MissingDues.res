@@ -1,4 +1,223 @@
+@module external styles: {..} = "./MissingDues/styles.module.scss"
+
+open Data
 open Belt
+
+/* One member's payment history, fetched when first shown. The join date
+   comes from the member detail, since the list summary doesn't carry
+   onboarding_finished_at. */
+module HistoryPreview = {
+  @react.component
+  let make = (~api: Api.t, ~bankApi: Api.t, ~member: MemberData.summary) => {
+    let (detail, _, _) =
+      api->Hook.getData(
+        ~path="/members/" ++ Uuid.toString(member.id),
+        ~decoder=MemberData.Decode.detail,
+      )
+    let (paymentsData, _, _) =
+      bankApi->Hook.getData(
+        ~path="/payments/" ++ Int.toString(member.memberNumber) ++ "/history",
+        ~decoder=PaymentData.Decode.history,
+      )
+
+    switch detail {
+    | Success(d) =>
+      <PaymentHistory paymentsData joinDate={PaymentHistory.joinDateOf(d)} leftAt=d.leftAt />
+    | Failure(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+    | Idle
+    | Loading =>
+      <div className={styles["loading"]}>
+        <Icons.Loading variant=Icons.Dark />
+      </div>
+    }
+  }
+}
+
+/* The Missed Months count, which opens the member's payment history: on
+   hover for a quick look, or pinned open by a click until closed again (a
+   second click, a click outside, Escape or the close button). The table
+   scrolls inside its own container, which would clip a nested popover, so it
+   is position: fixed and placed from the count's on-screen box instead. */
+module MissedMonthsCell = {
+  type rect = {left: float, top: float, bottom: float}
+
+  @send external getBoundingClientRect: Dom.element => rect = "getBoundingClientRect"
+  @send external contains: (Dom.element, Dom.element) => bool = "contains"
+  @get external target: Dom.event => Dom.element = "target"
+  @get external key: Dom.event => string = "key"
+  @val external innerWidth: float = "innerWidth"
+  @val external innerHeight: float = "innerHeight"
+  @val @scope("window")
+  external addWindowListener: (string, Dom.event => unit, bool) => unit = "addEventListener"
+  @val @scope("window")
+  external removeWindowListener: (string, Dom.event => unit, bool) => unit =
+    "removeEventListener"
+
+  // Hovering only opens after a short pause, so sweeping the mouse down the
+  // column doesn't fire a history request for every row it crosses.
+  let openDelay = 300
+  let closeDelay = 150
+
+  let margin = 16.0
+  let maxWidth = 760.0
+  // Below the count unless there's clearly more room above it.
+  let minHeightBelow = 320.0
+
+  let px = (n: float) => Float.toString(n) ++ "px"
+
+  let place = (anchor: rect) => {
+    let width = Js.Math.min_float(maxWidth, innerWidth -. 2.0 *. margin)
+    let left = Js.Math.max_float(margin, Js.Math.min_float(anchor.left, innerWidth -. margin -. width))
+    let spaceBelow = innerHeight -. anchor.bottom -. margin
+    let spaceAbove = anchor.top -. margin
+
+    if spaceBelow >= minHeightBelow || spaceBelow >= spaceAbove {
+      ReactDOM.Style.make(
+        ~left=px(left),
+        ~width=px(width),
+        ~top=px(anchor.bottom),
+        ~maxHeight=px(spaceBelow),
+        (),
+      )
+    } else {
+      ReactDOM.Style.make(
+        ~left=px(left),
+        ~width=px(width),
+        ~bottom=px(innerHeight -. anchor.top),
+        ~maxHeight=px(spaceAbove),
+        (),
+      )
+    }
+  }
+
+  let hidden = ReactDOM.Style.make(~display="none", ())
+
+  @react.component
+  let make = (
+    ~api: Api.t,
+    ~bankApi: Api.t,
+    ~member: MemberData.summary,
+    ~missedMonths: int,
+  ) => {
+    let anchorRef = React.useRef(Js.Nullable.null)
+    let popoverRef = React.useRef(Js.Nullable.null)
+    let timer = React.useRef(None)
+    let (hovered, setHovered) = React.useState(_ => false)
+    let (pinned, setPinned) = React.useState(_ => false)
+    /* None until first opened. After that the preview stays mounted (just
+       hidden) so reopening doesn't fetch the history again. */
+    let (placement, setPlacement) = React.useState(_ => None)
+    let isOpen = hovered || pinned
+
+    let cancelTimer = () => {
+      timer.current->Option.forEach(Js.Global.clearTimeout)
+      timer.current = None
+    }
+
+    let after = (ms, f) => {
+      cancelTimer()
+      timer.current = Some(Js.Global.setTimeout(f, ms))
+    }
+
+    React.useEffect0(() => Some(cancelTimer))
+
+    let close = () => {
+      cancelTimer()
+      setPinned(_ => false)
+      setHovered(_ => false)
+    }
+
+    // Layout effect, so a reopened popover never paints at its old position.
+    React.useLayoutEffect1(() =>
+      if isOpen {
+        let updatePlacement = _ =>
+          anchorRef.current
+          ->Js.Nullable.toOption
+          ->Option.forEach(el => setPlacement(_ => Some(place(el->getBoundingClientRect))))
+
+        let onKeyDown = e =>
+          if e->key == "Escape" {
+            close()
+          }
+
+        let isInside = (ref: React.ref<Js.Nullable.t<Dom.element>>, e) =>
+          ref.current->Js.Nullable.toOption->Option.mapWithDefault(false, el => el->contains(e->target))
+
+        let onMouseDown = e =>
+          if !isInside(anchorRef, e) && !isInside(popoverRef, e) {
+            close()
+          }
+
+        updatePlacement()
+        // Capture, to also follow the table's own scroll container.
+        addWindowListener("scroll", updatePlacement, true)
+        addWindowListener("resize", updatePlacement, false)
+        addWindowListener("keydown", onKeyDown, false)
+        addWindowListener("mousedown", onMouseDown, false)
+
+        Some(
+          () => {
+            removeWindowListener("scroll", updatePlacement, true)
+            removeWindowListener("resize", updatePlacement, false)
+            removeWindowListener("keydown", onKeyDown, false)
+            removeWindowListener("mousedown", onMouseDown, false)
+          },
+        )
+      } else {
+        None
+      }
+    , [isOpen])
+
+    let onClick = _ =>
+      if pinned {
+        close()
+      } else {
+        cancelTimer()
+        setPinned(_ => true)
+      }
+
+    <span
+      className={styles["missedMonths"]}
+      onMouseEnter={_ => after(openDelay, () => setHovered(_ => true))}
+      onMouseLeave={_ => after(closeDelay, () => setHovered(_ => false))}>
+      <button
+        ref={ReactDOM.Ref.domRef(anchorRef)}
+        className={styles["trigger"]}
+        ariaLabel={Int.toString(missedMonths) ++ " missed months, show payment history"}
+        ariaExpanded=isOpen
+        onClick>
+        {React.string(Int.toString(missedMonths))}
+      </button>
+      {switch placement {
+      | None => React.null
+      | Some(style) =>
+        <div
+          ref={ReactDOM.Ref.domRef(popoverRef)}
+          className={styles["popover"]}
+          style={isOpen ? style : hidden}
+          role="dialog"
+          ariaLabel="Payment history">
+          <header className={styles["popoverHeader"]}>
+            <span>
+              {React.string("Payment history of ")}
+              {MemberSummaryTable.viewPaddedNumber(member.memberNumber, ())}
+            </span>
+            <button className={styles["closeBtn"]} title="Close" onClick={_ => close()}>
+              <Icons.Close />
+            </button>
+          </header>
+          <HistoryPreview api bankApi member />
+        </div>
+      }}
+    </span>
+  }
+}
+
+/* Order of the missing dues list, switched by clicking the Missed Months or
+   Last Company header. One direction each, no toggling. */
+type sortBy =
+  | ByMissedMonths
+  | ByLastCompany
 
 module NeverPaidFilter = {
   @react.component
@@ -21,12 +240,15 @@ module HideSingleMissingFilter = {
 module MissingList = {
   @react.component
   let make = (
+    ~api: Api.t,
     ~bankApi: Api.t,
     ~year: int,
     ~month: option<int>,
     ~members: Api.webData<array<MemberData.summary>>,
     ~onlyNeverPaid: bool,
     ~hideSingleMissing: bool,
+    ~sortBy: sortBy,
+    ~setSortBy: sortBy => unit,
   ) => {
     let path = switch month {
     | Some(m) => "/payments/" ++ Int.toString(year) ++ "/" ++ Int.toString(m) ++ "/missing"
@@ -55,6 +277,23 @@ module MissingList = {
       everPaid
     }
 
+    let byMissedMonths = (a, b) => missedOf(b) - missedOf(a)
+
+    // A to Z, members with no company last; most missed months first within one.
+    let byLastCompany = (a, b) =>
+      switch (MemberSummaryTable.lastCompanyOf(a), MemberSummaryTable.lastCompanyOf(b)) {
+      | (Some(x), Some(y)) =>
+        switch Js.String2.localeCompare(x, y) {
+        | 0.0 => byMissedMonths(a, b)
+        | order => order > 0.0 ? 1 : -1
+        }
+      | (Some(_), None) => -1
+      | (None, Some(_)) => 1
+      | (None, None) => byMissedMonths(a, b)
+      }
+
+    let sortHeader = (by): DataTable.sort => {active: sortBy == by, onSelect: () => setSortBy(by)}
+
     let displayedMembers =
       members->RemoteData.map(rows =>
         rows
@@ -64,7 +303,12 @@ module MissingList = {
           (!hideSingleMissing || missedOf(m) != 1)
         )
         ->Array.copy
-        ->Js.Array2.sortInPlaceWith((a, b) => missedOf(b) - missedOf(a))
+        ->Js.Array2.sortInPlaceWith(
+          switch sortBy {
+          | ByMissedMonths => byMissedMonths
+          | ByLastCompany => byLastCompany
+          },
+        )
       )
 
     <>
@@ -82,7 +326,8 @@ module MissingList = {
           Custom({
             name: "Missed Months",
             minMax: ("140px", "1fr"),
-            view: r => React.string(Int.toString(missedOf(r))),
+            view: r => <MissedMonthsCell api bankApi member=r missedMonths={missedOf(r)} />,
+            sort: sortHeader(ByMissedMonths),
           }),
           Custom({
             name: "Ever Paid",
@@ -92,8 +337,12 @@ module MissingList = {
           LastCompany,
           Email,
           Phone,
-          CreatedOn,
-        ]>
+        ]
+        sortOf={c =>
+          switch c {
+          | LastCompany => Some(sortHeader(ByLastCompany))
+          | _ => None
+          }}>
         <p> {React.string("No members are missing dues for the selected period.")} </p>
       </MemberSummaryTable>
     </>
@@ -162,7 +411,6 @@ module CommentedList = {
             LastCompany,
             Email,
             Phone,
-            CreatedOn,
           ]>
           <p> {React.string("No commented transactions for the selected period.")} </p>
         </MemberSummaryTable>
@@ -183,6 +431,8 @@ module Body = {
     ~month: option<int>,
     ~onlyNeverPaid: bool,
     ~hideSingleMissing: bool,
+    ~sortBy: sortBy,
+    ~setSortBy: sortBy => unit,
   ) => {
     let membersPath = switch tab {
     | None => "/members"
@@ -199,12 +449,15 @@ module Body = {
     <>
       <MissingList
         key={Int.toString(year) ++ "-" ++ monthKey}
+        api
         bankApi
         year
         month
         members
         onlyNeverPaid
         hideSingleMissing
+        sortBy
+        setSortBy
       />
       <CommentedList
         key={"commented-" ++ Int.toString(year) ++ "-" ++ monthKey} bankApi year month members
@@ -230,6 +483,7 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
 
   let (onlyNeverPaid, setOnlyNeverPaid) = React.useState(_ => false)
   let (hideSingleMissing, setHideSingleMissing) = React.useState(_ => false)
+  let (sortBy, setSortBy) = React.useState(_ => ByMissedMonths)
 
   let tabHandlers = Tabbed.make(Some(MemberData.CurrentMember))
   let (activeTab, _) = tabHandlers
@@ -270,6 +524,8 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
           month
           onlyNeverPaid
           hideSingleMissing
+          sortBy
+          setSortBy={by => setSortBy(_ => by)}
         />
       </SessionContext.RequireBankRole>
     </RequireFeature>

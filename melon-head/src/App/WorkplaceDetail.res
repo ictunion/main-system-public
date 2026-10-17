@@ -304,22 +304,62 @@ module GenerateDocument = {
     let (removedMemberInput, setRemovedMemberInput) = React.useState(() => "")
     let (error, setError) = React.useState(() => None)
 
+    let isEntrustment = documentType == "entrustment"
+
     /* Members who left the committee can't be told apart from the database,
-       so their UUIDs are entered by hand. Orca loads their details. */
-    let addRemovedMember = _ => {
+       so they are picked by hand; only their IDs go to Orca, which loads their
+       details. Any member can have left, so the list isn't limited to current
+       ones. It needs list-members, which a workplace manager may lack -- then
+       the IDs are pasted and added by hand instead. */
+    let (members, _, _) =
+      api->Hook.getData(
+        ~enabled=isEntrustment,
+        ~path="/members",
+        ~decoder=Json.Decode.array(MemberData.Decode.summary),
+      )
+    let loadedMembers = members->RemoteData.unwrap(~default=[], ms => ms)
+    let membersLoaded = switch members {
+    | Success(_) => true
+    | _ => false
+    }
+
+    let addRemovedMember = id => {
+      setError(_ => None)
+      setRemovedMemberIds(ids => ids->Js.Array2.includes(id) ? ids : Belt.Array.concat(ids, [id]))
+      setRemovedMemberInput(_ => "")
+    }
+
+    // A pick from the list (or a pasted ID of a known member) is added at once.
+    let onRemovedMemberInput = value =>
+      switch MemberSearch.findById(loadedMembers, value) {
+      | Some(m) => addRemovedMember(Uuid.toString(m.id))
+      | None => setRemovedMemberInput(_ => value)
+      }
+
+    // Only offered while the member list isn't available.
+    let addPastedMember = _ => {
       let id = removedMemberInput->Js.String2.trim->Js.String2.toLowerCase
-      if !isUuid(id) {
-        setError(_ => Some("Not a valid member UUID"))
+      if isUuid(id) {
+        addRemovedMember(id)
       } else {
-        setError(_ => None)
-        setRemovedMemberIds(ids => ids->Js.Array2.includes(id) ? ids : Belt.Array.concat(ids, [id]))
-        setRemovedMemberInput(_ => "")
+        setError(_ => Some("Not a valid member UUID"))
       }
     }
+
     let removeRemovedMember = id =>
       setRemovedMemberIds(ids => ids->Belt.Array.keep(other => other != id))
 
-    let isEntrustment = documentType == "entrustment"
+    let viewRemovedMember = id =>
+      switch MemberSearch.findById(loadedMembers, id) {
+      | Some(m) =>
+        <span>
+          {MemberSummaryTable.viewPaddedNumber(m.memberNumber, ())}
+          {React.string(
+            " " ++ [m.firstName, m.lastName]->Belt.Array.keepMap(x => x)->Js.Array2.joinWith(" "),
+          )}
+        </span>
+      | None => <span className={styles["removedMemberId"]}> {React.string(id)} </span>
+      }
     // Member confirmation only needs data Orca already has
     let needsEmployer = isEntrustment || documentType == "workplace_announcement"
 
@@ -412,26 +452,35 @@ module GenerateDocument = {
           />
           <Form.Field>
             <Form.Label>
-              {React.string("Removed Members (optional)")}
+              {React.string("Removed Members (optional; name, number or ID)")}
               <div className={styles["removedMemberInput"]}>
-                <input
-                  type_="text"
-                  placeholder="Member UUID"
+                <MemberSearch
+                  listId="removed-members"
+                  members=loadedMembers
                   value=removedMemberInput
-                  onChange={e => {
-                    let value = ReactEvent.Form.currentTarget(e)["value"]
-                    setRemovedMemberInput(_ => value)
-                  }}
+                  onChange=onRemovedMemberInput
                 />
-                <Button onClick=addRemovedMember> {React.string("Add")} </Button>
+                {if membersLoaded {
+                  React.null
+                } else {
+                  <Button onClick=addPastedMember> {React.string("Add")} </Button>
+                }}
               </div>
             </Form.Label>
+            // A valid ID that matched nobody; a matching one was already added.
+            {if membersLoaded && isUuid(Js.String2.trim(removedMemberInput)) {
+              <Message.Warning>
+                {React.string("No member with this ID. Pick one from the list.")}
+              </Message.Warning>
+            } else {
+              React.null
+            }}
             {if Belt.Array.length(removedMemberIds) > 0 {
               <ul className={styles["removedMembers"]}>
                 {removedMemberIds
                 ->Belt.Array.map(id =>
                   <li key=id>
-                    <span> {React.string(id)} </span>
+                    {viewRemovedMember(id)}
                     <Button variant=Button.Danger onClick={_ => removeRemovedMember(id)}>
                       {React.string("Remove")}
                     </Button>

@@ -59,11 +59,18 @@ let defaultColumns: array<column> = [
   CreatedOn,
 ]
 
+// The most recent company, as shown in the Last Company column.
+let lastCompanyOf = (r: MemberData.summary): option<string> =>
+  r.companyNames->Array.get(0)->Option.flatMap(a => a)
+
+/* `sortOf` makes a built-in column's header a sort switch (see
+   DataTable.sort); a Custom column carries its own `sort` instead. */
 @react.component
 let make = (
   ~data: Api.webData<array<MemberData.summary>>,
   ~columns: array<column>,
   ~onNoteClick: option<(Uuid.t, option<string>) => unit>=?,
+  ~sortOf: column => option<DataTable.sort>=_ => None,
   ~children=React.null,
 ) => {
   let toColumn = (c: column): option<DataTable.column<MemberData.summary>> =>
@@ -102,7 +109,7 @@ let make = (
       Some({
         name: "Last Company",
         minMax: ("220px", "2fr"),
-        view: r => r.companyNames->Array.get(0)->Option.flatMap(a => a)->View.option(React.string),
+        view: r => r->lastCompanyOf->View.option(React.string),
       })
     | City =>
       Some({
@@ -137,7 +144,12 @@ let make = (
     | Custom(col) => Some(col)
     }
 
-  let resolvedColumns = columns->Array.keepMap(toColumn)
+  let resolvedColumns = columns->Array.keepMap(c =>
+    switch c {
+    | Custom(_) => toColumn(c)
+    | _ => toColumn(c)->Option.map(col => {...col, sort: ?sortOf(c)})
+    }
+  )
 
   <DataTable data columns=resolvedColumns> children </DataTable>
 }

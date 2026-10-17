@@ -1,0 +1,71 @@
+.missed-months {
+    display: inline-block;
+}
+
+/* Looks like the plain count it replaces, plus a hint that it opens. */
+.trigger {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+
+    &:hover,
+    &[aria-expanded="true"] {
+        color: var(--border-color);
+    }
+}
+
+/* Placement (left/top or bottom/width/max-height) is set inline from the
+   trigger's on-screen position. */
+.popover {
+    position: fixed;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 1px 4px 32px 4px rgba(0, 0, 0, .2);
+}
+
+.popover-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 6px 6px 12px;
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    border-radius: 100%;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background .2s ease-in-out;
+
+    &:hover {
+        background: rgba(var(--rgb_color1), .1);
+    }
+}
+
+.loading {
+    display: flex;
+    height: 150px;
+    justify-content: center;
+    align-items: center;
+}

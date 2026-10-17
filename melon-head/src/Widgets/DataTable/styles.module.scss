@@ -48,6 +48,29 @@
     overflow: hidden;
 }
 
+/* Sortable header: reads as the plain header until hovered (underline); the
+   active one is colored. */
+.sort-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    // Buttons center by default, which shifts a wrapped header off the column edge.
+    text-align: inherit;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+        text-underline-offset: 4px;
+    }
+}
+
+.sort-btn-active {
+    color: var(--border-color);
+}
+
 .loading-container {
     display: flex;
     height: 150px;

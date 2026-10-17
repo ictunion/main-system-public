@@ -1,0 +1,20 @@
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* Padding rather than margin, so the extra space adds to the h2's own
+   margins instead of collapsing into them. */
+.group:not(:last-child) {
+    padding-bottom: 20px;
+}
+
+.group-table {
+    padding-top: 6px;
+}

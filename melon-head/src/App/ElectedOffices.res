@@ -1,4 +1,4 @@
-@module external styles: {..} = "./Board/styles.module.scss"
+@module external styles: {..} = "./ElectedOffices/styles.module.scss"
 
 open Data
 open Belt
@@ -9,19 +9,13 @@ type tab = Current | Past
    the Form.DatePicker binding doesn't model. */
 external toNullable: Js.Date.t => Js.Nullable.t<Js.Date.t> = "%identity"
 
-let memberLabel = (m: MemberData.summary): string => {
-  let name = [m.firstName, m.lastName]->Array.keepMap(x => x)->Js.Array2.joinWith(" ")
-  "#" ++ Int.toString(m.memberNumber) ++ " " ++ name
-}
-
 let viewError = error =>
   switch error {
   | None => React.null
   | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
   }
 
-/* Picks a current member by typing a name or number (matched by the browser
-   against the datalist labels), or by pasting the member ID directly. */
+/* Picks a current member by name, number or ID (see MemberSearch). */
 module MemberPicker = {
   @react.component
   let make = (
@@ -30,37 +24,32 @@ module MemberPicker = {
     ~value: string,
     ~onChange: string => unit,
   ) => {
-    let onInput = event => onChange(ReactEvent.Form.currentTarget(event)["value"])
     let trimmed = Js.String2.trim(value)
 
     <Form.Field>
       <Form.Label>
         {React.string("Member (name, number or ID)")}
-        <input list="board-members" placeholder="Jane Doe" value onInput />
+        <MemberSearch
+          listId="elected-office-members"
+          members={members->RemoteData.unwrap(~default=[], ms => ms)}
+          value
+          onChange
+        />
       </Form.Label>
       {switch members {
       | Success(members) =>
         <>
-          <datalist id="board-members">
-            {members
-            ->Array.map(m =>
-              <option key={Uuid.toString(m.id)} value={Uuid.toString(m.id)}>
-                {React.string(memberLabel(m))}
-              </option>
-            )
-            ->React.array}
-          </datalist>
           {if trimmed == "" {
             React.null
           } else {
-            switch members->Js.Array2.find(m => Uuid.toString(m.id) == trimmed) {
+            switch MemberSearch.findById(members, value) {
             | None =>
               <Message.Warning>
                 {React.string("No current member with this ID. Pick one from the list.")}
               </Message.Warning>
             | Some(m) =>
               <>
-                <Message.Info> {React.string("Selected: " ++ memberLabel(m))} </Message.Info>
+                <Message.Info> {React.string("Selected: " ++ MemberSearch.label(m))} </Message.Info>
                 {switch activeOffices->Js.Array2.find(o => o.memberId == m.id) {
                 | None => React.null
                 | Some(o) =>
@@ -409,24 +398,31 @@ let columns = (
 
   let base: array<DataTable.column<OfficeData.office>> = [
     {
-      name: "Number",
+      name: "ID",
       minMax: ("100px", "1fr"),
+      view: o => <Link.Uuid uuid={o.memberId} toPath={uuid => "/members/" ++ uuid} />,
+    },
+    {
+      name: "Member Number",
+      minMax: ("200px", "1fr"),
       view: o => MemberSummaryTable.viewPaddedNumber(o.memberNumber, ()),
     },
     {
-      name: "Name",
-      minMax: ("150px", "2fr"),
-      view: o =>
-        <a onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(o.memberId))}>
-          {React.string(OfficeData.fullName(o))}
-        </a>,
+      name: "First Name",
+      minMax: ("140px", "1fr"),
+      view: o => o.firstName->View.option(React.string),
     },
-    {name: "Office", minMax: ("150px", "2fr"), view: o => React.string(o.title)},
+    {
+      name: "Last Name",
+      minMax: ("140px", "1fr"),
+      view: o => o.lastName->View.option(React.string),
+    },
+    {name: "Office", minMax: ("150px", "1fr"), view: o => React.string(o.title)},
     {name: "Elected by", minMax: ("150px", "2fr"), view: o => React.string(o.electedBy)},
-    {name: "Elected on", minMax: ("110px", "1fr"), view: o => viewDay(o.electedOn)},
+    {name: "Elected on", minMax: ("150px", "1fr"), view: o => viewDay(o.electedOn)},
     {
       name: "Term ends",
-      minMax: ("110px", "1fr"),
+      minMax: ("150px", "1fr"),
       view: o =>
         o.termEndsOn->View.option(viewDay),
     },
@@ -439,6 +435,61 @@ let columns = (
   }
 
   Array.concat(base, [actionsColumn])
+}
+
+/* Offices whose title is in `group`, in `OfficeData.allTitles` order.
+   Offices sharing a title keep the API's order (the sort is stable). */
+let inGroup = (offices: array<OfficeData.office>, group: OfficeData.group) => {
+  let rank = (o: OfficeData.office) =>
+    o.title
+    ->OfficeData.titleFromString
+    ->Option.mapWithDefault(-1, t => OfficeData.allTitles->Js.Array2.indexOf(t))
+
+  offices
+  ->Array.keep(o =>
+    o.title->OfficeData.titleFromString->Option.map(OfficeData.groupOf) == Some(group)
+  )
+  ->Array.copy
+  ->Js.Array2.sortInPlaceWith((a, b) => rank(a) - rank(b))
+}
+
+/* One tab's offices split into the Board and the Treasurer and Audit
+   Committee tables. The API takes free text, so an office with a title not
+   in `OfficeData.title` gets a third table rather than going missing. */
+module OfficeTables = {
+  @react.component
+  let make = (
+    ~data: Api.webData<array<OfficeData.office>>,
+    ~columns: array<DataTable.column<OfficeData.office>>,
+    ~emptyText: string,
+  ) => {
+    let others = data->RemoteData.map(offices =>
+      offices->Array.keep(o => o.title->OfficeData.titleFromString->Option.isNone)
+    )
+
+    let group = (~title, ~data, ~emptyText) =>
+      <section className={styles["group"]}>
+        <h2> {React.string(title)} </h2>
+        <div className={styles["groupTable"]}>
+          <DataTable data columns>
+            <p> {React.string(emptyText)} </p>
+          </DataTable>
+        </div>
+      </section>
+
+    <>
+      {group(~title="Board", ~data=data->RemoteData.map(inGroup(_, OfficeData.Board)), ~emptyText)}
+      {group(
+        ~title="Treasurer and Audit Committee",
+        ~data=data->RemoteData.map(inGroup(_, OfficeData.Finance)),
+        ~emptyText,
+      )}
+      {switch others {
+      | Success([]) | Idle | Loading | Failure(_) => React.null
+      | Success(_) => group(~title="Other Offices", ~data=others, ~emptyText)
+      }}
+    </>
+  }
 }
 
 @react.component
@@ -469,7 +520,7 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
   let columns = columns(~api, ~modal, ~activeOffices, ~refresh, ~tab=activeTab)
 
   <Page requireAnyRole=[ListMembers]>
-    <Page.Title> {React.string("Board")} </Page.Title>
+    <Page.Title> {React.string("Elected Offices")} </Page.Title>
     <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
       <Button.Panel>
         <Button onClick=openAssign> {React.string("Assign office")} </Button>
@@ -481,14 +532,10 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
         <Tabbed.Tab value=Past handlers=tabHandlers> {React.string("Past")} </Tabbed.Tab>
       </Tabbed.Tabs>
       <Tabbed.Content tab=Current handlers=tabHandlers>
-        <DataTable data=current columns>
-          <p> {React.string("Nobody holds an office.")} </p>
-        </DataTable>
+        <OfficeTables data=current columns emptyText="Nobody holds these offices." />
       </Tabbed.Content>
       <Tabbed.Content tab=Past handlers=tabHandlers>
-        <DataTable data=past columns>
-          <p> {React.string("There are no past offices.")} </p>
-        </DataTable>
+        <OfficeTables data=past columns emptyText="There are no past offices here." />
       </Tabbed.Content>
     </div>
   </Page>

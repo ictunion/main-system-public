@@ -2,16 +2,35 @@ open Belt
 
 @module external styles: {..} = "./DataTable/styles.module.scss"
 
+/* Makes a column's header a sort switch. The table doesn't sort anything
+   itself -- the caller orders the rows and says which column is active. */
+type sort = {
+  active: bool,
+  onSelect: unit => unit,
+}
+
 type column<'t> = {
   name: string,
   minMax: (string, string),
   view: 't => React.element,
+  sort?: sort,
 }
 
 module HeadCell = {
   @react.component
   let make = (~column: column<'t>) => {
-    <div className={styles["headCell"]}> {React.string(column.name)} </div>
+    <div className={styles["headCell"]}>
+      {switch column.sort {
+      | None => React.string(column.name)
+      | Some({active, onSelect}) =>
+        <button
+          className={styles["sortBtn"] ++ (active ? " " ++ styles["sortBtnActive"] : "")}
+          ariaPressed={active ? #"true" : #"false"}
+          onClick={_ => onSelect()}>
+          {React.string(column.name)}
+        </button>
+      }}
+    </div>
   }
 }
 
