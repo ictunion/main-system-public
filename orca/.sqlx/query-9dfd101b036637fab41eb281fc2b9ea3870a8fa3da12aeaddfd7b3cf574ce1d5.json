@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT f.id\n, f.name\n, f.file_type AS \"file_type: FileType\"\n, f.created_at\nFROM workplaces_files AS wf\nINNER JOIN files AS f ON f.id = wf.file_id\nWHERE wf.workplace_id = $1\nORDER BY f.created_at DESC\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "file_type: FileType",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9dfd101b036637fab41eb281fc2b9ea3870a8fa3da12aeaddfd7b3cf574ce1d5"
+}

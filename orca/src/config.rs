@@ -48,6 +48,11 @@ pub struct Config {
     pub listmonk_host: Option<String>,
     /// Shared secret bearer token for machine-to-machine bank-system sync
     pub bank_sync_token: Option<String>,
+    /// Member id of the union board chairperson signing generated documents (e.g. entrustments).
+    /// Name is loaded from the database at generation time so it is always current.
+    pub union_chairperson_member_id: Option<Uuid>,
+    /// Contact e-mail of the union chairperson printed on generated documents
+    pub union_chairperson_email: Option<String>,
 }
 
 impl Config {
@@ -144,6 +149,14 @@ impl Config {
 
         let bank_sync_token: Option<String> = figment.extract_inner("bank_sync_token").ok();
 
+        let union_chairperson_member_id: Option<Uuid> =
+            figment.extract_inner("union_chairperson_member_id").ok();
+
+        let union_chairperson_email: Option<String> = figment
+            .extract_inner("union_chairperson_email")
+            .ok()
+            .filter(|email: &String| !email.is_empty());
+
         Self {
             email_sender_email,
             email_sender_name,
@@ -175,6 +188,8 @@ impl Config {
             listmonk_username,
             listmonk_host,
             bank_sync_token,
+            union_chairperson_member_id,
+            union_chairperson_email,
         }
     }
 

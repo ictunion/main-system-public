@@ -1,8 +1,9 @@
 use uuid::Uuid;
 
 use super::{NewWorkplace, UpdateWorkplace, WorkplaceMemberSummary, WorkplaceSummary};
+use crate::api::files::FileInfo;
 use crate::api::members::MemberSummary;
-use crate::data::{Id, Member, Workplace};
+use crate::data::{FileType, Id, Member, Workplace};
 use crate::db::DbPool;
 
 // member count includes also members, who have already left union
@@ -22,6 +23,9 @@ SELECT id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
@@ -35,6 +39,9 @@ GROUP BY workplaces.id
     , workplaces.established_at
     , workplaces.cancelled_at
     , workplaces.newsletter_id
+    , workplaces.company_id
+    , workplaces.company_address
+    , workplaces.workplace_short_name
 ORDER BY workplaces.created_at DESC
 "#
     )
@@ -56,6 +63,9 @@ SELECT id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
@@ -71,6 +81,9 @@ GROUP BY workplaces.id
     , workplaces.established_at
     , workplaces.cancelled_at
     , workplaces.newsletter_id
+    , workplaces.company_id
+    , workplaces.company_address
+    , workplaces.workplace_short_name
 ORDER BY workplaces.created_at DESC
 "#
     )
@@ -95,6 +108,9 @@ SELECT id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
@@ -110,6 +126,9 @@ GROUP BY workplaces.id
     , workplaces.established_at
     , workplaces.cancelled_at
     , workplaces.newsletter_id
+    , workplaces.company_id
+    , workplaces.company_address
+    , workplaces.workplace_short_name
 ORDER BY workplaces.created_at DESC
 "#
     )
@@ -131,6 +150,9 @@ SELECT id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
@@ -145,6 +167,9 @@ GROUP BY workplaces.id
     , workplaces.established_at
     , workplaces.cancelled_at
     , workplaces.newsletter_id
+    , workplaces.company_id
+    , workplaces.company_address
+    , workplaces.workplace_short_name
 ORDER BY workplaces.cancelled_at DESC
 "#
     )
@@ -166,6 +191,9 @@ SELECT id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , count(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
@@ -180,6 +208,9 @@ GROUP BY workplaces.id
     , workplaces.established_at
     , workplaces.cancelled_at
     , workplaces.newsletter_id
+    , workplaces.company_id
+    , workplaces.company_address
+    , workplaces.workplace_short_name
 "#,
         id as _
     )
@@ -209,6 +240,9 @@ RETURNING id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
 "#,
         id as _
@@ -240,6 +274,9 @@ RETURNING id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
 "#,
         id as _
@@ -269,6 +306,9 @@ RETURNING id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
 "#,
         id as _
@@ -286,7 +326,10 @@ pub async fn update_workplace(
         WorkplaceSummary,
         r#"
 UPDATE workplaces
-SET newsletter_id = $2
+SET newsletter_id = COALESCE($2, newsletter_id)
+    , company_id = COALESCE($3, company_id)
+    , company_address = COALESCE($4, company_address)
+    , workplace_short_name = COALESCE($5, workplace_short_name)
 WHERE id = $1
 RETURNING id
     , name
@@ -298,10 +341,16 @@ RETURNING id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS "member_count!: i64"
 "#,
         id as _,
         update.newsletter_id,
+        update.company_id.as_deref(),
+        update.company_address.as_deref(),
+        update.workplace_short_name.as_deref(),
     )
     .fetch_one(pool)
     .await
@@ -320,9 +369,12 @@ INSERT INTO workplaces
     , keycloak_group_id
     , keycloak_executive_group_id
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     )
 VALUES
-    ( $1, $2, $3, $4, $5 )
+    ( $1, $2, $3, $4, $5, $6, $7, $8 )
 RETURNING id
     , name
     , email
@@ -333,6 +385,9 @@ RETURNING id
     , established_at
     , cancelled_at
     , newsletter_id
+    , company_id
+    , company_address
+    , workplace_short_name
     , 0::bigint AS "member_count!: i64"
 "#,
         new_workplace.name.as_deref().expect("validated"),
@@ -342,6 +397,9 @@ RETURNING id
             .keycloak_executive_group_id
             .expect("validated"),
         new_workplace.newsletter_id,
+        new_workplace.company_id.as_deref(),
+        new_workplace.company_address.as_deref(),
+        new_workplace.workplace_short_name.as_deref(),
     )
     .fetch_one(pool)
     .await
@@ -567,5 +625,37 @@ ORDER BY mw.became_representative_at
         workplace_id as _
     )
     .fetch_all(pool)
+    .await
+}
+
+pub async fn list_workplace_files(
+    pool: &DbPool,
+    workplace_id: Id<Workplace>,
+) -> sqlx::Result<Vec<FileInfo>> {
+    sqlx::query_as!(
+        FileInfo,
+        r#"
+SELECT f.id
+, f.name
+, f.file_type AS "file_type: FileType"
+, f.created_at
+FROM workplaces_files AS wf
+INNER JOIN files AS f ON f.id = wf.file_id
+WHERE wf.workplace_id = $1
+ORDER BY f.created_at DESC
+"#,
+        workplace_id as _
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// How many of `ids` are existing members
+pub async fn count_members(pool: &DbPool, ids: &[Uuid]) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"SELECT count(*) AS "count!" FROM members WHERE id = ANY($1)"#,
+        ids
+    )
+    .fetch_one(pool)
     .await
 }

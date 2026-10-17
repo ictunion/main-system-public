@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE workplaces\nSET announced_at = NOW()\nWHERE id = $1\n  AND established_at IS NOT NULL\n  AND announced_at IS NULL\n  AND cancelled_at IS NULL\nRETURNING id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS \"member_count!: i64\"\n",
+  "query": "\nUPDATE workplaces\nSET established_at = NOW()\nWHERE id = $1\n  AND established_at IS NULL\n  AND cancelled_at IS NULL\nRETURNING id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , company_id\n    , company_address\n    , workplace_short_name\n    , (SELECT COUNT(*) FROM members_workplaces mw WHERE mw.workplace_id = id)::bigint AS \"member_count!: i64\"\n",
   "describe": {
     "columns": [
       {
@@ -55,6 +55,21 @@
       },
       {
         "ordinal": 10,
+        "name": "company_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "company_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "workplace_short_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
         "name": "member_count!: i64",
         "type_info": "Int8"
       }
@@ -75,8 +90,11 @@
       true,
       true,
       true,
+      true,
+      true,
+      true,
       null
     ]
   },
-  "hash": "922bd20bbf5580a81794a448cf76a6ee38c199b8ec8b13751099cbc54b7aff2f"
+  "hash": "eabc4701db5982aa47c5cd7482d8680ae9584661ec0649ae7e7cb74c55f3eaa5"
 }

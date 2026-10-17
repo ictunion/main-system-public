@@ -1,21 +1,26 @@
 use super::{ApiError, AppState, SuccessResponse};
 use crate::api::Response;
 use crate::api::extract::{ApiJson, ApiPath};
+use crate::api::files::FileInfo;
 use crate::api::members::MemberSummary;
 use crate::api::members::query::get_status_data;
+use crate::config::Config;
 use crate::data::{Id, Member, MemberNumber, Workplace};
 use crate::db::DbPool;
+use crate::processing::workplace_documents::{EmployerInput, WorkplaceDocument};
+use crate::processing::{Command, QueueSender};
 use crate::server::oid::{JwtToken, Provider, Role};
 use crate::validation::Validated;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{get, patch, put};
 use axum::{Json, Router};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationErrors};
 
 pub mod query;
 
@@ -31,6 +36,9 @@ pub struct WorkplaceSummary {
     established_at: Option<DateTime<Utc>>,
     cancelled_at: Option<DateTime<Utc>>,
     newsletter_id: Option<i32>,
+    company_id: Option<String>,
+    company_address: Option<String>,
+    workplace_short_name: Option<String>,
     member_count: i64,
 }
 
@@ -233,6 +241,9 @@ pub struct NewWorkplace {
     #[validate(required)]
     keycloak_executive_group_id: Option<Uuid>,
     newsletter_id: Option<i32>,
+    company_id: Option<String>,
+    company_address: Option<String>,
+    workplace_short_name: Option<String>,
 }
 
 async fn create_workplace(
@@ -243,15 +254,32 @@ async fn create_workplace(
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
 
+    let mut new_workplace = new_workplace.into_inner();
+    new_workplace.company_id = normalize_text(new_workplace.company_id);
+    new_workplace.company_address = normalize_text(new_workplace.company_address);
+    new_workplace.workplace_short_name = normalize_text(new_workplace.workplace_short_name);
+
     // Create new workplace
-    let workplace = query::create_workplace(&db_pool, &new_workplace.into_inner()).await?;
+    let workplace = query::create_workplace(&db_pool, &new_workplace).await?;
 
     Ok(Json(workplace))
 }
 
+/// Partial update: a missing or `null` field (or empty text) keeps the stored value.
+/// Once set, a field can be changed but never cleared again.
 #[derive(Debug, Deserialize)]
 pub struct UpdateWorkplace {
     newsletter_id: Option<i32>,
+    company_id: Option<String>,
+    company_address: Option<String>,
+    workplace_short_name: Option<String>,
+}
+
+/// Trims text and treats empty as not set
+fn normalize_text(value: Option<String>) -> Option<String> {
+    value
+        .map(|text| text.trim().to_string())
+        .filter(|text| !text.is_empty())
 }
 
 async fn update(
@@ -259,9 +287,13 @@ async fn update(
     State(oid_provider): State<Arc<Provider>>,
     token: JwtToken,
     ApiPath(workplace_id): ApiPath<Id<Workplace>>,
-    ApiJson(update): ApiJson<UpdateWorkplace>,
+    ApiJson(mut update): ApiJson<UpdateWorkplace>,
 ) -> Response<Json<WorkplaceSummary>> {
     oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    update.company_id = normalize_text(update.company_id);
+    update.company_address = normalize_text(update.company_address);
+    update.workplace_short_name = normalize_text(update.workplace_short_name);
 
     let workplace = query::update_workplace(&db_pool, workplace_id, &update).await?;
 
@@ -465,6 +497,197 @@ async fn get_all_workplace_members(
     Ok(Json(summaries))
 }
 
+async fn list_files(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
+) -> Response<Json<Vec<FileInfo>>> {
+    oid_provider.require_role(&token, Role::ListWorkplaces)?;
+
+    let files = query::list_workplace_files(&db_pool, workplace_id).await?;
+
+    Ok(Json(files))
+}
+
+/// Request to generate a document (PDF) for a workplace.
+/// `document_type` selects the variant, the rest of the body are its inputs:
+///
+/// ```json
+/// { "document_type": "entrustment", "workplace_short_name": "ACME CZ", ... }
+/// { "document_type": "member_confirmation", "workplace_short_name": "ACME CZ" }
+/// { "document_type": "workplace_announcement", "workplace_short_name": "ACME CZ", ... }
+/// ```
+#[derive(Debug, Deserialize)]
+#[serde(tag = "document_type", rename_all = "snake_case")]
+pub enum NewWorkplaceDocument {
+    Entrustment(NewEntrustment),
+    MemberConfirmation(NewMemberConfirmation),
+    WorkplaceAnnouncement(NewWorkplaceAnnouncement),
+}
+
+// validator can't derive for enums
+impl Validate for NewWorkplaceDocument {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        match self {
+            Self::Entrustment(data) => data.validate(),
+            Self::MemberConfirmation(data) => data.validate(),
+            Self::WorkplaceAnnouncement(data) => data.validate(),
+        }
+    }
+}
+
+/// Builds employer details from fields which already passed validation.
+/// `None` only when called on data which didn't.
+fn employer_input(
+    workplace_short_name: Option<String>,
+    company_address: Option<String>,
+    company_id: Option<String>,
+) -> Option<EmployerInput> {
+    Some(EmployerInput {
+        workplace_short_name: workplace_short_name?.trim().to_string(),
+        company_address: company_address?.trim().to_string(),
+        company_id: company_id?.trim().to_string(),
+    })
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct NewEntrustment {
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    workplace_short_name: Option<String>,
+    #[validate(required)]
+    meeting_date: Option<NaiveDate>,
+    /// Members no longer on the committee, listed in an extra section when not empty
+    #[serde(default)]
+    removed_member_ids: Vec<Uuid>,
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    company_address: Option<String>,
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    company_id: Option<String>,
+}
+
+impl NewEntrustment {
+    /// Keeps the first occurrence of each id, in the order they were added
+    fn dedup_removed_members(&mut self) {
+        let mut seen = std::collections::HashSet::new();
+        self.removed_member_ids.retain(|id| seen.insert(*id));
+    }
+
+    /// `None` only when called on data which didn't pass validation
+    fn into_document(self) -> Option<WorkplaceDocument> {
+        Some(WorkplaceDocument::Entrustment {
+            meeting_date: self.meeting_date?,
+            removed_members: self.removed_member_ids,
+            employer: employer_input(
+                self.workplace_short_name,
+                self.company_address,
+                self.company_id,
+            )?,
+        })
+    }
+}
+
+/// Short name only goes into the file name, the rest comes from the database
+#[derive(Debug, Deserialize, Validate)]
+pub struct NewMemberConfirmation {
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    workplace_short_name: Option<String>,
+}
+
+impl NewMemberConfirmation {
+    /// `None` only when called on data which didn't pass validation
+    fn into_document(self) -> Option<WorkplaceDocument> {
+        Some(WorkplaceDocument::MemberConfirmation {
+            workplace_short_name: self.workplace_short_name?.trim().to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct NewWorkplaceAnnouncement {
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    workplace_short_name: Option<String>,
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    company_address: Option<String>,
+    #[validate(required)]
+    #[validate(custom(function = "super::validate_non_empty"))]
+    company_id: Option<String>,
+}
+
+impl NewWorkplaceAnnouncement {
+    /// `None` only when called on data which didn't pass validation
+    fn into_document(self) -> Option<WorkplaceDocument> {
+        Some(WorkplaceDocument::WorkplaceAnnouncement(employer_input(
+            self.workplace_short_name,
+            self.company_address,
+            self.company_id,
+        )?))
+    }
+}
+
+/// Generating happens in the processing queue, so this only checks what it can
+/// up front and answers 202. The PDF shows up in `GET /<workplace_id>/files` when done.
+async fn create_document(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    State(config): State<Arc<Config>>,
+    State(queue): State<QueueSender>,
+    token: JwtToken,
+    ApiPath(workplace_id): ApiPath<Id<Workplace>>,
+    data: Validated<NewWorkplaceDocument>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ManageWorkplaces)?;
+
+    // 404 for unknown workplace
+    query::detail(&db_pool, workplace_id).await?;
+
+    // Every workplace document lists representatives and is signed by the chairperson
+    if config.union_chairperson_member_id.is_none() {
+        error!("Can't generate workplace document: union_chairperson_member_id not configured");
+        return Err(ApiError::Status(StatusCode::INTERNAL_SERVER_ERROR));
+    }
+
+    let representatives = query::list_representatives(&db_pool, workplace_id).await?;
+    if representatives.is_empty() {
+        return Err(ApiError::data_conflict("Workplace has no representatives"));
+    }
+
+    let document = match data.into_inner() {
+        NewWorkplaceDocument::Entrustment(mut entrustment) => {
+            entrustment.dedup_removed_members();
+            let removed = &entrustment.removed_member_ids;
+            if !removed.is_empty() {
+                let known = query::count_members(&db_pool, removed).await?;
+                if i64::try_from(removed.len()).ok() != Some(known) {
+                    return Err(ApiError::data_conflict("Some removed members don't exist"));
+                }
+            }
+            entrustment.into_document()
+        }
+        NewWorkplaceDocument::MemberConfirmation(confirmation) => confirmation.into_document(),
+        NewWorkplaceDocument::WorkplaceAnnouncement(announcement) => {
+            if config.union_chairperson_email.is_none() {
+                error!("Can't generate announcement: union_chairperson_email not configured");
+                return Err(ApiError::Status(StatusCode::INTERNAL_SERVER_ERROR));
+            }
+            announcement.into_document()
+        }
+    }
+    .ok_or(ApiError::Status(StatusCode::UNPROCESSABLE_ENTITY))?;
+
+    queue
+        .send(Command::NewWorkplaceDocument(workplace_id, document))
+        .await?;
+
+    Ok(SuccessResponse::Accepted)
+}
+
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_all).post(create_workplace))
@@ -487,4 +710,43 @@ pub(crate) fn router() -> Router<AppState> {
             put(assign_member_to_workplace_rep),
         )
         .route("/{workplace_id}/members", get(get_all_workplace_members))
+        .route(
+            "/{workplace_id}/files",
+            get(list_files).post(create_document),
+        )
+}
+
+#[cfg(test)]
+mod update_workplace_tests {
+    use super::*;
+
+    fn parse(json: &str) -> UpdateWorkplace {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn missing_company_fields_are_kept() {
+        let update = parse(r#"{"newsletter_id": 42}"#);
+        assert_eq!(update.newsletter_id, Some(42));
+        assert_eq!(update.company_id, None);
+        assert_eq!(update.company_address, None);
+        assert_eq!(update.workplace_short_name, None);
+    }
+
+    #[test]
+    fn null_company_field_is_kept_and_value_is_set() {
+        let update = parse(r#"{"company_id": null, "workplace_short_name": "ACME CZ"}"#);
+        assert_eq!(update.company_id, None);
+        assert_eq!(update.workplace_short_name, Some("ACME CZ".to_string()));
+    }
+
+    #[test]
+    fn normalize_text_trims_and_empties() {
+        assert_eq!(
+            normalize_text(Some("  ACME  ".to_string())),
+            Some("ACME".to_string())
+        );
+        assert_eq!(normalize_text(Some("   ".to_string())), None);
+        assert_eq!(normalize_text(None), None);
+    }
 }

@@ -35,6 +35,12 @@ processing_db_pool = 2
 
 # PDF printing
 tex_exe = "xelatex"
+# Member id of the union chairperson who signs generated documents (entrustments).
+# Can be set via ROCKET_UNION_CHAIRPERSON_MEMBER_ID env variable.
+# union_chairperson_member_id = "00000000-0000-0000-0000-000000000000"
+# Printed on the workplace announcement.
+# Can be set via ROCKET_UNION_CHAIRPERSON_EMAIL env variable.
+union_chairperson_email = ""
 
 # Authentication / Authorization
 keycloak_host = "http://localhost:8180"

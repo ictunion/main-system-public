@@ -1,0 +1,81 @@
+\documentclass[11pt]{article}
+
+\usepackage{fontspec}
+
+%% Basic font
+\setmainfont[
+  BoldFont={IBMPlexSans-Bold.otf},
+  ItalicFont={IBMPlexSans-Italic.otf},
+  BoldItalicFont={IBMPlexSans-BoldItalic.otf}
+]{IBMPlexSans-Regular.otf}
+
+\usepackage[english,czech]{babel}
+
+%Paper size
+\usepackage[a4paper, nomarginpar, top = 30mm, bottom = 25mm, right = 22mm, left = 22mm]{geometry}
+
+\pagenumbering{gobble}
+
+\setlength\parindent{0pt}
+
+\input{data.tex}
+
+%% Width of one table column (two columns, three vertical rules)
+\newlength{\colwidth}
+\setlength{\colwidth}{\dimexpr(\textwidth - 4\tabcolsep - 3\arrayrulewidth) / 2\relax}
+
+%% One table row: Czech text on the left, English translation on the right
+%% Optional first argument sets alignment of both cells
+\newcommand{\row}[3][\raggedright]{%
+  \begin{minipage}[t]{\colwidth}
+    \vspace{2mm}#1 #2\par\vspace{5mm}
+  \end{minipage}
+  &
+  \begin{minipage}[t]{\colwidth}
+    \vspace{2mm}#1\foreignlanguage{english}{#3}\par\vspace{5mm}
+  \end{minipage}
+  \\ \hline
+}
+
+\newcommand{\dotline}{\makebox[30mm]{\dotfill}}
+
+\begin{document}
+
+  \begin{tabular}{|p{\colwidth}|p{\colwidth}|}
+    \hline
+    \row[\centering]{\textbf{Potvrzení o~členství}}{\textbf{Confirmation of membership}}
+    \row{
+      Název: Odborová organizace pracujících v~ICT\\
+      Sídlo: Roháčova 145/14, Žižkov, \mbox{130~00 Praha~3}\\
+      IČ:~116~57~502
+    }{
+      Name: Odborová organizace pracujících v~ICT\\
+      (Trade union of workers in ICT)\\
+      Address: Roháčova 145/14, Žižkov, \mbox{130~00 Praha~3}\\
+      ID:~116~57~502
+    }
+    \row{
+      potvrzuje, že níže zmínění členové jsou členy Odborové organizace
+      pracujících v~ICT.
+    }{
+      confirms that the members listed below are members of the Odborová
+      organizace pracujících v~ICT.
+    }
+    \row{
+      Členové:\\[2mm]
+      \RepresentativesCs
+    }{
+      Members:\\[2mm]
+      \RepresentativesEn
+    }
+    \row{V~Praze dne \dotline}{In Prague, date \dotline}
+    \row{
+      \ChairpersonName\\
+      Předsedkyně Odborové organizace pracujících v~ICT
+    }{
+      \ChairpersonName\\
+      Chairperson of the Odborová organizace pracujících v~ICT
+    }
+  \end{tabular}
+
+\end{document}

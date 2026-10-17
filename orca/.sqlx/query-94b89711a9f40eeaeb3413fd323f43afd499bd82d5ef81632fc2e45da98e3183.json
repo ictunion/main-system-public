@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT m.first_name\n    , m.last_name\n    , m.date_of_birth\nFROM members m\nJOIN members_workplaces mw ON mw.member_id = m.id\nWHERE mw.workplace_id = $1\n  AND mw.became_representative_at IS NOT NULL\n  AND m.left_at IS NULL\nORDER BY mw.became_representative_at\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "first_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "last_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "date_of_birth",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "94b89711a9f40eeaeb3413fd323f43afd499bd82d5ef81632fc2e45da98e3183"
+}

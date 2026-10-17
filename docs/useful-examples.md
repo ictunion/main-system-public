@@ -48,6 +48,38 @@ Defined in [`orca/src/api/registration/mod.rs`](../orca/src/api/registration/mod
 Success returns `200` with a confirmation payload. The confirmation token is
 generated server-side.
 
+## Generate a workplace document (PDF)
+
+`POST /workplaces/<id>/files` on Orca (`:8000`). Requires `manage-workplaces`.
+Answers `202` and generates the PDF in the background processor; it then shows
+up in `GET /workplaces/<id>/files`. `document_type` selects the document, the
+other fields are its inputs.
+
+```bash
+TOKEN=$(./scripts/get-token.sh <client> <user> <pass>)
+curl -i -X POST http://localhost:8000/workplaces/<workplace-uuid>/files \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "document_type": "entrustment",
+    "workplace_short_name": "ACME CZ",
+    "meeting_date": "2026-10-03",
+    "company_address": "Vinohradská 1234/56, 120 00 Praha 2",
+    "company_id": "12345678"
+  }'
+```
+
+`entrustment` also accepts optional `"removed_member_ids": ["<member-uuid>", ...]`;
+when not empty, the PDF gets an extra section listing members who are no longer
+on the committee as of the meeting date (unknown ids are a `409`).
+`member_confirmation` takes only the short name (used in the file name):
+`{"document_type": "member_confirmation", "workplace_short_name": "ACME CZ"}`.
+`workplace_announcement` takes the same fields as `entrustment` except `meeting_date` and `removed_member_ids`.
+
+Every document needs `union_chairperson_member_id` in `Rocket.toml` and at
+least one representative on the workplace (otherwise `409`). The workplace
+announcement also needs `union_chairperson_email`.
+
 ## Refresh the sqlx offline query cache
 
 Run from `orca/` (inside `nix develop .#orca`, for the `cargo sqlx` subcommand)

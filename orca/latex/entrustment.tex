@@ -1,0 +1,109 @@
+\documentclass[11pt]{article}
+
+\usepackage{fontspec}
+
+%% Basic font
+\setmainfont[
+  BoldFont={IBMPlexSans-Bold.otf},
+  ItalicFont={IBMPlexSans-Italic.otf},
+  BoldItalicFont={IBMPlexSans-BoldItalic.otf}
+]{IBMPlexSans-Regular.otf}
+
+\usepackage[english,czech]{babel}
+
+%Paper size
+\usepackage[a4paper, nomarginpar, top = 35mm, bottom = 25mm, right = 22mm, left = 22mm]{geometry}
+
+\pagenumbering{gobble}
+
+\setlength\parindent{0pt}
+
+%% data.tex sets this to true when some members are no longer on the committee
+\newif\ifRemovedMembers
+
+\input{data.tex}
+
+%% Czech text on the left, English translation on the right
+%% Optional first argument sets alignment of both columns
+\newcommand{\pair}[3][\raggedright]{%
+  \begin{minipage}[t]{0.47\textwidth}
+    #1 #2
+  \end{minipage}%
+  \hfill
+  \begin{minipage}[t]{0.47\textwidth}
+    #1\foreignlanguage{english}{#3}
+  \end{minipage}%
+  \par\vspace{8mm}
+}
+
+\newcommand{\dotline}{\makebox[30mm]{\dotfill}}
+
+\begin{document}
+
+  \pair[\centering]{\textbf{Pověření}}{\textbf{Entrustment}}
+
+  \pair{
+    Výbor Odborové organizace pracujících v~ICT se sídlem Roháčova 145/14,
+    Žižkov, \mbox{130~00 Praha~3}, IČ:~116~57~502, jako statutární orgán odborové
+    organizace
+  }{
+    The Board of the Odborová organizace pracujících v~ICT (Trade Union of
+    Workers in ICT), registered at Roháčova 145/14, Žižkov, \mbox{130~00 Prague~3},
+    ID:~116~57~502, as the statutory body of the trade union
+  }
+
+  \pair{
+    na základě výsledků hlasování Členské schůze pracoviště \WorkplaceName{}
+    konané \MeetingDateCs{} pověřuje
+  }{
+    on the basis of the results of the vote of \WorkplaceName{} Workplace
+    Members’ Meeting held on \MeetingDateEn{} entrusts
+  }
+
+  \pair{
+    k jednání jménem organizace se zaměstnavatelem \CompanyName,
+    \CompanyAddress, IČ:~\CompanyId, tyto své členy:
+  }{
+    for negotiations on behalf of the organization with the employer
+    \CompanyName, \CompanyAddress, ID:~\CompanyId, the following members:
+  }
+
+  \pair{\RepresentativesCs}{\RepresentativesEn}
+
+  \pair{
+    \ifRemovedMembers Dále\else Zároveň\fi{} organizace potvrzuje, že tito členi
+    jsou zvoleni do Předsednictva pracoviště \WorkplaceName.
+  }{
+    At the same time, the organization confirms that these members are elected
+    to the Workplace executive committee \WorkplaceName.
+  }
+
+  \ifRemovedMembers
+    \pair{
+      Organizace také potvrzuje, že od \MeetingDateCs{} níže uvedení členové
+      nejsou členy Předsednictva pracoviště ani jiného orgánu odborové
+      organizace:
+    }{
+      The organization also confirms that, as of \MeetingDateEn, the members
+      listed below are not members of the Workplace executive committee or any
+      other body of the trade union:
+    }
+
+    \pair{\RemovedMembersCs}{\RemovedMembersEn}
+  \fi
+
+  \vspace{4mm}
+
+  \pair{V~Praze dne \dotline}{In Prague, date \dotline}
+
+  \vspace{20mm}
+
+  \pair[\centering]{
+    \ChairpersonName\\
+    Předsedkyně Výboru Odborové organizace pracujících v~ICT
+  }{
+    \ChairpersonName\\
+    Chairperson of the Board of the Odborová organizace pracujících v~ICT
+  }
+
+\end{document}

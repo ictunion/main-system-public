@@ -16,14 +16,15 @@ use lettre::{
     transport::smtp::authentication::Credentials,
 };
 use log::{error, info};
-use std::process::Stdio;
+use std::process::{ExitStatus, Stdio};
 use thiserror::Error;
 
 mod query;
+pub mod workplace_documents;
 
 use crate::config::Config;
 use crate::config::templates;
-use crate::data::{Id, Member, RegistrationRequest};
+use crate::data::{Id, Member, RegistrationRequest, Workplace};
 use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};
 use crate::server::oid::{JwtToken, Provider};
@@ -35,6 +36,7 @@ pub enum Command {
     SendEmailAsTreasurer(String, String, String, String),
     NewMemberCreated(Id<Member>, Option<String>),
     SendNotificationToTreasurer,
+    NewWorkplaceDocument(Id<Workplace>, workplace_documents::WorkplaceDocument),
 }
 
 impl std::fmt::Display for Command {
@@ -54,6 +56,13 @@ impl std::fmt::Display for Command {
             }
             Self::SendNotificationToTreasurer => {
                 write!(f, "SendNotificationToTreasurer")
+            }
+            Self::NewWorkplaceDocument(id, document) => {
+                write!(
+                    f,
+                    "NewWorkplaceDocument {} workplace id: {id}",
+                    document.name()
+                )
             }
         }
     }
@@ -135,6 +144,14 @@ enum ProcessingError {
     Oid(#[from] crate::server::oid::Error),
     #[error("NewMemberCreated command is missing OID token")]
     MissingOidToken,
+    #[error("TeX exited with: {0}")]
+    Tex(ExitStatus),
+    #[error("union_chairperson_member_id is not configured")]
+    MissingChairpersonMemberId,
+    #[error("Workplace {0} has no representatives")]
+    NoRepresentatives(Id<Workplace>),
+    #[error("union_chairperson_email is not configured")]
+    MissingChairpersonEmail,
 }
 
 async fn process(
@@ -144,8 +161,8 @@ async fn process(
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
     use Command::{
-        NewMemberCreated, NewRegistrationRequest, ResentRegistrationEmail, SendEmailAsTreasurer,
-        SendNotificationToTreasurer,
+        NewMemberCreated, NewRegistrationRequest, NewWorkplaceDocument, ResentRegistrationEmail,
+        SendEmailAsTreasurer, SendNotificationToTreasurer,
     };
 
     match command {
@@ -193,6 +210,10 @@ async fn process(
         }
         SendNotificationToTreasurer => {
             process_confirmation_email_for_treasurer(config).await?;
+        }
+        NewWorkplaceDocument(workplace_id, document) => {
+            workplace_documents::process_new_document(workplace_id, &document, config, db_pool)
+                .await?;
         }
     }
 
@@ -267,8 +288,7 @@ async fn process_new_registration(
     let application_details = query::query_registration(db_pool, reg_id).await?;
 
     // Generate PDF
-    let pdf_path = print_pdf(config, &application_details, &processing_dir).await?;
-    let pdf_data = fs::read(pdf_path).await?;
+    let pdf_data = print_pdf(config, &application_details, &processing_dir).await?;
     query::insert_registration_pdf(db_pool, reg_id, &pdf_data).await?;
 
     send_verification_email(config, db_pool, &application_details, pdf_data).await?;
@@ -506,12 +526,12 @@ fn get_pdf_localization(lang: &str) -> &'static str {
 
 /// Given a member id, directory and `db_pool`
 /// This will generate registration PDF for
-/// application using xelatex and return path to the PDF file
+/// application using xelatex and return its content
 async fn print_pdf(
     config: &Config,
     application_details: &RegistrationDetails,
     dir: &str,
-) -> Result<String, ProcessingError> {
+) -> Result<Vec<u8>, ProcessingError> {
     info!("Printing registration pdf at {dir}");
 
     // inline static files
@@ -533,12 +553,22 @@ async fn print_pdf(
     .await?;
     fs::write(format!("{dir}/logo.png"), logo_png).await?;
 
+    render_tex(config, dir, "registration").await
+}
+
+/// Compile `{dir}/{name}.tex` with xelatex and return content of the resulting PDF.
+/// Everything the document references (data, images...) must already be in `dir`.
+async fn render_tex(config: &Config, dir: &str, name: &str) -> Result<Vec<u8>, ProcessingError> {
     // Spawn xelatex process to print the pdf
     let mut child = process::Command::new(config.tex_exe.as_str())
         .current_dir(dir)
-        .arg("registration.tex")
+        .arg(format!("{name}.tex"))
+        // On error exit right away instead of prompting -- xelatex would otherwise
+        // wait on the inherited terminal and block the whole processing queue
+        .arg("-interaction=nonstopmode")
         .arg("-halt-on-error")
         .arg("-no-shell-escape")
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .spawn()?;
 
@@ -547,7 +577,10 @@ async fn print_pdf(
     // at least in cases where xelatex fails to find font in OSFONTDIR
     // like similar to https://users.rust-lang.org/t/tokio-child-wait-never-returning/96657
     let status = child.wait().await?;
+    if !status.success() {
+        return Err(ProcessingError::Tex(status));
+    }
     info!("Tex command exited successfully: {status}");
 
-    Ok(format!("{dir}/registration.pdf"))
+    Ok(fs::read(format!("{dir}/{name}.pdf")).await?)
 }

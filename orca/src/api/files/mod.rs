@@ -1,7 +1,7 @@
 use axum::Router;
 use axum::extract::{FromRequestParts, Query, State};
 use axum::http::StatusCode;
-use axum::http::header::CONTENT_TYPE;
+use axum::http::header::{CONTENT_DISPOSITION, CONTENT_TYPE};
 use axum::http::request::Parts;
 use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
@@ -18,7 +18,9 @@ use crate::server::oid::{JwtToken, Provider, Role};
 pub struct File {
     // This is read only and using Rc<[u8]> rather than Vec<u8> removes some overhead
     data: Vec<u8>,
-    file_type: FileType,
+    name: String,
+    kind: FileType,
+    created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -29,9 +31,44 @@ pub struct FileInfo {
     pub(crate) created_at: DateTime<Utc>,
 }
 
+impl File {
+    /// `inline` keeps opening the file in the browser,
+    /// `filename` is what the browser offers when saving it: name and creation date (UTC).
+    fn content_disposition(&self) -> String {
+        format!(
+            "inline; filename=\"{}_{}.{}\"",
+            header_safe_name(&self.name),
+            self.created_at.format("%Y-%m-%d"),
+            self.kind.extension()
+        )
+    }
+}
+
+/// File names are our own identifiers (`entrustment`, `registration`...), but anything
+/// outside a plain ASCII set is replaced so it can't break the header value.
+fn header_safe_name(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 impl IntoResponse for File {
     fn into_response(self) -> axum::response::Response {
-        ([(CONTENT_TYPE, self.file_type.mime_type())], self.data).into_response()
+        let content_disposition = self.content_disposition();
+        (
+            [
+                (CONTENT_TYPE, self.kind.mime_type().to_string()),
+                (CONTENT_DISPOSITION, content_disposition),
+            ],
+            self.data,
+        )
+            .into_response()
     }
 }
 
@@ -73,7 +110,16 @@ async fn get(
     UrlToken(token): UrlToken,
     ApiPath(id): ApiPath<Id<File>>,
 ) -> Response<File> {
-    oid_provider.require_role(&token, Role::ViewApplication)?;
+    // Files belong to applications, members or workplaces. Any role that can
+    // list one of those file lists may download; the file owner isn't checked.
+    oid_provider.require_any_role(
+        &token,
+        &[
+            Role::ViewApplication,
+            Role::ListMembers,
+            Role::ListWorkplaces,
+        ],
+    )?;
 
     let file: File = read_file(&db_pool, id).await?;
     Ok(file)
@@ -82,7 +128,14 @@ async fn get(
 async fn read_file(pool: &DbPool, id: Id<File>) -> sqlx::Result<File> {
     sqlx::query_as!(
         File,
-        r#"SELECT data AS "data!", file_type AS "file_type: FileType" FROM files WHERE id = $1"#,
+        r#"
+SELECT data AS "data!"
+    , name
+    , file_type AS "kind: FileType"
+    , created_at
+FROM files
+WHERE id = $1
+"#,
         id as _
     )
     .fetch_one(pool)
@@ -91,4 +144,28 @@ async fn read_file(pool: &DbPool, id: Id<File>) -> sqlx::Result<File> {
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new().route("/{id}", axum::routing::get(get))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn content_disposition_keeps_file_name() {
+        let file = File {
+            data: Vec::new(),
+            name: "acme-cz_workplace_announcement".to_string(),
+            kind: FileType::Pdf,
+            created_at: DateTime::from_timestamp(1_791_590_400, 0).unwrap(),
+        };
+        assert_eq!(
+            file.content_disposition(),
+            "inline; filename=\"acme-cz_workplace_announcement_2026-10-10.pdf\""
+        );
+    }
+
+    #[test]
+    fn header_safe_name_replaces_unsafe_chars() {
+        assert_eq!(header_safe_name("přihláška \"1\""), "p_ihl__ka__1_");
+    }
 }
