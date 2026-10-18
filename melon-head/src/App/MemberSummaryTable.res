@@ -151,5 +151,5 @@ let make = (
     }
   )
 
-  <DataTable data columns=resolvedColumns> children </DataTable>
+  <DataTable data columns=resolvedColumns rowKey={r => Uuid.toString(r.id)}> children </DataTable>
 }

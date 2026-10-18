@@ -35,7 +35,7 @@ type row<'a> = {
 
 type t<'a> = array<row<'a>>
 
-let viewRow = (rowI, row: row<'a>, ~data: Api.webData<'a>) => {
+let viewRow = (rowIndex, row: row<'a>, ~data: Api.webData<'a>) => {
   let gridTemplate: string = Array.map(row.cells, r => {
     let (min, max) = r.minmax
     "minmax(" ++ min ++ "," ++ max ++ ") "
@@ -44,16 +44,16 @@ let viewRow = (rowI, row: row<'a>, ~data: Api.webData<'a>) => {
   let style =
     ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--grid-template-columns", gridTemplate)
 
-  <div key={Int.toString(rowI)} className={styles["rowWrap"]}>
+  <div key={Int.toString(rowIndex)} className={styles["rowWrap"]}>
     {if row.label != "" {
       <h3 className={styles["rowLabel"]}> {React.string(row.label)} </h3>
     } else {
       React.null
     }}
-    <div style key={Int.toString(rowI)} className={styles["row"]}>
+    <div style key={Int.toString(rowIndex)} className={styles["row"]}>
       {row.cells
-      ->Array.mapWithIndex((i, c) =>
-        <Cell key={Int.toString(i)} label={c.label}>
+      ->Array.mapWithIndex((index, c) =>
+        <Cell key={Int.toString(index)} label={c.label}>
           {switch data {
           | Success(d) => c.view(d)
           | Idle => <Loading />

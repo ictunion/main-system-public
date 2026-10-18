@@ -277,10 +277,10 @@ let make = (
           <table className={styles["paymentsTable"]}>
             <tbody>
               {monthNames
-              ->Array.mapWithIndex((idx, name) =>
-                <tr key={idx->Js.Int.toString}>
+              ->Array.mapWithIndex((index, name) =>
+                <tr key={index->Js.Int.toString}>
                   <td> {React.string(name)} </td>
-                  <td> {viewCellStatus(statusOf(~year, ~month=idx + 1))} </td>
+                  <td> {viewCellStatus(statusOf(~year, ~month=index + 1))} </td>
                 </tr>
               )
               ->React.array}
@@ -305,13 +305,13 @@ let make = (
         </thead>
         <tbody>
           {monthNames
-          ->Array.mapWithIndex((idx, name) =>
-            <tr key={idx->Js.Int.toString}>
+          ->Array.mapWithIndex((index, name) =>
+            <tr key={index->Js.Int.toString}>
               <td> {React.string(name)} </td>
               {years
               ->Array.map(year =>
                 <td key={year->Js.Int.toString}>
-                  {viewCellStatus(statusOf(~year, ~month=idx + 1))}
+                  {viewCellStatus(statusOf(~year, ~month=index + 1))}
                 </td>
               )
               ->React.array}

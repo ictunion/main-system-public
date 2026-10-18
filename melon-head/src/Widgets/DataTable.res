@@ -39,7 +39,7 @@ module THead = {
   let make = (~columns: array<column<'t>>) => {
     <div className={styles["thead"]}>
       {React.array(
-        Array.mapWithIndex(columns, (id, column) => <HeadCell key={Int.toString(id)} column />),
+        Array.mapWithIndex(columns, (index, column) => <HeadCell key={Int.toString(index)} column />),
       )}
     </div>
   }
@@ -58,14 +58,22 @@ module Tr = {
   let make = (~columns: array<column<'t>>, ~row: 't) => {
     <div className={styles["tr"]}>
       {React.array(
-        Array.mapWithIndex(columns, (id, column) => <Td key={Int.toString(id)} column row />),
+        Array.mapWithIndex(columns, (index, column) => <Td key={Int.toString(index)} column row />),
       )}
     </div>
   }
 }
 
+/* `rowKey` gives each row a stable identity. Without it rows are keyed by
+   position, so after a re-sort a row's state (e.g. an already-fetched cell
+   preview) stays put and ends up showing on a different record. */
 @react.component
-let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>, ~children=React.null) => {
+let make = (
+  ~data: Api.webData<array<'t>>,
+  ~columns: array<column<'t>>,
+  ~rowKey: option<'t => string>=?,
+  ~children=React.null,
+) => {
   let gridTemplate: string = Array.map(columns, r => {
     let (min, max) = r.minMax
     "minmax(" ++ min ++ "," ++ max ++ ") "
@@ -83,7 +91,10 @@ let make = (~data: Api.webData<array<'t>>, ~columns: array<column<'t>>, ~childre
           <div className={styles["emptyContainer"]}> children </div>
         } else {
           React.array(
-            rows->Array.mapWithIndex((id, row) => <Tr key={Int.toString(id)} columns row />),
+            rows->Array.mapWithIndex((index, row) => {
+              let key = rowKey->Option.mapWithDefault(Int.toString(index), f => f(row))
+              <Tr key columns row />
+            }),
           )
         }
       | Failure(err) => <div className={styles["error"]}> {React.string(err->Api.showError)} </div>

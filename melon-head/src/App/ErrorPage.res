@@ -43,8 +43,8 @@ module Forbidden = {
       <p className={styles["desc"]}>
         {React.string("This page requires at least one of the following roles: ")}
         {roles
-        ->Array.mapWithIndex((i, role) =>
-          <code className={styles["code"]} key={Int.toString(i)}>
+        ->Array.mapWithIndex((index, role) =>
+          <code className={styles["code"]} key={Int.toString(index)}>
             {React.string(role->Session.showOrcaRole)}
           </code>
         )
