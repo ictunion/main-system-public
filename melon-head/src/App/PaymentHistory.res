@@ -141,14 +141,15 @@ let cellStatus = (
   | ([], _, _) if waivedHere->Array.length > 0 => Waived
   | (_, _, _) if paidHere->Array.length > 0 => Paid(viewAmounts(paidHere))
   | _ =>
-    if year < joinYear || (year == joinYear && month < joinMonth) {
+    let afterLeaving = switch leftYearMonth {
+    | Some((leftYear, leftMonth)) => year > leftYear || (year == leftYear && month >= leftMonth)
+    | None => false
+    }
+
+    if year < joinYear || (year == joinYear && month < joinMonth) || afterLeaving {
       NotMember
     } else if year > graceYear || (year == graceYear && month >= graceMonth) {
-      switch leftYearMonth {
-      | Some((leftYear, leftMonth))
-        if year > leftYear || (year == leftYear && month >= leftMonth) => NotMember
-      | _ => year == graceYear && month == graceMonth ? Due : Future
-      }
+      year == graceYear && month == graceMonth ? Due : Future
     } else {
       switch paymentsData {
       | Loading => LoadingCell

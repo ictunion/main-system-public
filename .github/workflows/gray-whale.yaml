@@ -3,36 +3,68 @@ name: "Gray Whale"
 on:
   push:
 
+env:
+  POSTGRES_IMAGE: postgres:15.2-alpine
+
 jobs:
   all:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:15.2-alpine
-        env:
-          # Enable password authentication even for local connections
-          POSTGRES_USER: postgres
-          POSTGRES_DB: ictunion
-          POSTGRES_PASSWORD: superuser
-        ports:
-          # maps tcp port 5432 on service container to the host
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        # needed because the postgres container does not provide a healthcheck
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - name: Clone repository
         uses: actions/checkout@v3
+
+      # Postgres runs as a plain container instead of a `services:` entry:
+      # service images are pulled before any step runs, so they can't be
+      # served from actions/cache. Caching the image avoids registry pulls
+      # (and their rate limits) on every run.
+      - name: Restore postgres image cache
+        id: postgres-image-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/docker-images/postgres.tar
+          key: docker-image-${{ env.POSTGRES_IMAGE }}
+
+      - name: Load postgres image from cache
+        if: steps.postgres-image-cache.outputs.cache-hit == 'true'
+        run: docker load --input "$RUNNER_TEMP/docker-images/postgres.tar"
+
+      - name: Pull and save postgres image
+        if: steps.postgres-image-cache.outputs.cache-hit != 'true'
+        run: |
+          docker pull "$POSTGRES_IMAGE"
+          mkdir -p "$RUNNER_TEMP/docker-images"
+          docker save --output "$RUNNER_TEMP/docker-images/postgres.tar" "$POSTGRES_IMAGE"
+
+      # Started early so postgres boots while nix installs and builds.
+      - name: Start postgres
+        run: |
+          docker run --detach --name postgres \
+            --env POSTGRES_USER=postgres \
+            --env POSTGRES_DB=ictunion \
+            --env POSTGRES_PASSWORD=superuser \
+            --publish 5432:5432 \
+            --health-cmd pg_isready \
+            --health-interval 2s \
+            --health-timeout 5s \
+            --health-retries 15 \
+            "$POSTGRES_IMAGE"
 
       - name: Install nix
         uses: cachix/install-nix-action@v18
 
       - name: Build using nix
         run: nix build .#gray-whale
+
+      - name: Wait for postgres
+        run: |
+          for _ in $(seq 1 30); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' postgres)" = healthy ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs postgres
+          exit 1
 
       - name: Run migrations
         working-directory: gray-whale
