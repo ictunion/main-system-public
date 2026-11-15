@@ -17,6 +17,3 @@ CLAUDE.md
 
 # Local agent tooling
 .mcp.json
-
-# Axum migration baseline 
-orca/rest-client/contract

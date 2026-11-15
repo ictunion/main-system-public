@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT m.member_number\n    , m.email\n    , CONCAT_WS(' ', NULLIF(m.first_name, ''), NULLIF(m.last_name, '')) AS \"name!: String\"\n    , m.city\n    -- orca's own emails fall back to English for a missing language\n    , COALESCE(m.language, 'en') AS \"lang!: String\"\n    , (\n        SELECT w.newsletter_id\n        FROM members_workplaces mw\n        JOIN workplaces w ON w.id = mw.workplace_id\n        WHERE mw.member_id = m.id\n          AND w.newsletter_id IS NOT NULL\n        ORDER BY w.name\n        LIMIT 1\n      ) AS \"workplace_newsletter_id: i32\"\nFROM members AS m\nWHERE m.onboarding_finished_at IS NOT NULL\n  AND m.left_at IS NULL\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "member_number",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name!: String",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "city",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "lang!: String",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "workplace_newsletter_id: i32",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "9157901a0af50d1c4cd3a7c62a84313e4887e49927ace5c045b9f873985d705e"
+}

@@ -48,6 +48,8 @@ pub struct Config {
     pub listmonk_host: Option<String>,
     /// Shared secret bearer token for machine-to-machine bank-system sync
     pub bank_sync_token: Option<String>,
+    /// Shared secret bearer token for machine-to-machine newsletter-system sync
+    pub newsletter_sync_token: Option<String>,
     /// Member id of the union board chairperson signing generated documents (e.g. entrustments).
     /// Name is loaded from the database at generation time so it is always current.
     pub union_chairperson_member_id: Option<Uuid>,
@@ -62,6 +64,10 @@ impl Config {
     ///
     /// If one or more required configuration fields aren't present or a value is invalid. It's pointless to continue execution.
     #[must_use]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "flat list of config field reads; splitting would not improve readability"
+    )]
     pub fn get() -> Self {
         let figment = Figment::new()
             // TODO: rename Rocket.toml to Orca.toml later, when we are sure that everything works
@@ -149,6 +155,9 @@ impl Config {
 
         let bank_sync_token: Option<String> = figment.extract_inner("bank_sync_token").ok();
 
+        let newsletter_sync_token: Option<String> =
+            figment.extract_inner("newsletter_sync_token").ok();
+
         let union_chairperson_member_id: Option<Uuid> =
             figment.extract_inner("union_chairperson_member_id").ok();
 
@@ -188,6 +197,7 @@ impl Config {
             listmonk_username,
             listmonk_host,
             bank_sync_token,
+            newsletter_sync_token,
             union_chairperson_member_id,
             union_chairperson_email,
         }

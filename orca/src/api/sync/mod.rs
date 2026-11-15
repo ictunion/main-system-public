@@ -32,6 +32,19 @@ pub struct BankSyncMember {
     workplace_executive_committee_sub: Option<Uuid>,
 }
 
+/// Member payload for newsletter-system. Field set is a contract: send nothing else.
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct NewsletterSyncMember {
+    member_number: MemberNumber,
+    email: String,
+    /// First name and last name joined with one space
+    name: String,
+    city: Option<String>,
+    lang: String,
+    /// `workplaces.newsletter_id` (a Listmonk list ID) of the member's workplace
+    workplace_newsletter_id: Option<i32>,
+}
+
 #[derive(Debug, Serialize)]
 struct BankSyncMembersResponse {
     members: Vec<BankSyncMember>,
@@ -49,25 +62,43 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
         == 0
 }
 
+/// Checks the bearer token against a configured shared secret; unset secret rejects everything.
+fn check_sync_token(token: &JwtToken, expected: Option<&str>) -> Result<(), StatusCode> {
+    let expected = expected.ok_or(StatusCode::UNAUTHORIZED)?;
+
+    if constant_time_eq(token.as_str().as_bytes(), expected.as_bytes()) {
+        Ok(())
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
+    }
+}
+
 async fn list_bank_members(
     State(db_pool): State<DbPool>,
     State(config): State<Arc<Config>>,
     token: JwtToken,
 ) -> Response<Json<BankSyncMembersResponse>> {
-    let expected_token = config
-        .bank_sync_token
-        .as_deref()
-        .ok_or(StatusCode::UNAUTHORIZED)?;
-
-    if !constant_time_eq(token.as_str().as_bytes(), expected_token.as_bytes()) {
-        return Err(StatusCode::UNAUTHORIZED.into());
-    }
+    check_sync_token(&token, config.bank_sync_token.as_deref())?;
 
     let members = query::list_bank_sync_members(&db_pool).await?;
 
     Ok(Json(BankSyncMembersResponse { members }))
 }
 
+async fn list_newsletter_members(
+    State(db_pool): State<DbPool>,
+    State(config): State<Arc<Config>>,
+    token: JwtToken,
+) -> Response<Json<Vec<NewsletterSyncMember>>> {
+    check_sync_token(&token, config.newsletter_sync_token.as_deref())?;
+
+    let members = query::list_newsletter_sync_members(&db_pool).await?;
+
+    Ok(Json(members))
+}
+
 pub(crate) fn router() -> Router<AppState> {
-    Router::new().route("/bank/members", get(list_bank_members))
+    Router::new()
+        .route("/bank/members", get(list_bank_members))
+        .route("/newsletter/members", get(list_newsletter_members))
 }
