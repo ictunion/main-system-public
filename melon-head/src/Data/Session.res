@@ -41,11 +41,13 @@ let showRealmRole = (r: realmRole): string =>
 type bankRole =
   | UnknownBankRole(string)
   | PaymentHistory
+  | WorkplacePaymentHistory
 
 let showBankRole = (r: bankRole): string =>
   switch r {
   | UnknownBankRole(str) => str
   | PaymentHistory => "payment-history"
+  | WorkplacePaymentHistory => "view-workplace-payment-history"
   }
 
 type tokenClaims = {
@@ -131,6 +133,7 @@ module Decode = {
   let bankRole = string->map((. str) => {
     switch str {
     | "payment-history" => PaymentHistory
+    | "view-workplace-payment-history" => WorkplacePaymentHistory
     | _ => UnknownBankRole(str)
     }
   })

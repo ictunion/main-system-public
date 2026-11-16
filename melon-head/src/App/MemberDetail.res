@@ -563,7 +563,11 @@ module MemberWorkplaceSelect = {
    Nothing is shown while loading or on failure. */
 module MissingDuesButton = {
   @react.component
-  let make = (~paymentsData: Api.webData<array<PaymentData.transaction>>, ~detail: MemberData.detail) => {
+  let make = (
+    ~paymentsData: Api.webData<array<PaymentData.transaction>>,
+    ~detail: MemberData.detail,
+    ~path="/missing-dues",
+  ) => {
     let hasMissing = PaymentHistory.hasMissingMonth(
       ~joinDate=PaymentHistory.joinDateOf(detail),
       ~leftAt=detail.leftAt,
@@ -571,7 +575,7 @@ module MissingDuesButton = {
     )
 
     if hasMissing {
-      <Page.BackButton name="missing dues" path="/missing-dues" />
+      <Page.BackButton name="missing dues" path />
     } else {
       React.null
     }
@@ -719,32 +723,26 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
       Session.hasRole(s, ~role=Session.ListMembers)
     )
 
-  /* Payment history stays gated on the payment-history bank role for staff,
-     but a workplace executive gets it too -- for their own workplace's
-     members only, which Orca already enforced by serving this page at all.
-     Also requires the bank feature itself to be configured -- a role alone
-     isn't enough when there's no bank backend to call. */
+  /* Staff see any member's payment history via payment-history; a workplace
+     executive via view-workplace-payment-history, which the bank service
+     scopes to their own workplace's members. Also requires the bank feature
+     itself to be configured -- a role alone isn't enough when there's no bank
+     backend to call. */
   let canSeePayments =
     bankEnabled &&
     session->RemoteData.unwrap(~default=false, s =>
       Session.hasBankRole(s, ~role=Session.PaymentHistory) ||
-      Session.hasRole(s, ~role=Session.ListOwnWorkplaceMembers)
+      Session.hasBankRole(s, ~role=Session.WorkplacePaymentHistory)
     )
 
   let tabHandlers = Tabbed.make(isStaff ? Occupations : Payments)
 
   /* Single payment history request, shared by the Payments tab and the Missing
-     Dues back button. Both are gated on the payment-history bank role, so skip
-     the request without it (and until the member number is known). */
-  let canFetchPayments =
-    bankEnabled &&
-    session->RemoteData.unwrap(~default=false, s =>
-      Session.hasBankRole(s, ~role=Session.PaymentHistory)
-    )
-
+     Dues back button. Skipped without a payment role (and until the member
+     number is known). */
   let (paymentsData, _, _) =
     bankApi->Hook.getData(
-      ~enabled=canFetchPayments &&
+      ~enabled=canSeePayments &&
       switch detail {
       | Success(_) => true
       | _ => false
@@ -835,7 +833,18 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
         {if isStaff {
           React.null
         } else {
-          <Page.BackButton name="my workplace" path="/my-workplace" />
+          <>
+            <Page.BackButton name="my workplace" path="/my-workplace" />
+            <RequireFeature enabled=bankEnabled>
+              <SessionContext.RequireBankRole anyOf=[Session.WorkplacePaymentHistory]>
+                {switch detail {
+                | Success(d) =>
+                  <MissingDuesButton paymentsData detail=d path="/my-workplace-missing-dues" />
+                | _ => React.null
+                }}
+              </SessionContext.RequireBankRole>
+            </RequireFeature>
+          </>
         }}
       </div>
       <dl className={styles["headerRow"]}>
@@ -933,14 +942,12 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
       React.null
     }}
     {if canSeePayments {
-    <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
       <Tabbed.Content tab=Payments handlers=tabHandlers>
         {switch detail {
         | Success(d) => <PaymentHistory paymentsData joinDate={PaymentHistory.joinDateOf(d)} leftAt=d.leftAt />
         | _ => <Loading />
         }}
       </Tabbed.Content>
-    </SessionContext.RequireBankRole>
     } else {
       React.null
     }}
