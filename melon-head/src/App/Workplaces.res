@@ -268,6 +268,16 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
 
   let refreshWorkplaces = () => setRefreshKey(k => k + 1)
 
+  let (stats, _, sendStats) =
+    api->Hook.getData(~path="/stats/workplaces/basic", ~decoder=StatsData.Workplaces.Decode.basic)
+
+  React.useEffect1(() => {
+    if refreshKey > 0 {
+      let _ = sendStats()
+    }
+    None
+  }, [refreshKey])
+
   let openNewWorkplaceModal = _ =>
     Modal.Interface.openModal(modal, newWorkplaceModal(~api, ~modal, ~refreshWorkplaces))
 
@@ -279,17 +289,21 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
     <div className={styles["mainContent"]}>
       <Tabbed.Tabs>
         <Tabbed.Tab value={Some(Active)} handlers={tabHandlers}>
-          {React.string("Active")}
+          <span> {React.string("Active")} </span>
+          <Chip.Count value={stats->RemoteData.map(s => s.active)} />
         </Tabbed.Tab>
         <Tabbed.Tab value={Some(InPreparation)} handlers={tabHandlers}>
-          {React.string("In preparation")}
+          <span> {React.string("In preparation")} </span>
+          <Chip.Count value={stats->RemoteData.map(s => s.inPreparation)} />
         </Tabbed.Tab>
         <Tabbed.Tab value={Some(Inactive)} handlers={tabHandlers}>
-          {React.string("Inactive")}
+          <span> {React.string("Inactive")} </span>
+          <Chip.Count value={stats->RemoteData.map(s => s.past)} />
         </Tabbed.Tab>
         <Tabbed.TabSpacer />
         <Tabbed.Tab value={None} handlers={tabHandlers} color=Some("var(--color1)")>
-          {React.string("All")}
+          <span> {React.string("All")} </span>
+          <Chip.Count value={stats->RemoteData.map(StatsData.Workplaces.all)} />
         </Tabbed.Tab>
       </Tabbed.Tabs>
       <Tabbed.Content tab={Some(Active)} handlers={tabHandlers}>

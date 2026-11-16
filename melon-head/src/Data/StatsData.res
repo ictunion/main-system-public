@@ -59,6 +59,8 @@ module Workplaces = {
   type basic = {
     current: int,
     past: int,
+    active: int,
+    inPreparation: int,
   }
 
   let all = (b: basic): int => {
@@ -71,6 +73,8 @@ module Workplaces = {
     let basic = object(field => {
       current: field.required(. "current", int),
       past: field.required(. "past", int),
+      active: field.required(. "active", int),
+      inPreparation: field.required(. "in_preparation", int),
     })
   }
 }

@@ -81,6 +81,8 @@ async fn members_basic_stats(
 struct WorkplacesBasicStats {
     current: i64,
     past: i64,
+    active: i64,
+    in_preparation: i64,
 }
 
 async fn workplaces_basic_stats(
@@ -91,10 +93,14 @@ async fn workplaces_basic_stats(
     // Every authenticated user is able to see stats
     oid_provider.decode_jwt(&token)?;
 
-    let current = query::count_current_workplaces(&db_pool).await?;
-    let past = query::count_past_workplaces(&db_pool).await?;
+    let counts = query::count_workplaces(&db_pool).await?;
 
-    Ok(Json(WorkplacesBasicStats { current, past }))
+    Ok(Json(WorkplacesBasicStats {
+        current: counts.active + counts.in_preparation,
+        past: counts.past,
+        active: counts.active,
+        in_preparation: counts.in_preparation,
+    }))
 }
 
 pub(crate) fn router() -> Router<AppState> {

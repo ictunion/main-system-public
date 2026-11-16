@@ -70,15 +70,22 @@ WHERE m.left_at IS NULL
     .await
 }
 
-pub async fn count_current_workplaces(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM workplaces WHERE cancelled_at IS NULL"#)
-        .fetch_one(pool)
-        .await
+pub struct WorkplaceCounts {
+    pub active: i64,
+    pub in_preparation: i64,
+    pub past: i64,
 }
 
-pub async fn count_past_workplaces(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(
-        r#"SELECT COUNT(*) as "count!" FROM workplaces WHERE cancelled_at IS NOT NULL"#
+// One statement so the counts come from the same snapshot and always add up.
+pub async fn count_workplaces(pool: &DbPool) -> sqlx::Result<WorkplaceCounts> {
+    sqlx::query_as!(
+        WorkplaceCounts,
+        r#"
+SELECT COUNT(*) FILTER (WHERE established_at IS NOT NULL AND cancelled_at IS NULL) AS "active!"
+    , COUNT(*) FILTER (WHERE established_at IS NULL AND cancelled_at IS NULL) AS "in_preparation!"
+    , COUNT(*) FILTER (WHERE cancelled_at IS NOT NULL) AS "past!"
+FROM workplaces
+"#
     )
     .fetch_one(pool)
     .await
