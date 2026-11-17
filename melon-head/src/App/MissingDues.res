@@ -235,6 +235,83 @@ module HideSingleMissingFilter = {
     </Form.CheckboxButton>
 }
 
+/* Dues notes on the missing-dues pages, shared with MyWorkplaceMissingDues:
+   the Notes column, the drawer, and the Dues Notes section for members whose
+   thread outlived their missing dues. */
+module DuesNotes = {
+  let column = (
+    byId: Map.String.t<NoteData.summary>,
+    onOpen: MemberData.summary => unit,
+  ): MemberSummaryTable.column => Custom({
+    name: "Notes",
+    minMax: ("250px", "4fr"),
+    view: r => <Notes.Cell summary={Notes.summaryOf(byId, r.id)} onOpen={() => onOpen(r)} />,
+  })
+
+  /* Members with a dues thread who are not in the bank API's missing list for
+     the selected period. Empty until the missing list has loaded, so nobody
+     shows up here just because the bank data is still on its way. */
+  let resolved = (
+    ~byId: Map.String.t<NoteData.summary>,
+    ~missing: Api.webData<'a>,
+    ~isMissing: MemberData.summary => bool,
+    members: Api.webData<array<MemberData.summary>>,
+  ) =>
+    switch (missing, members) {
+    | (Success(_), Success(rows)) =>
+      rows->Array.keep(m => Notes.summaryOf(byId, m.id)->Option.isSome && !isMissing(m))
+    | _ => []
+    }
+
+  module Drawer = {
+    @react.component
+    let make = (
+      ~api: Api.t,
+      ~member: option<MemberData.summary>,
+      ~onClose: unit => unit,
+      ~onChange: unit => unit,
+    ) =>
+      switch member {
+      | None => React.null
+      | Some(m) => {
+          let name = [m.firstName, m.lastName]->Array.keepMap(n => n)->Js.Array2.joinWith(" ")
+          <Notes.Drawer
+          title={<>
+            {React.string("Dues notes of ")}
+            {MemberSummaryTable.viewPaddedNumber(m.memberNumber, ())}
+            {React.string(" " ++ name)}
+          </>}
+          onClose>
+          <Notes.Panel
+            key={Uuid.toString(m.id)} api target=NoteData.MemberDues targetId=m.id onChange
+          />
+          </Notes.Drawer>
+        }
+      }
+  }
+
+  module Section = {
+    @react.component
+    let make = (~members: array<MemberData.summary>, ~notesColumn: MemberSummaryTable.column) =>
+      if Array.length(members) == 0 {
+        React.null
+      } else {
+        <>
+          <h2> {React.string("Dues Notes")} </h2>
+          <p>
+            {React.string(
+              "Members with dues notes who are not missing any dues in the selected period. Read the outcome and clear the notes.",
+            )}
+          </p>
+          <MemberSummaryTable
+            data=RemoteData.Success(members)
+            columns=[Id, MemberNumber, FirstName, LastName, notesColumn, Email, Phone]
+          />
+        </>
+      }
+  }
+}
+
 /* Split out so a change of year or month remounts it (via `key` in the parent)
    and re-runs the bank API request -- Hook.getData only fetches on mount. */
 module MissingList = {
@@ -294,6 +371,10 @@ module MissingList = {
 
     let sortHeader = (by): DataTable.sort => {active: sortBy == by, onSelect: () => setSortBy(by)}
 
+    let (notesById, _, refreshNotes) = Notes.useSummary(api, NoteData.MemberDues)
+    let (notesFor, setNotesFor) = React.useState(() => None)
+    let notesColumn = DuesNotes.column(notesById, m => setNotesFor(_ => Some(m)))
+
     let displayedMembers =
       members->RemoteData.map(rows =>
         rows
@@ -334,6 +415,7 @@ module MissingList = {
             minMax: ("120px", "1fr"),
             view: r => React.string(hasEverPaidOf(r) ? "Yes" : "No"),
           }),
+          notesColumn,
           LastCompany,
           Email,
           Phone,
@@ -345,6 +427,17 @@ module MissingList = {
           }}>
         <p> {React.string("No members are missing dues for the selected period.")} </p>
       </MemberSummaryTable>
+      <DuesNotes.Section
+        members={members->DuesNotes.resolved(
+          ~byId=notesById,
+          ~missing,
+          ~isMissing=m => missingByNumber->Map.Int.has(m.memberNumber),
+        )}
+        notesColumn
+      />
+      <DuesNotes.Drawer
+        api member=notesFor onClose={() => setNotesFor(_ => None)} onChange=refreshNotes
+      />
     </>
   }
 }

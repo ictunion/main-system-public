@@ -17,6 +17,7 @@ pub(crate) mod errors;
 pub(crate) mod extract;
 mod files;
 mod members;
+mod notes;
 mod oidc;
 mod registration;
 mod session;
@@ -358,6 +359,7 @@ pub(crate) fn router(state: AppState) -> Router {
         .nest("/workplaces", workplaces::router())
         .nest("/sync", sync::router())
         .nest("/files", files::router())
+        .nest("/notes", notes::router())
         .fallback(not_found)
         // Must come after all routes: it only applies to routes added before it
         .method_not_allowed_fallback(method_not_allowed)

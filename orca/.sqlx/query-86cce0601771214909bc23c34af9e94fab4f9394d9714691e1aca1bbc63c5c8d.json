@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT author_sub\nFROM notes\nWHERE id = $1\n  AND target_type = $2\n  AND (registration_request_id = $3 OR member_id = $3 OR workplace_id = $3)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "author_sub",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "note_target",
+            "kind": {
+              "Enum": [
+                "application",
+                "member",
+                "member_dues",
+                "workplace"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "86cce0601771214909bc23c34af9e94fab4f9394d9714691e1aca1bbc63c5c8d"
+}

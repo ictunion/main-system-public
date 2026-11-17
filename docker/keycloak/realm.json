@@ -357,6 +357,15 @@
           "attributes": {}
         },
         {
+          "id": "7a899d1f-5ddb-4909-8244-02c73ae2d68f",
+          "name": "manage-notes",
+          "description": "Edit and delete notes written by other users",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
+          "attributes": {}
+        },
+        {
           "id": "6e9e0b13-452f-415a-986f-b41f708a9813",
           "name": "list-workplaces",
           "description": "Listing of workplaces",
@@ -592,7 +601,8 @@
           "list-members",
           "list-workplaces",
           "resolve-applications",
-          "list-applications"
+          "list-applications",
+          "manage-notes"
         ],
         "bank-system": [
           "manage-transactions",

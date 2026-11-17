@@ -99,6 +99,9 @@ pub struct Member;
 pub struct Workplace;
 
 #[derive(Debug, Clone, Copy)]
+pub struct Note;
+
+#[derive(Debug, Clone, Copy)]
 pub struct Office;
 
 #[derive(Debug, Clone, Copy)]

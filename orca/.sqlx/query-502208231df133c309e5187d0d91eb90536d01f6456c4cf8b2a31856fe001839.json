@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM notes\nWHERE target_type = $1\n  AND (registration_request_id = $2 OR member_id = $2 OR workplace_id = $2)\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "note_target",
+            "kind": {
+              "Enum": [
+                "application",
+                "member",
+                "member_dues",
+                "workplace"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "502208231df133c309e5187d0d91eb90536d01f6456c4cf8b2a31856fe001839"
+}

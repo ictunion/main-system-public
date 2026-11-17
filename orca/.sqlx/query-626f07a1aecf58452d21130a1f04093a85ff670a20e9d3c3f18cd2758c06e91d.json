@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT COALESCE(n.registration_request_id, n.member_id, n.workplace_id) AS \"target_id!\"\n    , COUNT(*) AS \"count!\"\n    , (ARRAY_AGG(n.body ORDER BY n.created_at DESC, n.id))[1] AS \"latest_body!\"\nFROM notes n\nWHERE n.target_type = $1\n  AND ( $2::uuid[] IS NULL\n     OR n.member_id IN (\n        SELECT mw.member_id\n        FROM members_workplaces mw\n        JOIN members m ON m.id = mw.member_id\n        WHERE mw.workplace_id = ANY($2)\n          AND m.left_at IS NULL\n     ))\nGROUP BY 1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "target_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "latest_body!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "note_target",
+            "kind": {
+              "Enum": [
+                "application",
+                "member",
+                "member_dues",
+                "workplace"
+              ]
+            }
+          }
+        },
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "626f07a1aecf58452d21130a1f04093a85ff670a20e9d3c3f18cd2758c06e91d"
+}

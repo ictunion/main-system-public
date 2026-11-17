@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO notes\n    ( target_type\n    , registration_request_id\n    , member_id\n    , workplace_id\n    , body\n    , author_sub\n    , author_name\n    )\nVALUES ( $1, $2, $3, $4, $5, $6, $7 )\nRETURNING id\n    , target_type AS \"target_type: NoteTarget\"\n    , COALESCE(registration_request_id, member_id, workplace_id) AS \"target_id!\"\n    , body\n    , author_sub\n    , author_name\n    , created_at\n    , updated_at\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "target_type: NoteTarget",
+        "type_info": {
+          "Custom": {
+            "name": "note_target",
+            "kind": {
+              "Enum": [
+                "application",
+                "member",
+                "member_dues",
+                "workplace"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "target_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "body",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "author_sub",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "author_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "note_target",
+            "kind": {
+              "Enum": [
+                "application",
+                "member",
+                "member_dues",
+                "workplace"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e3f55f3511eca7a193ad1eabb992c7e31a512c0505e214dc25f20bffa3a33e82"
+}

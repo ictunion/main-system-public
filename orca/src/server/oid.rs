@@ -67,6 +67,9 @@ pub enum Role {
     /// `ListWorkplaces` and are not restricted to their own. See
     /// `api::workplaces::detail`.
     ListOwnWorkplace,
+    /// Edit and delete notes written by other users, and clear whole note
+    /// threads. Only together with the target's own write role. See `api::notes`.
+    ManageNotes,
     SuperPowers,
 }
 
@@ -82,6 +85,7 @@ impl Role {
             Self::ManageWorkplaces => "manage-workplaces",
             Self::ListOwnWorkplaceMembers => "list-own-workplace-members",
             Self::ListOwnWorkplace => "list-own-workplace",
+            Self::ManageNotes => "manage-notes",
             Self::SuperPowers => "super-powers",
         }
     }
@@ -341,7 +345,7 @@ pub struct JwtClaims {
     pub sub: Uuid,
     resource_access: HashMap<String, Roles>,
     pub email: String,
-    name: Option<String>,
+    pub name: Option<String>,
 }
 
 /// Bearer token from the `Authorization` header; a missing header is a 401

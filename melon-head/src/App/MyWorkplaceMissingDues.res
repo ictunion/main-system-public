@@ -80,10 +80,15 @@ module MissingList = {
       everPaid
     }
 
+    let summaries = members->RemoteData.map(rows => rows->Array.map(toSummary))
+
+    let (notesById, _, refreshNotes) = Notes.useSummary(api, NoteData.MemberDues)
+    let (notesFor, setNotesFor) = React.useState(() => None)
+    let notesColumn = MissingDues.DuesNotes.column(notesById, m => setNotesFor(_ => Some(m)))
+
     let displayedMembers =
-      members->RemoteData.map(rows =>
+      summaries->RemoteData.map(rows =>
         rows
-        ->Array.map(toSummary)
         ->Array.keep(m =>
           missingByNumber->Map.Int.has(m.memberNumber) && (!onlyNeverPaid || !hasEverPaidOf(m))
         )
@@ -115,11 +120,23 @@ module MissingList = {
             minMax: ("120px", "1fr"),
             view: r => React.string(hasEverPaidOf(r) ? "Yes" : "No"),
           }),
+          notesColumn,
           Email,
           Phone,
         ]>
         <p> {React.string("No members are missing dues for the selected period.")} </p>
       </MemberSummaryTable>
+      <MissingDues.DuesNotes.Section
+        members={summaries->MissingDues.DuesNotes.resolved(
+          ~byId=notesById,
+          ~missing,
+          ~isMissing=m => missingByNumber->Map.Int.has(m.memberNumber),
+        )}
+        notesColumn
+      />
+      <MissingDues.DuesNotes.Drawer
+        api member=notesFor onClose={() => setNotesFor(_ => None)} onChange=refreshNotes
+      />
     </>
   }
 }
