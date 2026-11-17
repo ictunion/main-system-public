@@ -23,10 +23,9 @@ treasurer_reply_email = "treasurer@ictunion.cz"
 treasurer_reply_name = "ICT Union Treasurer"
 templates_dir = "./templates/emails"
 
-# Linkmonk configuration
-Listmonk_password = ""
-Listmonk_username = ""
-Listmonk_host = ""
+# newsletter-system base URL, e.g. "https://newsletter.example.org".
+# Empty disables the calls on member changes (development).
+newsletter_host = ""
 
 # Database
 postgres = "postgres://orca@localhost/ictunion"

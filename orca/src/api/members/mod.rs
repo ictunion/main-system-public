@@ -20,6 +20,7 @@ use crate::api::files::FileInfo;
 use crate::api::workplaces;
 use crate::data::{Id, Member, MemberNumber, Office};
 use crate::db::DbPool;
+use crate::newsletter::Newsletter;
 use crate::processing::{Command, QueueSender};
 use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role, User};
 use crate::validation::Validated;
@@ -298,6 +299,7 @@ impl MemberStatusData {
 async fn accept(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<MemberDetail>> {
@@ -314,6 +316,10 @@ async fn accept(
     }
 
     let detail = query::set_onboarding_finished(&db_pool, id).await?;
+
+    // Members created by hand (not from an application) reach newsletter-system here;
+    // for the others it's a no-op, the POST is idempotent.
+    newsletter.create_member(&db_pool, &token, id).await;
 
     Ok(Json(detail))
 }
@@ -649,6 +655,7 @@ pub struct UpdateMember {
 async fn update_member(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath(id): ApiPath<Id<Member>>,
     data: Validated<UpdateMember>,
@@ -657,12 +664,15 @@ async fn update_member(
 
     let result = query::update_member(&db_pool, id, data.into_inner()).await?;
 
+    newsletter.update_member(&db_pool, &token, id).await;
+
     Ok(Json(result))
 }
 
 async fn remove_member(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<MemberDetail>> {
@@ -689,6 +699,8 @@ async fn remove_member(
     let detail = query::remove_member(&mut *tx, id).await?;
 
     tx.commit().await?;
+
+    newsletter.delete_member(&token, detail.member_number).await;
 
     Ok(Json(detail))
 }

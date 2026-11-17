@@ -1,8 +1,9 @@
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-use super::{BankSyncMember, NewsletterSyncMember};
+use super::BankSyncMember;
 use crate::db::DbPool;
+use crate::newsletter::NewsletterMember;
 
 pub async fn list_bank_sync_members(pool: &DbPool) -> sqlx::Result<Vec<BankSyncMember>> {
     sqlx::query_as!(
@@ -29,11 +30,9 @@ FROM members AS m
 }
 
 /// Active members only (same notion as the bank sync `active` flag).
-pub async fn list_newsletter_sync_members(
-    pool: &DbPool,
-) -> sqlx::Result<Vec<NewsletterSyncMember>> {
+pub async fn list_newsletter_sync_members(pool: &DbPool) -> sqlx::Result<Vec<NewsletterMember>> {
     sqlx::query_as!(
-        NewsletterSyncMember,
+        NewsletterMember,
         r#"
 SELECT m.member_number
     , m.email

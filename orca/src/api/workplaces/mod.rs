@@ -7,6 +7,7 @@ use crate::api::members::query::get_status_data;
 use crate::config::Config;
 use crate::data::{Id, Member, MemberNumber, Workplace};
 use crate::db::DbPool;
+use crate::newsletter::Newsletter;
 use crate::processing::workplace_documents::{EmployerInput, WorkplaceDocument};
 use crate::processing::{Command, QueueSender};
 use crate::server::oid::{JwtToken, Provider, Role};
@@ -285,6 +286,7 @@ fn normalize_text(value: Option<String>) -> Option<String> {
 async fn update(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath(workplace_id): ApiPath<Id<Workplace>>,
     ApiJson(mut update): ApiJson<UpdateWorkplace>,
@@ -295,7 +297,15 @@ async fn update(
     update.company_address = normalize_text(update.company_address);
     update.workplace_short_name = normalize_text(update.workplace_short_name);
 
+    let old_newsletter_id = query::detail(&db_pool, workplace_id).await?.newsletter_id;
+
     let workplace = query::update_workplace(&db_pool, workplace_id, &update).await?;
+
+    if workplace.newsletter_id != old_newsletter_id {
+        newsletter
+            .update_workplace_members(&db_pool, &token, workplace_id)
+            .await;
+    }
 
     Ok(Json(workplace))
 }
@@ -354,6 +364,7 @@ async fn cancel(
 async fn assign_member_to_workplace_impl(
     db_pool: &DbPool,
     oid_provider: &Provider,
+    newsletter: &Newsletter,
     token: &JwtToken,
     workplace_id: Id<Workplace>,
     member_id: Id<Member>,
@@ -370,6 +381,9 @@ async fn assign_member_to_workplace_impl(
         is_representative,
     )
     .await?;
+
+    // Before the Keycloak calls: the assignment is stored even if they fail
+    newsletter.update_member(db_pool, token, member_id).await;
 
     let workplace_details = query::detail(db_pool, workplace_id).await?;
 
@@ -409,12 +423,14 @@ async fn assign_member_to_workplace_impl(
 async fn assign_member_to_workplace(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath((workplace_id, member_id)): ApiPath<(Id<Workplace>, Id<Member>)>,
 ) -> Response<SuccessResponse> {
     assign_member_to_workplace_impl(
         &db_pool,
         &oid_provider,
+        &newsletter,
         &token,
         workplace_id,
         member_id,
@@ -426,12 +442,14 @@ async fn assign_member_to_workplace(
 async fn assign_member_to_workplace_rep(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath((workplace_id, member_id)): ApiPath<(Id<Workplace>, Id<Member>)>,
 ) -> Response<SuccessResponse> {
     assign_member_to_workplace_impl(
         &db_pool,
         &oid_provider,
+        &newsletter,
         &token,
         workplace_id,
         member_id,
@@ -443,6 +461,7 @@ async fn assign_member_to_workplace_rep(
 async fn remove_member_from_workplace(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath((workplace_id, member_id)): ApiPath<(Id<Workplace>, Id<Member>)>,
 ) -> Response<SuccessResponse> {
@@ -454,6 +473,11 @@ async fn remove_member_from_workplace(
     let rows_affected =
         query::remove_connection_between_member_and_workplace(&db_pool, workplace_id, member_id)
             .await?;
+
+    // Before the Keycloak calls: the removal is stored even if they fail
+    if rows_affected > 0 {
+        newsletter.update_member(&db_pool, &token, member_id).await;
+    }
 
     let workplace_details = query::detail(&db_pool, workplace_id).await?;
 

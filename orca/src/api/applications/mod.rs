@@ -7,18 +7,15 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::config::Config;
-
 use crate::api::Response;
 use crate::api::files::FileInfo;
 use crate::api::members;
 use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
 use crate::db::{self, DbPool};
+use crate::newsletter::Newsletter;
 use crate::processing::{Command, QueueSender};
 use crate::server::IpAddress;
 use crate::server::oid::{JwtToken, Provider, Role};
-
-use crate::listmonk::subscribe_to_listmonk;
 
 use super::{ApiError, AppState, SuccessResponse};
 use crate::api::extract::{ApiJson, ApiPath};
@@ -420,10 +417,10 @@ struct NewMember {
 }
 
 async fn accept(
-    State(config): State<Arc<Config>>,
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
     State(queue): State<QueueSender>,
+    State(newsletter): State<Newsletter>,
     token: JwtToken,
     ApiPath(id): ApiPath<Id<RegistrationRequest>>,
     ApiJson(new_member): ApiJson<NewMember>,
@@ -476,18 +473,9 @@ async fn accept(
     // let's just do an extra query for application detail
     let detail: ApplicationDetail = query::get_application(&mut *tx, id).await?;
 
-    // if config file doesn't contain listmonk_host value, let's skip listmonk subscribe step.
-    // DEV environment will be probably missing listmonk_host, unless devs setup their own testing listmonk instance.
-    // We don't want to call production listmonk during development
-    if config
-        .listmonk_host
-        .as_deref()
-        .is_some_and(|h| !h.is_empty())
-    {
-        subscribe_to_listmonk(&detail, member_number, &config, tx, member_id).await?;
-    } else {
-        tx.commit().await?;
-    }
+    tx.commit().await?;
+
+    newsletter.create_member(&db_pool, &token, member_id).await;
 
     queue
         .send(Command::NewMemberCreated(

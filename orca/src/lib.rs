@@ -3,9 +3,9 @@ pub mod config;
 mod data;
 mod db;
 mod generate;
-mod listmonk;
 mod logging;
 mod media;
+mod newsletter;
 mod processing;
 mod server;
 mod validation;
@@ -67,6 +67,7 @@ pub async fn start(config: Config) -> Result<(), StartupError> {
     let app = NormalizePath::trim_trailing_slash(api::router(api::AppState {
         db: web_db_pool,
         queue,
+        newsletter: newsletter::Newsletter::new(config.newsletter_host.as_deref()),
         config: Arc::new(config),
         provider,
     }));

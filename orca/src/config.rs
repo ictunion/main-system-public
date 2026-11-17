@@ -43,9 +43,8 @@ pub struct Config {
     pub keycloak_client_id: Option<String>,
     pub keycloak_members_group_id: Option<Uuid>,
     pub templates: Templates<'static>,
-    pub listmonk_password: Option<String>,
-    pub listmonk_username: Option<String>,
-    pub listmonk_host: Option<String>,
+    /// newsletter-system base URL (API lives under `/api`); unset disables the calls
+    pub newsletter_host: Option<String>,
     /// Shared secret bearer token for machine-to-machine bank-system sync
     pub bank_sync_token: Option<String>,
     /// Shared secret bearer token for machine-to-machine newsletter-system sync
@@ -147,11 +146,7 @@ impl Config {
         let keycloak_members_group_id: Option<Uuid> =
             figment.extract_inner("keycloak_members_group_id").ok();
 
-        let listmonk_password: Option<String> = figment.extract_inner("listmonk_password").ok();
-
-        let listmonk_username: Option<String> = figment.extract_inner("listmonk_username").ok();
-
-        let listmonk_host: Option<String> = figment.extract_inner("listmonk_host").ok();
+        let newsletter_host: Option<String> = figment.extract_inner("newsletter_host").ok();
 
         let bank_sync_token: Option<String> = figment.extract_inner("bank_sync_token").ok();
 
@@ -193,9 +188,7 @@ impl Config {
             keycloak_client_id,
             keycloak_members_group_id,
             templates,
-            listmonk_password,
-            listmonk_username,
-            listmonk_host,
+            newsletter_host,
             bank_sync_token,
             newsletter_sync_token,
             union_chairperson_member_id,

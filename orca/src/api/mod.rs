@@ -27,6 +27,7 @@ mod workplaces;
 use crate::api::errors::error_response;
 use crate::config::Config;
 use crate::db::{self, DbPool};
+use crate::newsletter::Newsletter;
 use crate::processing::{QueueSender, SenderError};
 use crate::server::oid::{self, Provider};
 use crate::{logging, server};
@@ -39,6 +40,7 @@ pub(crate) struct AppState {
     pub(crate) queue: QueueSender,
     pub(crate) config: Arc<Config>,
     pub(crate) provider: Arc<Provider>,
+    pub(crate) newsletter: Newsletter,
 }
 
 impl FromRef<AppState> for DbPool {
@@ -56,6 +58,12 @@ impl FromRef<AppState> for QueueSender {
 impl FromRef<AppState> for Arc<Config> {
     fn from_ref(input: &AppState) -> Self {
         Arc::clone(&input.config)
+    }
+}
+
+impl FromRef<AppState> for Newsletter {
+    fn from_ref(input: &AppState) -> Self {
+        input.newsletter.clone()
     }
 }
 
@@ -238,59 +246,8 @@ impl ApiError {
 
         Self::Custom(custom_error)
     }
-
-    pub fn listmonk_error(description: &str) -> ApiError {
-        let custom_error = CustomError {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            json: json!(
-            {
-                "error": {
-                    "code": 500,
-                    "reason": "Listmonk error",
-                    "description": description
-                }
-            }
-            ),
-        };
-
-        Self::Custom(custom_error)
-    }
-
-    pub fn config_missing(item: &'static str) -> ApiError {
-        let description = format!("Missing {item}");
-
-        let custom_error = CustomError {
-            status: StatusCode::CONFLICT,
-            json: json!(
-            {
-                "error": {
-                    "code": 500,
-                    "reason": "Config Missing",
-                    "description": description
-                }
-            }
-            ),
-        };
-        Self::Custom(custom_error)
-    }
-    pub fn data_missing(item: &'static str) -> ApiError {
-        let description = format!("Missing {item}");
-
-        let custom_error = CustomError {
-            status: StatusCode::CONFLICT,
-            json: json!(
-            {
-                "error": {
-                    "code": 500,
-                    "reason": "Data Missing",
-                    "description": description
-                }
-            }
-            ),
-        };
-        Self::Custom(custom_error)
-    }
 }
+
 impl From<sqlx::Error> for ApiError {
     fn from(err: sqlx::Error) -> Self {
         Self::DbErr(err.into())

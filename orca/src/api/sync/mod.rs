@@ -13,6 +13,7 @@ use crate::api::AppState;
 use crate::config::Config;
 use crate::data::MemberNumber;
 use crate::db::DbPool;
+use crate::newsletter::NewsletterMember;
 use crate::server::oid::JwtToken;
 use uuid::Uuid;
 
@@ -30,19 +31,6 @@ pub struct BankSyncMember {
     /// executive committee group configured. If a member is assigned to more
     /// than one workplace, the one first by name is used.
     workplace_executive_committee_sub: Option<Uuid>,
-}
-
-/// Member payload for newsletter-system. Field set is a contract: send nothing else.
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct NewsletterSyncMember {
-    member_number: MemberNumber,
-    email: String,
-    /// First name and last name joined with one space
-    name: String,
-    city: Option<String>,
-    lang: String,
-    /// `workplaces.newsletter_id` (a Listmonk list ID) of the member's workplace
-    workplace_newsletter_id: Option<i32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -89,7 +77,7 @@ async fn list_newsletter_members(
     State(db_pool): State<DbPool>,
     State(config): State<Arc<Config>>,
     token: JwtToken,
-) -> Response<Json<Vec<NewsletterSyncMember>>> {
+) -> Response<Json<Vec<NewsletterMember>>> {
     check_sync_token(&token, config.newsletter_sync_token.as_deref())?;
 
     let members = query::list_newsletter_sync_members(&db_pool).await?;
