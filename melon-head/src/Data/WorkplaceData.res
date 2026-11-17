@@ -21,20 +21,20 @@ type summary = {
   companyAddress: option<string>,
   workplaceShortName: option<string>,
   memberCount: int,
-  createdAt: Js.Date.t,
-  establishedAt: option<Js.Date.t>,
-  announcedAt: option<Js.Date.t>,
-  cancelledAt: option<Js.Date.t>,
+  createdAt: Date.t,
+  establishedAt: option<Date.t>,
+  announcedAt: option<Date.t>,
+  cancelledAt: option<Date.t>,
 }
 
 type status = Initial | Established | Announced | Cancelled
 
 let getStatus = (d: summary): status =>
-  if d.cancelledAt->Belt.Option.isSome {
+  if d.cancelledAt->Option.isSome {
     Cancelled
-  } else if d.announcedAt->Belt.Option.isSome {
+  } else if d.announcedAt->Option.isSome {
     Announced
-  } else if d.establishedAt->Belt.Option.isSome {
+  } else if d.establishedAt->Option.isSome {
     Established
   } else {
     Initial
@@ -44,25 +44,25 @@ module Decode = {
   open Json.Decode
 
   let summary = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    name: field.required(. "name", string),
-    email: field.required(. "email", Email.decode),
-    keycloakGroupId: field.required(. "keycloak_group_id", Uuid.decode),
-    keycloakExecutiveGroupId: field.required(. "keycloak_executive_group_id", option(Uuid.decode)),
-    newsletterId: field.required(. "newsletter_id", option(int)),
-    companyId: field.required(. "company_id", option(string)),
-    companyAddress: field.required(. "company_address", option(string)),
-    workplaceShortName: field.required(. "workplace_short_name", option(string)),
-    memberCount: field.required(. "member_count", int),
-    createdAt: field.required(. "created_at", date),
-    establishedAt: field.required(. "established_at", option(date)),
-    announcedAt: field.required(. "announced_at", option(date)),
-    cancelledAt: field.required(. "cancelled_at", option(date)),
+    id: field.required("id", Uuid.decode),
+    name: field.required("name", string),
+    email: field.required("email", Email.decode),
+    keycloakGroupId: field.required("keycloak_group_id", Uuid.decode),
+    keycloakExecutiveGroupId: field.required("keycloak_executive_group_id", option(Uuid.decode)),
+    newsletterId: field.required("newsletter_id", option(int)),
+    companyId: field.required("company_id", option(string)),
+    companyAddress: field.required("company_address", option(string)),
+    workplaceShortName: field.required("workplace_short_name", option(string)),
+    memberCount: field.required("member_count", int),
+    createdAt: field.required("created_at", date),
+    establishedAt: field.required("established_at", option(date)),
+    announcedAt: field.required("announced_at", option(date)),
+    cancelledAt: field.required("cancelled_at", option(date)),
   })
 }
 
 module Encode = {
-  open Json.Encode
+  open! Json.Encode
 
   let strOption = str => {
     if str == "" {
@@ -78,7 +78,7 @@ module Encode = {
       ("email", strOption(newWorkplace.email)),
       ("keycloak_group_id", strOption(newWorkplace.keycloakGroupId)),
       ("keycloak_executive_group_id", strOption(newWorkplace.keycloakExecutiveGroupId)),
-      ("newsletter_id", option(int, newWorkplace.newsletterId->Belt.Int.fromString)),
+      ("newsletter_id", option(int)(newWorkplace.newsletterId->Int.fromString)),
     ])
 
   let workplaceMember = (workplaceMember: workplaceMember) =>
@@ -97,7 +97,7 @@ type mineMember = {
   lastName: option<string>,
   email: option<Email.t>,
   phoneNumber: option<PhoneNumber.t>,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
   isRepresentative: bool,
 }
 
@@ -105,14 +105,14 @@ module DecodeMine = {
   open Json.Decode
 
   let member = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    memberNumber: field.required(. "member_number", int),
-    workplaceId: field.required(. "workplace_id", Uuid.decode),
-    firstName: field.required(. "first_name", option(string)),
-    lastName: field.required(. "last_name", option(string)),
-    email: field.required(. "email", option(Email.decode)),
-    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
-    createdAt: field.required(. "created_at", date),
-    isRepresentative: field.required(. "is_representative", bool),
+    id: field.required("id", Uuid.decode),
+    memberNumber: field.required("member_number", int),
+    workplaceId: field.required("workplace_id", Uuid.decode),
+    firstName: field.required("first_name", option(string)),
+    lastName: field.required("last_name", option(string)),
+    email: field.required("email", option(Email.decode)),
+    phoneNumber: field.required("phone_number", option(PhoneNumber.decode)),
+    createdAt: field.required("created_at", date),
+    isRepresentative: field.required("is_representative", bool),
   })
 }

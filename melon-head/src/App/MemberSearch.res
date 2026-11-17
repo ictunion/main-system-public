@@ -1,18 +1,17 @@
 open Data
-open Belt
 
 @send external focus: Dom.element => unit = "focus"
 
 // `#123 Jane Doe`, as the browser lists each member under the typed text.
 let label = (m: MemberData.summary): string => {
-  let name = [m.firstName, m.lastName]->Array.keepMap(x => x)->Js.Array2.joinWith(" ")
+  let name = [m.firstName, m.lastName]->Array.filterMap(x => x)->Array.joinUnsafe(" ")
   "#" ++ Int.toString(m.memberNumber) ++ " " ++ name
 }
 
 // The member whose ID is `value`, the way a pick from the list fills it in.
 let findById = (members: array<MemberData.summary>, value: string) => {
-  let id = value->Js.String2.trim->Js.String2.toLowerCase
-  members->Js.Array2.find(m => Uuid.toString(m.id) == id)
+  let id = value->String.trim->String.toLowerCase
+  members->Array.find(m => Uuid.toString(m.id) == id)
 }
 
 /* Text input that finds a member by name, member number or ID. The browser
@@ -32,13 +31,13 @@ let make = (
      element (new `key`) after each pick avoids that; focus is put back so
      typing carries on. */
   let (inputKey, setInputKey) = React.useState(() => 0)
-  let inputRef = React.useRef(Js.Nullable.null)
+  let inputRef = React.useRef(Nullable.null)
   let refocus = React.useRef(false)
 
   React.useEffect1(() => {
     if refocus.current {
       refocus.current = false
-      inputRef.current->Js.Nullable.toOption->Option.forEach(focus)
+      inputRef.current->Nullable.toOption->Option.forEach(focus)
     }
     None
   }, [inputKey])

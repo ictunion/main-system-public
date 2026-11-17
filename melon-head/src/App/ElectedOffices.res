@@ -1,13 +1,12 @@
 @module external styles: {..} = "./ElectedOffices/styles.module.scss"
 
 open Data
-open Belt
 
 type tab = Current | Past
 
 /* react-datepicker calls onChange with null when the date is cleared, which
-   the Form.DatePicker binding doesn't model. */
-external toNullable: Js.Date.t => Js.Nullable.t<Js.Date.t> = "%identity"
+ the Form.DatePicker binding doesn't model. */
+external toNullable: Date.t => Nullable.t<Date.t> = "%identity"
 
 let viewError = error =>
   switch error {
@@ -24,7 +23,7 @@ module MemberPicker = {
     ~value: string,
     ~onChange: string => unit,
   ) => {
-    let trimmed = Js.String2.trim(value)
+    let trimmed = String.trim(value)
 
     <Form.Field>
       <Form.Label>
@@ -50,7 +49,7 @@ module MemberPicker = {
             | Some(m) =>
               <>
                 <Message.Info> {React.string("Selected: " ++ MemberSearch.label(m))} </Message.Info>
-                {switch activeOffices->Js.Array2.find(o => o.memberId == m.id) {
+                {switch activeOffices->Array.find(o => o.memberId == m.id) {
                 | None => React.null
                 | Some(o) =>
                   <Message.Warning>
@@ -82,9 +81,9 @@ module Editor = {
     ~onSaved: unit => unit,
   ) => {
     let (memberId, setMemberId) = React.useState(_ => "")
-    let (title, setTitle) = React.useState(_ => existing->Option.mapWithDefault("", o => o.title))
+    let (title, setTitle) = React.useState(_ => existing->Option.mapOr("", o => o.title))
     let (electedBy, setElectedBy) = React.useState(_ =>
-      existing->Option.mapWithDefault("", o => o.electedBy)
+      existing->Option.mapOr("", o => o.electedBy)
     )
     let (electedOn, setElectedOn) = React.useState(_ => existing->Option.map(o => o.electedOn))
     let (termEndsOn, setTermEndsOn) = React.useState(_ =>
@@ -95,7 +94,7 @@ module Editor = {
     let (termEndTouched, setTermEndTouched) = React.useState(_ => false)
 
     let onElectedOnChange = d => {
-      let date = d->toNullable->Js.Nullable.toOption
+      let date = d->toNullable->Nullable.toOption
       setElectedOn(_ => date)
 
       // New offices only: prefill the usual three-year term
@@ -106,7 +105,7 @@ module Editor = {
 
     let onTermEndsOnChange = d => {
       setTermEndTouched(_ => true)
-      setTermEndsOn(_ => d->toNullable->Js.Nullable.toOption)
+      setTermEndsOn(_ => d->toNullable->Nullable.toOption)
     }
     let (error, setError) = React.useState(() => None)
 
@@ -120,14 +119,15 @@ module Editor = {
     let memberKnown = switch (existing, members) {
     | (Some(_), _) => true
     | (None, Success(members)) =>
-      members->Array.some(m => Uuid.toString(m.id) == Js.String2.trim(memberId))
+      members->Array.some(m => Uuid.toString(m.id) == String.trim(memberId))
     // Members failed to load: let the API validate a pasted ID
-    | (None, _) => Js.String2.trim(memberId) != ""
+    | (None, _) => String.trim(memberId) != ""
     }
 
-    let isFilled = s => Js.String2.trim(s) != ""
+    let isFilled = s => String.trim(s) != ""
 
-    let canSubmit = memberKnown && isFilled(title) && isFilled(electedBy) && Option.isSome(electedOn)
+    let canSubmit =
+      memberKnown && isFilled(title) && isFilled(electedBy) && Option.isSome(electedOn)
 
     let onSubmit = _ => {
       switch electedOn {
@@ -139,7 +139,7 @@ module Editor = {
               ~path="/members/offices",
               ~decoder=OfficeData.Decode.office,
               ~body=OfficeData.Encode.newOffice(
-                ~memberId=Js.String2.trim(memberId),
+                ~memberId=String.trim(memberId),
                 ~title,
                 ~electedBy,
                 ~electedOn,
@@ -169,7 +169,8 @@ module Editor = {
 
     <Form onSubmit>
       {switch existing {
-      | None => <MemberPicker members activeOffices value=memberId onChange={v => setMemberId(_ => v)} />
+      | None =>
+        <MemberPicker members activeOffices value=memberId onChange={v => setMemberId(_ => v)} />
       | Some(office) =>
         <Form.Field>
           <Form.Label> {React.string("Member")} </Form.Label>
@@ -193,11 +194,7 @@ module Editor = {
         value=electedBy
         onChange={v => setElectedBy(_ => v)}
       />
-      <Form.Date
-        label="Elected on"
-        value=electedOn
-        onChange=onElectedOnChange
-      />
+      <Form.Date label="Elected on" value=electedOn onChange=onElectedOnChange />
       <Form.Date
         label="Term ends on (optional, last day in office)"
         value=termEndsOn
@@ -205,7 +202,8 @@ module Editor = {
       />
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta disabled={!canSubmit}>
@@ -258,7 +256,7 @@ let deleteOffice = (~api: Api.t, office: OfficeData.office) =>
     ~body=None,
   )
 
-let viewDay = (date: Js.Date.t) => date->Js.Date.toLocaleDateString->React.string
+let viewDay = (date: Date.t) => date->Date.toLocaleDateString->React.string
 
 /* Ends a current office early (e.g. resignation) by setting the last day in
    office. It defaults to today, as the update may be entered a few days
@@ -277,12 +275,12 @@ module EndOffice = {
 
     let invalid = switch termEndsOn {
     | None => Some("Pick the last day in office.")
-    | Some(date) if Js.Date.getTime(date) > Js.Date.getTime(OfficeData.today()) =>
+    | Some(date) if Date.getTime(date) > Date.getTime(OfficeData.today()) =>
       Some("The last day in office can't be in the future.")
-    | Some(date) if Js.Date.getTime(date) < Js.Date.getTime(office.electedOn) =>
+    | Some(date) if Date.getTime(date) < Date.getTime(office.electedOn) =>
       Some(
         "The last day in office can't be before the election (" ++
-        Js.Date.toLocaleDateString(office.electedOn) ++ ").",
+        Date.toLocaleDateString(office.electedOn) ++ ").",
       )
     | Some(_) => None
     }
@@ -310,13 +308,15 @@ module EndOffice = {
           "End the office \"" ++
           office.title ++
           "\" held by " ++
-          OfficeData.fullName(office) ++ ". It stays current until the end of the last day in office, then moves to Past.",
+          OfficeData.fullName(
+            office,
+          ) ++ ". It stays current until the end of the last day in office, then moves to Past.",
         )}
       </p>
       <Form.Date
         label="Last day in office"
         value=termEndsOn
-        onChange={d => setTermEndsOn(_ => d->toNullable->Js.Nullable.toOption)}
+        onChange={d => setTermEndsOn(_ => d->toNullable->Nullable.toOption)}
       />
       {switch invalid {
       | None => React.null
@@ -388,9 +388,12 @@ let columns = (
           onClick={_ =>
             openDelete(
               ~message="Delete the record of the office " ++
-              describe(office) ++ "? It will be hidden everywhere, including Past. Use this only for records entered by mistake; to end an office, use End.",
+              describe(
+                office,
+              ) ++ "? It will be hidden everywhere, including Past. Use this only for records entered by mistake; to end an office, use End.",
               office,
-            )}>
+            )}
+        >
           {React.string("Delete")}
         </Button>
       </div>
@@ -423,8 +426,7 @@ let columns = (
     {
       name: "Term ends",
       minMax: ("150px", "1fr"),
-      view: o =>
-        o.termEndsOn->View.option(viewDay),
+      view: o => o.termEndsOn->View.option(viewDay),
     },
   ]
 
@@ -438,19 +440,18 @@ let columns = (
 }
 
 /* Offices whose title is in `group`, in `OfficeData.allTitles` order.
-   Offices sharing a title keep the API's order (the sort is stable). */
+ Offices sharing a title keep the API's order (the sort is stable). */
 let inGroup = (offices: array<OfficeData.office>, group: OfficeData.group) => {
   let rank = (o: OfficeData.office) =>
     o.title
     ->OfficeData.titleFromString
-    ->Option.mapWithDefault(-1, t => OfficeData.allTitles->Js.Array2.indexOf(t))
+    ->Option.mapOr(-1, t => OfficeData.allTitles->Array.indexOf(t))
 
   offices
-  ->Array.keep(o =>
+  ->Array.filter(o =>
     o.title->OfficeData.titleFromString->Option.map(OfficeData.groupOf) == Some(group)
   )
-  ->Array.copy
-  ->Js.Array2.sortInPlaceWith((a, b) => rank(a) - rank(b))
+  ->Array.toSorted((a, b) => Int.toFloat(rank(a) - rank(b)))
 }
 
 /* One tab's offices split into the Board and the Treasurer and Audit
@@ -463,9 +464,10 @@ module OfficeTables = {
     ~columns: array<DataTable.column<OfficeData.office>>,
     ~emptyText: string,
   ) => {
-    let others = data->RemoteData.map(offices =>
-      offices->Array.keep(o => o.title->OfficeData.titleFromString->Option.isNone)
-    )
+    let others =
+      data->RemoteData.map(offices =>
+        offices->Array.filter(o => o.title->OfficeData.titleFromString->Option.isNone)
+      )
 
     let group = (~title, ~data, ~emptyText) =>
       <section className={styles["group"]}>

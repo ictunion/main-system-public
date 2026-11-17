@@ -1,7 +1,5 @@
 @module external styles: {..} = "./Settings/styles.module.scss"
 
-open Belt
-
 module ViewBool = {
   @react.component
   let make = (~value: bool) => {value ? React.string("👍 yes") : React.string("👎 no")}
@@ -38,9 +36,7 @@ module VerificationRow = {
           <span className={styles["verificationAllGood"]}> {React.string("✓ All good")} </span>
         | Some(n) =>
           <>
-            <span className={styles["verificationRowCell"]}>
-              {React.string(n->Belt.Int.toString)}
-            </span>
+            <span className={styles["verificationRowCell"]}> {React.string(n->Int.toString)} </span>
             <span className={styles["verificationRowActions"]}>
               <Button variant=Button.Cta onClick={_ => onFixAll()}>
                 {React.string("Fix all")}
@@ -67,7 +63,7 @@ type detailView =
   | MissingWorkplaceGroupView
 
 let oidGroupMemberDecoder = Json.Decode.array(
-  Json.Decode.object(field => field.required(. "id", Data.Uuid.decode)),
+  Json.Decode.object(field => field.required("id", Data.Uuid.decode)),
 )
 
 module DataVerificationContent = {
@@ -89,7 +85,7 @@ module DataVerificationContent = {
     let reloadGroupMembers = () => setGroupMembersKey(k => k + 1)
 
     let (
-      workplaceGroupMembersMap: Api.webData<Belt.Map.String.t<Belt.Set.String.t>>,
+      workplaceGroupMembersMap: Api.webData<Map.t<string, Set.t<string>>>,
       setWorkplaceGroupMembersMap,
     ) = React.useState(RemoteData.init)
     let (workplaceGroupKey, setWorkplaceGroupKey) = React.useState(_ => 0)
@@ -99,13 +95,13 @@ module DataVerificationContent = {
       switch workplaces {
       | Success(wps) =>
         if wps->Array.length == 0 {
-          setWorkplaceGroupMembersMap(_ => RemoteData.Success(Belt.Map.String.empty))
+          setWorkplaceGroupMembersMap(_ => RemoteData.Success(Map.make()))
           None
         } else {
           setWorkplaceGroupMembersMap(RemoteData.setLoading)
           let remaining = ref(wps->Array.length)
           let failed = ref(false)
-          let acc = ref(Belt.Map.String.empty)
+          let acc = Map.make()
           let requests =
             wps->Array.map((wp: WorkplaceData.summary) =>
               api->Api.getJson(
@@ -113,7 +109,7 @@ module DataVerificationContent = {
                 ~decoder=oidGroupMemberDecoder,
               )
             )
-          requests->Array.forEachWithIndex((i, req) => {
+          requests->Array.forEachWithIndex((req, i) => {
             let wp = wps->Array.getUnsafe(i)
             req->Future.get(
               res => {
@@ -125,10 +121,10 @@ module DataVerificationContent = {
                     setWorkplaceGroupMembersMap(_ => RemoteData.Failure(e))
                   }
                 | Ok(subs) =>
-                  let subSet = subs->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
-                  acc := acc.contents->Belt.Map.String.set(Data.Uuid.toString(wp.id), subSet)
+                  let subSet = subs->Array.map(Data.Uuid.toString)->Set.fromArray
+                  acc->Map.set(Data.Uuid.toString(wp.id), subSet)
                   if remaining.contents === 0 && !failed.contents {
-                    setWorkplaceGroupMembersMap(_ => RemoteData.Success(acc.contents))
+                    setWorkplaceGroupMembersMap(_ => RemoteData.Success(acc))
                   }
                 }
               },
@@ -157,20 +153,18 @@ module DataVerificationContent = {
 
     let membersWithoutSub =
       members->RemoteData.map(ms =>
-        ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
+        ms->Array.filter(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
       )
 
     let missingSub = membersWithoutSub->RemoteData.map(Array.length)
 
     let membersNotInGroup = switch (members, groupMembers) {
     | (Success(ms), Success(groupIds)) =>
-      let groupIdSet = groupIds->Array.map(Data.Uuid.toString)->Belt.Set.String.fromArray
+      let groupIdSet = groupIds->Array.map(Data.Uuid.toString)->Set.fromArray
       RemoteData.Success(
-        ms->Array.keep(m =>
+        ms->Array.filter(m =>
           m.leftAt->Option.isNone &&
-            m.sub->Option.mapWithDefault(false, sub =>
-              !(groupIdSet->Belt.Set.String.has(Data.Uuid.toString(sub)))
-            )
+            m.sub->Option.mapOr(false, sub => !(groupIdSet->Set.has(Data.Uuid.toString(sub))))
         ),
       )
     | (Failure(e), _) | (_, Failure(e)) => RemoteData.Failure(e)
@@ -183,17 +177,17 @@ module DataVerificationContent = {
     let membersWithMissingWorkplaceGroup = switch (members, workplaces, workplaceGroupMembersMap) {
     | (Success(ms), Success(_), Success(groupMap)) =>
       RemoteData.Success(
-        ms->Array.keep(m =>
+        ms->Array.filter(m =>
           m.leftAt->Option.isNone &&
           m.workplaceIds->Array.length > 0 &&
-          m.sub->Option.mapWithDefault(false, sub => {
+          m.sub->Option.mapOr(false, sub => {
             let subStr = Data.Uuid.toString(sub)
             m.workplaceIds
-            ->Array.keep(
+            ->Array.filter(
               wpId =>
-                switch groupMap->Belt.Map.String.get(Data.Uuid.toString(wpId)) {
+                switch groupMap->Map.get(Data.Uuid.toString(wpId)) {
                 | None => false
-                | Some(subSet) => !(subSet->Belt.Set.String.has(subStr))
+                | Some(subSet) => !(subSet->Set.has(subStr))
                 },
             )
             ->Array.length > 0
@@ -210,13 +204,13 @@ module DataVerificationContent = {
     let pollUntilResolved = (~maxAttempts: int) => {
       let attempt = ref(0)
       let rec poll = () => {
-        let _ = Js.Global.setTimeout(() => {
+        let _ = setTimeout(() => {
           attempt := attempt.contents + 1
           let req = reloadMembers()
           req->Future.get(res => {
             let stillMissing = switch res {
             | Ok(ms) =>
-              ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)->Array.length
+              ms->Array.filter(m => m.sub->Option.isNone && m.leftAt->Option.isNone)->Array.length
             | Error(_) => 0
             }
 
@@ -232,7 +226,7 @@ module DataVerificationContent = {
     let doFixAll = () => {
       switch members {
       | Success(ms) =>
-        let missing = ms->Array.keep(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
+        let missing = ms->Array.filter(m => m.sub->Option.isNone && m.leftAt->Option.isNone)
         let remaining = ref(missing->Array.length)
         missing->Array.forEach(m => {
           let _ =
@@ -240,7 +234,7 @@ module DataVerificationContent = {
             ->Api.postJson(
               ~path="/members/" ++ Data.Uuid.toString(m.id) ++ "/create_oid_account",
               ~decoder=Api.Decode.acceptedResponse,
-              ~body=Js.Json.null,
+              ~body=JSON.Encode.null,
             )
             ->Future.get(_ => {
               remaining := remaining.contents - 1
@@ -271,7 +265,7 @@ module DataVerificationContent = {
               )
               ->Future.get(_ => processNext(rest))
           }
-        processNext(ms->Belt.List.fromArray)
+        processNext(ms->List.fromArray)
       | _ => ()
       }
     }
@@ -280,9 +274,7 @@ module DataVerificationContent = {
       switch (membersWithMissingWorkplaceGroup, workplaces, workplaceGroupMembersMap) {
       | (Success(ms), Success(wps), Success(groupMap)) =>
         let workplaceKeycloakGroupMap =
-          wps->Array.reduce(Belt.Map.String.empty, (acc, wp) =>
-            acc->Belt.Map.String.set(Data.Uuid.toString(wp.id), wp.keycloakGroupId)
-          )
+          wps->Array.map(wp => (Data.Uuid.toString(wp.id), wp.keycloakGroupId))->Map.fromArray
         let pairs = ref(list{})
         ms->Array.forEach(m =>
           switch m.sub {
@@ -291,11 +283,8 @@ module DataVerificationContent = {
             let subStr = Data.Uuid.toString(sub)
             m.workplaceIds->Array.forEach(wpId => {
               let wpIdStr = Data.Uuid.toString(wpId)
-              switch (
-                groupMap->Belt.Map.String.get(wpIdStr),
-                workplaceKeycloakGroupMap->Belt.Map.String.get(wpIdStr),
-              ) {
-              | (Some(subSet), Some(keycloakGroupId)) if !(subSet->Belt.Set.String.has(subStr)) =>
+              switch (groupMap->Map.get(wpIdStr), workplaceKeycloakGroupMap->Map.get(wpIdStr)) {
+              | (Some(subSet), Some(keycloakGroupId)) if !(subSet->Set.has(subStr)) =>
                 pairs := list{(m.id, keycloakGroupId), ...pairs.contents}
               | _ => ()
               }
@@ -337,7 +326,8 @@ module DataVerificationContent = {
         <MemberSummaryTable
           data=membersWithoutSub
           onNoteClick=openNewNoteModal
-          columns=MemberSummaryTable.defaultColumns>
+          columns=MemberSummaryTable.defaultColumns
+        >
           {React.null}
         </MemberSummaryTable>
       </div>
@@ -349,7 +339,8 @@ module DataVerificationContent = {
         <MemberSummaryTable
           data=membersNotInGroup
           onNoteClick=openNewNoteModal
-          columns=MemberSummaryTable.defaultColumns>
+          columns=MemberSummaryTable.defaultColumns
+        >
           {React.null}
         </MemberSummaryTable>
       </div>
@@ -361,7 +352,8 @@ module DataVerificationContent = {
         <MemberSummaryTable
           data=membersWithMissingWorkplaceGroup
           onNoteClick=openNewNoteModal
-          columns=MemberSummaryTable.defaultColumns>
+          columns=MemberSummaryTable.defaultColumns
+        >
           {React.null}
         </MemberSummaryTable>
       </div>

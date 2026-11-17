@@ -2,8 +2,6 @@
 
 @scope("window") @val external window_open: (string, string) => unit = "open"
 
-open Belt
-
 let option = (o: option<'a>, view: 'a => React.element): React.element => {
   switch o {
   | Some(v) => view(v)
@@ -25,7 +23,7 @@ let fileRow = (~api: Api.t, file: Data.file): React.element => {
     <td>
       <a onClick=openFile> {React.string(fileName)} </a>
     </td>
-    <td> {file.createdAt->Js.Date.toLocaleString->React.string} </td>
+    <td> {file.createdAt->Date.toLocaleString->React.string} </td>
   </tr>
 }
 
@@ -37,6 +35,6 @@ let filesTable = (~api: Api.t, ~files: array<Data.file>): React.element => {
         <th> {React.string("Created at")} </th>
       </tr>
     </thead>
-    <tbody> {files->Array.map(fileRow(~api))->React.array} </tbody>
+    <tbody> {files->Array.map(fileRow(~api, ...))->React.array} </tbody>
   </table>
 }

@@ -5,10 +5,10 @@
 let pageCount = (~total: int, ~pageSize: int): int => (total + pageSize - 1) / pageSize
 
 /* Keeps `page` in range when the data shrinks (e.g. after a refetch) */
-let clamp = (page: int, ~pageCount: int): int => Js.Math.max_int(0, Js.Math.min_int(page, pageCount - 1))
+let clamp = (page: int, ~pageCount: int): int => Math.Int.max(0, Math.Int.min(page, pageCount - 1))
 
 let slice = (items: array<'a>, ~page: int, ~pageSize: int): array<'a> =>
-  items->Belt.Array.slice(~offset=page * pageSize, ~len=pageSize)
+  items->Array.slice(~start=page * pageSize, ~end=(page + 1) * pageSize)
 
 /* Renders nothing when everything fits on one page */
 @react.component
@@ -21,9 +21,7 @@ let make = (~page: int, ~pageCount: int, ~onChange: int => unit) => {
         {React.string("‹ Previous")}
       </Button>
       <span className={styles["status"]}>
-        {React.string(
-          "Page " ++ Belt.Int.toString(page + 1) ++ " of " ++ Belt.Int.toString(pageCount),
-        )}
+        {React.string("Page " ++ Int.toString(page + 1) ++ " of " ++ Int.toString(pageCount))}
       </span>
       <Button disabled={page >= pageCount - 1} onClick={_ => onChange(page + 1)}>
         {React.string("Next ›")}

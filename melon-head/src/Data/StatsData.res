@@ -15,11 +15,11 @@ module Applications = {
     open Json.Decode
 
     let basic = object(field => {
-      unverified: field.required(. "unverified", int),
-      accepted: field.required(. "accepted", int),
-      rejected: field.required(. "rejected", int),
-      processing: field.required(. "processing", int),
-      invalid: field.required(. "invalid", int),
+      unverified: field.required("unverified", int),
+      accepted: field.required("accepted", int),
+      rejected: field.required("rejected", int),
+      processing: field.required("processing", int),
+      invalid: field.required("invalid", int),
     })
   }
 }
@@ -46,11 +46,11 @@ module Members = {
     open Json.Decode
 
     let basic = object(field => {
-      new: field.required(. "new", int),
-      current: field.required(. "current", int),
-      past: field.required(. "past", int),
-      workplace: field.required(. "workplace", int),
-      sectoral: field.required(. "sectoral", int),
+      new: field.required("new", int),
+      current: field.required("current", int),
+      past: field.required("past", int),
+      workplace: field.required("workplace", int),
+      sectoral: field.required("sectoral", int),
     })
   }
 }
@@ -71,10 +71,10 @@ module Workplaces = {
     open Json.Decode
 
     let basic = object(field => {
-      current: field.required(. "current", int),
-      past: field.required(. "past", int),
-      active: field.required(. "active", int),
-      inPreparation: field.required(. "in_preparation", int),
+      current: field.required("current", int),
+      past: field.required("past", int),
+      active: field.required("active", int),
+      inPreparation: field.required("in_preparation", int),
     })
   }
 }

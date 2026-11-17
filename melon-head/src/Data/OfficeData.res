@@ -1,8 +1,7 @@
 open Data
-open Belt
 
 /* Elected office held by a member (chairperson, board member, ...). It is
-   current until its `termEndsOn` has passed, then it is past. */
+ current until its `termEndsOn` has passed, then it is past. */
 type office = {
   id: Uuid.t,
   memberId: Uuid.t,
@@ -11,10 +10,10 @@ type office = {
   lastName: option<string>,
   title: string,
   electedBy: string,
-  electedOn: Js.Date.t,
-  termEndsOn: option<Js.Date.t>,
-  createdAt: Js.Date.t,
-  updatedAt: Js.Date.t,
+  electedOn: Date.t,
+  termEndsOn: option<Date.t>,
+  createdAt: Date.t,
+  updatedAt: Date.t,
 }
 
 /* Offices the Elected Offices page offers, and the table each one is listed
@@ -47,7 +46,7 @@ let titleToString = (title: title) =>
 
 // None for free text entered before (or outside) this list.
 let titleFromString = (s: string): option<title> =>
-  allTitles->Js.Array2.find(t => titleToString(t) == s)
+  allTitles->Array.find(t => titleToString(t) == s)
 
 let groupOf = (title: title) =>
   switch title {
@@ -62,46 +61,40 @@ let groupOf = (title: title) =>
 
 let titles = allTitles->Array.map(titleToString)
 
-let electedByOptions =["All members meeting", "Monthly members meeting", "Workplaces Council"]
+let electedByOptions = ["All members meeting", "Monthly members meeting", "Workplaces Council"]
 
 let fullName = (office: office): string =>
-  [office.firstName, office.lastName]->Array.keepMap(x => x)->Js.Array2.joinWith(" ")
+  [office.firstName, office.lastName]->Array.filterMap(x => x)->Array.joinUnsafe(" ")
 
 /* Local midnight of the current day, comparable with decoded calendar days. */
-let today = (): Js.Date.t => {
-  let now = Js.Date.make()
-  Js.Date.makeWithYMD(
-    ~year=Js.Date.getFullYear(now),
-    ~month=Js.Date.getMonth(now),
-    ~date=Js.Date.getDate(now),
-    (),
-  )
+let today = (): Date.t => {
+  let now = Date.make()
+  Date.makeWithYMD(~year=Date.getFullYear(now), ~month=Date.getMonth(now), ~day=Date.getDate(now))
 }
 
 /* Same day and month, `years` later. 29 February rolls over to 1 March. */
-let addYears = (date: Js.Date.t, years: int): Js.Date.t =>
-  Js.Date.makeWithYMD(
-    ~year=Js.Date.getFullYear(date) +. Int.toFloat(years),
-    ~month=Js.Date.getMonth(date),
-    ~date=Js.Date.getDate(date),
-    (),
+let addYears = (date: Date.t, years: int): Date.t =>
+  Date.makeWithYMD(
+    ~year=Date.getFullYear(date) + years,
+    ~month=Date.getMonth(date),
+    ~day=Date.getDate(date),
   )
 
 module Decode = {
   open Json.Decode
 
   let office = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    memberId: field.required(. "member_id", Uuid.decode),
-    memberNumber: field.required(. "member_number", int),
-    firstName: field.required(. "first_name", option(string)),
-    lastName: field.required(. "last_name", option(string)),
-    title: field.required(. "title", string),
-    electedBy: field.required(. "elected_by", string),
-    electedOn: field.required(. "elected_on", Data.Decode.day),
-    termEndsOn: field.required(. "term_ends_on", option(Data.Decode.day)),
-    createdAt: field.required(. "created_at", date),
-    updatedAt: field.required(. "updated_at", date),
+    id: field.required("id", Uuid.decode),
+    memberId: field.required("member_id", Uuid.decode),
+    memberNumber: field.required("member_number", int),
+    firstName: field.required("first_name", option(string)),
+    lastName: field.required("last_name", option(string)),
+    title: field.required("title", string),
+    electedBy: field.required("elected_by", string),
+    electedOn: field.required("elected_on", Data.Decode.day),
+    termEndsOn: field.required("term_ends_on", option(Data.Decode.day)),
+    createdAt: field.required("created_at", date),
+    updatedAt: field.required("updated_at", date),
   })
 }
 
@@ -115,7 +108,7 @@ module Encode = {
     ("elected_by", string(electedBy)),
     ("elected_on", day(electedOn)),
     // null clears the term end on PATCH
-    ("term_ends_on", option(day, termEndsOn)),
+    ("term_ends_on", option(day)(termEndsOn)),
   ]
 
   let newOffice = (~memberId: string, ~title, ~electedBy, ~electedOn, ~termEndsOn) =>
@@ -127,7 +120,7 @@ module Encode = {
     )
 
   /* Ending an office early: PATCH only the last day in office. */
-  let termEnd = (termEndsOn: option<Js.Date.t>) => object([("term_ends_on", option(day, termEndsOn))])
+  let termEnd = (termEndsOn: option<Date.t>) => object([("term_ends_on", option(day)(termEndsOn))])
 
   let patch = (~title, ~electedBy, ~electedOn, ~termEndsOn) =>
     object(fields(~title, ~electedBy, ~electedOn, ~termEndsOn))

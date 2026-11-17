@@ -6,8 +6,6 @@ module Provider = {
 }
 
 module RequireRole = {
-  open Belt
-
   @react.component
   let make = (~children: React.element, ~anyOf=[]) => {
     let session = React.useContext(context)
@@ -31,8 +29,6 @@ module RequireRole = {
 }
 
 module RequireBankRole = {
-  open Belt
-
   @react.component
   let make = (~children: React.element, ~anyOf=[]) => {
     let session = React.useContext(context)

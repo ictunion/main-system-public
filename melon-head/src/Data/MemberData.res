@@ -1,5 +1,4 @@
 open Data
-open Belt
 
 type summary = {
   id: Uuid.t,
@@ -11,9 +10,9 @@ type summary = {
   note: option<string>,
   city: option<string>,
   language: option<string>,
-  leftAt: option<Js.Date.t>,
+  leftAt: option<Date.t>,
   companyNames: array<option<string>>,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
   workplaceIds: array<Uuid.t>,
   isRepresentative: option<bool>,
   sub: option<Uuid.t>,
@@ -28,7 +27,7 @@ type newMember = {
   // this should be able to hold invalid state as well so it's not phoneNumber type
   phoneNumber: string,
   note: option<string>,
-  dateOfBirth: option<Js.Date.t>,
+  dateOfBirth: option<Date.t>,
   address: string,
   city: string,
   postalCode: string,
@@ -40,7 +39,7 @@ type newWorkplaceMember = {memberId: string}
 type emailInfo = {
   body: string,
   subject: string,
-  variables: Js.Dict.t<string>,
+  variables: dict<string>,
 }
 
 type detail = {
@@ -48,7 +47,7 @@ type detail = {
   memberNumber: int,
   firstName: option<string>,
   lastName: option<string>,
-  dateOfBirth: option<Js.Date.t>,
+  dateOfBirth: option<Date.t>,
   email: option<Email.t>,
   phoneNumber: option<PhoneNumber.t>,
   note: option<string>,
@@ -57,11 +56,11 @@ type detail = {
   postalCode: option<string>,
   language: option<string>,
   applicationId: option<Uuid.t>,
-  leftAt: option<Js.Date.t>,
-  onboardingFinishAt: option<Js.Date.t>,
+  leftAt: option<Date.t>,
+  onboardingFinishAt: option<Date.t>,
   workplaceId: option<Uuid.t>,
   isRepresentative: option<bool>,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
   sub: option<Uuid.t>,
 }
 
@@ -70,7 +69,7 @@ type occupation = {
   companyName: option<string>,
   position: option<string>,
   source: string,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
 }
 
 type newOccupation = {
@@ -99,56 +98,56 @@ module Decode = {
   open Json.Decode
 
   let summary = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    memberNumber: field.required(. "member_number", int),
-    firstName: field.required(. "first_name", option(string)),
-    lastName: field.required(. "last_name", option(string)),
-    email: field.required(. "email", option(Email.decode)),
-    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
-    note: field.required(. "note", option(string)),
-    city: field.required(. "city", option(string)),
-    language: field.required(. "language", option(string)),
-    leftAt: field.required(. "left_at", option(date)),
-    companyNames: field.required(. "company_names", array(option(string))),
-    createdAt: field.required(. "created_at", date),
-    workplaceIds: field.required(. "workplace_ids", array(Uuid.decode)),
-    isRepresentative: field.required(. "is_representative", option(bool)),
-    sub: field.required(. "sub", option(Uuid.decode)),
+    id: field.required("id", Uuid.decode),
+    memberNumber: field.required("member_number", int),
+    firstName: field.required("first_name", option(string)),
+    lastName: field.required("last_name", option(string)),
+    email: field.required("email", option(Email.decode)),
+    phoneNumber: field.required("phone_number", option(PhoneNumber.decode)),
+    note: field.required("note", option(string)),
+    city: field.required("city", option(string)),
+    language: field.required("language", option(string)),
+    leftAt: field.required("left_at", option(date)),
+    companyNames: field.required("company_names", array(option(string))),
+    createdAt: field.required("created_at", date),
+    workplaceIds: field.required("workplace_ids", array(Uuid.decode)),
+    isRepresentative: field.required("is_representative", option(bool)),
+    sub: field.required("sub", option(Uuid.decode)),
   })
 
   let detail = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    memberNumber: field.required(. "member_number", int),
-    firstName: field.required(. "first_name", option(string)),
-    lastName: field.required(. "last_name", option(string)),
-    dateOfBirth: field.required(. "date_of_birth", option(Data.Decode.day)),
-    email: field.required(. "email", option(Email.decode)),
-    phoneNumber: field.required(. "phone_number", option(PhoneNumber.decode)),
-    note: field.required(. "note", option(string)),
-    address: field.required(. "address", option(string)),
-    city: field.required(. "city", option(string)),
-    postalCode: field.required(. "postal_code", option(string)),
-    language: field.required(. "language", option(string)),
-    applicationId: field.required(. "application_id", option(Uuid.decode)),
-    leftAt: field.required(. "left_at", option(date)),
-    onboardingFinishAt: field.required(. "onboarding_finished_at", option(date)),
-    workplaceId: field.required(. "workplace_id", option(Uuid.decode)),
-    isRepresentative: field.required(. "is_representative", option(bool)),
-    createdAt: field.required(. "created_at", date),
-    sub: field.required(. "sub", option(Uuid.decode)),
+    id: field.required("id", Uuid.decode),
+    memberNumber: field.required("member_number", int),
+    firstName: field.required("first_name", option(string)),
+    lastName: field.required("last_name", option(string)),
+    dateOfBirth: field.required("date_of_birth", option(Data.Decode.day)),
+    email: field.required("email", option(Email.decode)),
+    phoneNumber: field.required("phone_number", option(PhoneNumber.decode)),
+    note: field.required("note", option(string)),
+    address: field.required("address", option(string)),
+    city: field.required("city", option(string)),
+    postalCode: field.required("postal_code", option(string)),
+    language: field.required("language", option(string)),
+    applicationId: field.required("application_id", option(Uuid.decode)),
+    leftAt: field.required("left_at", option(date)),
+    onboardingFinishAt: field.required("onboarding_finished_at", option(date)),
+    workplaceId: field.required("workplace_id", option(Uuid.decode)),
+    isRepresentative: field.required("is_representative", option(bool)),
+    createdAt: field.required("created_at", date),
+    sub: field.required("sub", option(Uuid.decode)),
   })
 
   let occupation = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    companyName: field.required(. "company_name", option(string)),
-    position: field.required(. "position", option(string)),
-    source: field.required(. "source", string),
-    createdAt: field.required(. "created_at", date),
+    id: field.required("id", Uuid.decode),
+    companyName: field.required("company_name", option(string)),
+    position: field.required("position", option(string)),
+    source: field.required("source", string),
+    createdAt: field.required("created_at", date),
   })
 }
 
 module Encode = {
-  open Json.Encode
+  open! Json.Encode
 
   let strOption = str => {
     if str == "" {
@@ -160,14 +159,17 @@ module Encode = {
 
   let newMember = (newMember: newMember) =>
     object([
-      ("member_number", option(int, newMember.memberNumber->Option.flatMap(Int.fromString))),
+      (
+        "member_number",
+        option(int)(newMember.memberNumber->Option.flatMap(s => Int.fromString(s))),
+      ),
       ("first_name", strOption(newMember.firstName)),
       ("last_name", strOption(newMember.lastName)),
       ("email", strOption(newMember.email)),
       ("phone_number", strOption(newMember.phoneNumber)),
       // there is no option to set note in Modal dialog
       ("note", null),
-      ("date_of_birth", option(Data.Encode.day, newMember.dateOfBirth)),
+      ("date_of_birth", option(Data.Encode.day)(newMember.dateOfBirth)),
       ("address", strOption(newMember.address)),
       ("city", strOption(newMember.city)),
       ("postal_code", strOption(newMember.postalCode)),
@@ -184,7 +186,7 @@ module Encode = {
       ("source", string(newOccupation.source)),
     ])
 
-  let dict = (encoder, d) => Js.Json.object_(Js.Dict.map((. v) => encoder(v), d))
+  let dict = (encoder, d) => JSON.Encode.object(Dict.mapValues(d, v => encoder(v)))
 
   let emailInfo = (emailInfo: emailInfo) =>
     object([

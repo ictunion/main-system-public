@@ -35,7 +35,8 @@ module Editor = {
       />
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta> {React.string("Update note")} </Button>

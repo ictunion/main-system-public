@@ -62,6 +62,14 @@ module.exports = (env, argv) => {
         resolve: {
             extensions: ['.js', '.bs.js', '.ts'],
         },
+        // react-datepicker 9.1.0 loads optional date-fns-tz via require(variable); we don't use time zones.
+        // Pinned to that exact file and line, so any other warning (or this one after an upgrade) still shows.
+        ignoreWarnings: [
+            (warning) =>
+                /node_modules\/react-datepicker\/dist\/index\.es\.js$/.test(warning.module?.resource ?? '') &&
+                warning.message === 'Critical dependency: the request of a dependency is an expression' &&
+                warning.loc?.start?.line === 138,
+        ],
         output: {
             filename: 'bundle-[contenthash].js',
             path: path.resolve(__dirname, 'dist'),

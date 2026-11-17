@@ -1,7 +1,5 @@
 @module external styles: {..} = "./Chip/styles.module.scss"
 
-open Belt
-
 module Count = {
   @react.component
   let make = (~value: RemoteData.t<int, 'e>) => {

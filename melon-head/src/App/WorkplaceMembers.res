@@ -1,7 +1,6 @@
 @module external styles: {..} = "./Members/styles.module.scss"
 
 open Data
-open Belt
 
 @react.component
 let make = (~api: Api.t, ~id, ~modal) => {
@@ -27,30 +26,27 @@ let make = (~api: Api.t, ~id, ~modal) => {
     let workplaceName = currentWorkplace->RemoteData.unwrap(~default="workplace", s => s.name)
     let safeName =
       workplaceName
-      ->Js.String2.split("")
-      ->Belt.Array.map(c =>
-        if Js.Re.test_(%re("/[a-zA-Z0-9\-]/"), c) {
+      ->String.split("")
+      ->Array.map(c =>
+        if RegExp.test(/[a-zA-Z0-9\-]/, c) {
           c
         } else {
           "_"
         }
       )
-      ->Js.Array2.joinWith("")
-    let rows = members->Belt.Array.map(m => {
-      let email = m.email->Belt.Option.mapWithDefault("", Data.Email.toString)
-      let name =
-        Belt.Option.getWithDefault(m.firstName, "") ++
-        " " ++
-        Belt.Option.getWithDefault(m.lastName, "")
+      ->Array.joinUnsafe("")
+    let rows = members->Array.map(m => {
+      let email = m.email->Option.mapOr("", Data.Email.toString)
+      let name = Option.getOr(m.firstName, "") ++ " " ++ Option.getOr(m.lastName, "")
       let attributes =
         "{\"lang\": \"" ++
-        Belt.Option.getWithDefault(m.language, "") ++
+        Option.getOr(m.language, "") ++
         "\", \"memberNumber\": \"" ++
-        Belt.Int.toString(m.memberNumber) ++ "\"}"
+        Int.toString(m.memberNumber) ++ "\"}"
       [email, name, attributes]
     })
-    let csv = Papa.unparse(Belt.Array.concat([["email", "name", "attributes"]], rows))
-    let date = Js.Date.make()->Data.Day.toString
+    let csv = Papa.unparse(Array.concat([["email", "name", "attributes"]], rows))
+    let date = Date.make()->Data.Day.toString
     Download.csv(~filename="workplace-" ++ safeName ++ "-members-" ++ date ++ ".csv", ~content=csv)
   }
 
@@ -70,14 +66,17 @@ let make = (~api: Api.t, ~id, ~modal) => {
       | Some(members) if Array.length(members) === 0 => React.null
       | Some(members) =>
         <Button.Panel>
-          <Button onClick={onExportCsv(members)}> {React.string("Export Listmonk CSV")} </Button>
+          <Button onClick={onExportCsv(members, ...)}>
+            {React.string("Export Listmonk CSV")}
+          </Button>
         </Button.Panel>
       }}
     </SessionContext.RequireRole>
     <MemberSummaryTable
       data=workplaceMembers
       onNoteClick={(id, note) => openNewNoteModal(id, note)}
-      columns=MemberSummaryTable.defaultColumns>
+      columns=MemberSummaryTable.defaultColumns
+    >
       <p> {React.string("There are no members yet.")} </p>
     </MemberSummaryTable>
   </Page>

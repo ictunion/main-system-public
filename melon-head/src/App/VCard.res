@@ -1,18 +1,17 @@
 /* vCard 3.0 rather than 4.0 -- it is the version both iOS and Android contacts
-   import reliably. */
+ import reliably. */
 open Data
-open Belt
 
 let escape = (str: string) =>
   str
-  ->Js.String2.split("\\")
-  ->Js.Array2.joinWith("\\\\")
-  ->Js.String2.split(",")
-  ->Js.Array2.joinWith("\\,")
-  ->Js.String2.split(";")
-  ->Js.Array2.joinWith("\\;")
-  ->Js.String2.split("\n")
-  ->Js.Array2.joinWith("\\n")
+  ->String.split("\\")
+  ->Array.joinUnsafe("\\\\")
+  ->String.split(",")
+  ->Array.joinUnsafe("\\,")
+  ->String.split(";")
+  ->Array.joinUnsafe("\\;")
+  ->String.split("\n")
+  ->Array.joinUnsafe("\\n")
 
 let render = (
   ~firstName: option<string>,
@@ -21,12 +20,12 @@ let render = (
   ~email: option<Email.t>,
   ~note: option<string>,
 ) => {
-  let first = firstName->Option.getWithDefault("")
+  let first = firstName->Option.getOr("")
   /* "ICT" goes into the surname itself, not the suffix field -- phones build
      the display name from N, and suffix rendering differs between iOS and
      Android. It keeps union contacts apart from personal ones. */
-  let last = Js.String2.trim(lastName->Option.getWithDefault("") ++ " ICT")
-  let fullName = Js.String2.trim(first ++ " " ++ last)
+  let last = String.trim(lastName->Option.getOr("") ++ " ICT")
+  let fullName = String.trim(first ++ " " ++ last)
 
   [
     Some("BEGIN:VCARD"),
@@ -38,8 +37,8 @@ let render = (
     note->Option.map(n => "NOTE:" ++ escape(n)),
     Some("END:VCARD"),
   ]
-  ->Array.keepMap(x => x)
-  ->Js.Array2.joinWith("\r\n") ++ "\r\n"
+  ->Array.filterMap(x => x)
+  ->Array.joinUnsafe("\r\n") ++ "\r\n"
 }
 
 module DownloadButton = {
@@ -69,7 +68,7 @@ module Member = {
 module Application = {
   @react.component
   let make = (~detail: ApplicationData.detail) => {
-    let id = detail.id->Uuid.toString->Js.String2.slice(~from=0, ~to_=8)
+    let id = detail.id->Uuid.toString->String.slice(~start=0, ~end=8)
     <DownloadButton
       filename={"application-" ++ id ++ ".vcf"}
       firstName=detail.firstName

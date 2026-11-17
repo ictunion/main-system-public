@@ -1,7 +1,5 @@
 @module external styles: {..} = "./DataGrid/styles.module.scss"
 
-open Belt
-
 module Cell = {
   @react.component
   let make = (~label: option<string>=?, ~children: React.element) => {
@@ -35,14 +33,13 @@ type row<'a> = {
 
 type t<'a> = array<row<'a>>
 
-let viewRow = (rowIndex, row: row<'a>, ~data: Api.webData<'a>) => {
+let viewRow = (row: row<'a>, rowIndex, ~data: Api.webData<'a>) => {
   let gridTemplate: string = Array.map(row.cells, r => {
     let (min, max) = r.minmax
     "minmax(" ++ min ++ "," ++ max ++ ") "
-  })->Js.String.concatMany("")
+  })->Array.join("")
 
-  let style =
-    ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--grid-template-columns", gridTemplate)
+  let style = ReactDOM.Style.unsafeAddProp({}, "--grid-template-columns", gridTemplate)
 
   <div key={Int.toString(rowIndex)} className={styles["rowWrap"]}>
     {if row.label != "" {
@@ -52,7 +49,7 @@ let viewRow = (rowIndex, row: row<'a>, ~data: Api.webData<'a>) => {
     }}
     <div style key={Int.toString(rowIndex)} className={styles["row"]}>
       {row.cells
-      ->Array.mapWithIndex((index, c) =>
+      ->Array.mapWithIndex((c, index) =>
         <Cell key={Int.toString(index)} label={c.label}>
           {switch data {
           | Success(d) => c.view(d)
@@ -70,7 +67,7 @@ let viewRow = (rowIndex, row: row<'a>, ~data: Api.webData<'a>) => {
 @react.component
 let make = (~layout: t<'a>, ~data: Api.webData<'a>) =>
   <div className={styles["dataGrid"]}>
-    {layout->Array.mapWithIndex(viewRow(~data))->React.array}
+    {layout->Array.mapWithIndex(viewRow(~data, ...))->React.array}
     {switch data {
     | Failure(err) => <div className={styles["error"]}> {React.string(err->Api.showError)} </div>
     | _ => React.null

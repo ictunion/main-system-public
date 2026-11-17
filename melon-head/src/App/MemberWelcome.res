@@ -1,5 +1,3 @@
-open Belt
-
 @react.component
 let make = (~api, ~id, ~modal) => {
   let csTemplate: string = %raw("require('../../raw/welcome_email_cs.mjml').default")
@@ -11,7 +9,7 @@ let make = (~api, ~id, ~modal) => {
     csSubject: "Vítej v Odborové organizaci pracujících v ICT!",
     enSubject: "Welcome to the ICT Union!",
     variables: detail => {
-      Js.Dict.fromList(list{("variable_symbol", Int.toString(detail.memberNumber))})
+      Dict.fromArray([("variable_symbol", Int.toString(detail.memberNumber))])
     },
   }
 

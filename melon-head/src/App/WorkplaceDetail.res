@@ -34,7 +34,7 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
       },
       {
         label: "Members",
-        view: d => d.memberCount->Belt.Int.toString->React.string,
+        view: d => d.memberCount->Int.toString->React.string,
         minmax: ("100px", "200px"),
       },
     ],
@@ -65,7 +65,7 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
       {
         label: "Executive Group ID",
         view: d =>
-          d.keycloakExecutiveGroupId->Belt.Option.mapWithDefault(React.string("—"), uuid =>
+          d.keycloakExecutiveGroupId->Option.mapOr(React.string("—"), uuid =>
             uuid->Uuid.toString->React.string
           ),
         minmax: ("300px", "900px"),
@@ -80,7 +80,7 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
         view: d =>
           switch d.newsletterId {
           | None => React.string("Newsletter not connected")
-          | Some(id) => id->Belt.Int.toString->React.string
+          | Some(id) => id->Int.toString->React.string
           },
         minmax: ("250px", "600px"),
       },
@@ -91,30 +91,30 @@ let layout: DataGrid.t<WorkplaceData.summary> = [
     cells: [
       {
         label: "Created On",
-        view: d => d.createdAt->Js.Date.toLocaleDateString->React.string,
+        view: d => d.createdAt->Date.toLocaleDateString->React.string,
         minmax: ("150px", "300px"),
       },
       {
         label: "Established On",
         view: d =>
-          d.establishedAt->Belt.Option.mapWithDefault(React.string("—"), date =>
-            date->Js.Date.toLocaleDateString->React.string
+          d.establishedAt->Option.mapOr(React.string("—"), date =>
+            date->Date.toLocaleDateString->React.string
           ),
         minmax: ("150px", "300px"),
       },
       {
         label: "Announced On",
         view: d =>
-          d.announcedAt->Belt.Option.mapWithDefault(React.string("—"), date =>
-            date->Js.Date.toLocaleDateString->React.string
+          d.announcedAt->Option.mapOr(React.string("—"), date =>
+            date->Date.toLocaleDateString->React.string
           ),
         minmax: ("150px", "300px"),
       },
       {
         label: "Cancelled On",
         view: d =>
-          d.cancelledAt->Belt.Option.mapWithDefault(React.string("—"), date =>
-            date->Js.Date.toLocaleDateString->React.string
+          d.cancelledAt->Option.mapOr(React.string("—"), date =>
+            date->Date.toLocaleDateString->React.string
           ),
         minmax: ("150px", "300px"),
       },
@@ -132,31 +132,26 @@ module EditWorkplace = {
     ~setDetail,
   ) => {
     let (newsletterId, setNewsletterId) = React.useState(_ =>
-      detail.newsletterId->Belt.Option.mapWithDefault("", Belt.Int.toString)
+      detail.newsletterId->Option.mapOr("", x => Int.toString(x))
     )
-    let (shortName, setShortName) = React.useState(_ =>
-      detail.workplaceShortName->Belt.Option.getWithDefault("")
-    )
-    let (companyId, setCompanyId) = React.useState(_ =>
-      detail.companyId->Belt.Option.getWithDefault("")
-    )
+    let (shortName, setShortName) = React.useState(_ => detail.workplaceShortName->Option.getOr(""))
+    let (companyId, setCompanyId) = React.useState(_ => detail.companyId->Option.getOr(""))
     let (companyAddress, setCompanyAddress) = React.useState(_ =>
-      detail.companyAddress->Belt.Option.getWithDefault("")
+      detail.companyAddress->Option.getOr("")
     )
     let (error, setError) = React.useState(() => None)
 
     /* Orca keeps the stored value when a field is sent empty, so a value once set
-       can be changed but not removed. Say so instead of silently keeping it. */
+     can be changed but not removed. Say so instead of silently keeping it. */
     let clearedField = {
-      let cleared = (isStored: bool, input: string) => isStored && input->Js.String2.trim == ""
-      open Belt.Option
-      if cleared(detail.newsletterId->isSome, newsletterId) {
+      let cleared = (isStored: bool, input: string) => isStored && input->String.trim == ""
+      if cleared(detail.newsletterId->Option.isSome, newsletterId) {
         Some("Newsletter ID")
-      } else if cleared(detail.workplaceShortName->isSome, shortName) {
+      } else if cleared(detail.workplaceShortName->Option.isSome, shortName) {
         Some("Short Name")
-      } else if cleared(detail.companyId->isSome, companyId) {
+      } else if cleared(detail.companyId->Option.isSome, companyId) {
         Some("Company ID")
-      } else if cleared(detail.companyAddress->isSome, companyAddress) {
+      } else if cleared(detail.companyAddress->Option.isSome, companyAddress) {
         Some("Company Address")
       } else {
         None
@@ -164,15 +159,15 @@ module EditWorkplace = {
     }
 
     let text = (value: string) => {
-      let trimmed = value->Js.String2.trim
+      let trimmed = value->String.trim
       trimmed == "" ? Json.Encode.null : Json.Encode.string(trimmed)
     }
 
     let onSubmit = _ => {
-      let parsedId = switch newsletterId->Js.String2.trim {
+      let parsedId = switch newsletterId->String.trim {
       | "" => Ok(None)
       | s =>
-        switch Belt.Int.fromString(s) {
+        switch Int.fromString(s) {
         | Some(n) => Ok(Some(n))
         | None => Error("Newsletter ID must be a number")
         }
@@ -182,7 +177,7 @@ module EditWorkplace = {
       | (_, Some(field)) => setError(_ => Some(field ++ " can be changed, but not removed"))
       | (Ok(parsedNewsletterId), None) =>
         let body = Json.Encode.object([
-          ("newsletter_id", Json.Encode.option(Json.Encode.int, parsedNewsletterId)),
+          ("newsletter_id", Json.Encode.option(Json.Encode.int)(parsedNewsletterId)),
           ("workplace_short_name", text(shortName)),
           ("company_id", text(companyId)),
           ("company_address", text(companyAddress)),
@@ -213,10 +208,7 @@ module EditWorkplace = {
         onInput={v => setNewsletterId(_ => v)}
       />
       <Form.TextField
-        label="Short Name"
-        placeholder="ACME CZ"
-        value=shortName
-        onInput={v => setShortName(_ => v)}
+        label="Short Name" placeholder="ACME CZ" value=shortName onInput={v => setShortName(_ => v)}
       />
       <Form.TextField
         label="Company ID (IČ)"
@@ -232,7 +224,8 @@ module EditWorkplace = {
       />
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta> {React.string("Save")} </Button>
@@ -251,7 +244,7 @@ let editWorkplaceModal = (~api, ~modal, ~id, ~detail, ~setDetail): Modal.modalCo
 }
 
 /* Documents Orca can generate for a workplace. `value` is the `document_type`
-   the API expects. */
+ the API expects. */
 type documentType = {
   value: string,
   label: string,
@@ -267,18 +260,18 @@ let documentTypes = [
 ]
 
 /* `YYYY-MM-DD` from the local calendar day. The date picker returns local
-   midnight, which `toJSON` (UTC) would shift to the previous day in Prague. */
-let localDay = (date: Js.Date.t): string => {
-  let pad = n => (n < 10 ? "0" : "") ++ Belt.Int.toString(n)
-  Belt.Int.toString(Belt.Float.toInt(Js.Date.getFullYear(date))) ++
+ midnight, which `toJSON` (UTC) would shift to the previous day in Prague. */
+let localDay = (date: Date.t): string => {
+  let pad = n => (n < 10 ? "0" : "") ++ Int.toString(n)
+  Int.toString(Date.getFullYear(date)) ++
   "-" ++
-  pad(Belt.Float.toInt(Js.Date.getMonth(date)) + 1) ++
+  pad(Date.getMonth(date) + 1) ++
   "-" ++
-  pad(Belt.Float.toInt(Js.Date.getDate(date)))
+  pad(Date.getDate(date))
 }
 
 let isUuid = (s: string): bool =>
-  %re("/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i")->Js.Re.test_(s)
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i->RegExp.test(s)
 
 module GenerateDocument = {
   @react.component
@@ -291,15 +284,13 @@ module GenerateDocument = {
     let (documentType, setDocumentType) = React.useState(() => "entrustment")
     // Prefilled from the workplace, still editable for this one document
     let (shortName, setShortName) = React.useState(() =>
-      detail.workplaceShortName->Belt.Option.getWithDefault("")
+      detail.workplaceShortName->Option.getOr("")
     )
     let (meetingDate, setMeetingDate) = React.useState(() => None)
     let (companyAddress, setCompanyAddress) = React.useState(() =>
-      detail.companyAddress->Belt.Option.getWithDefault("")
+      detail.companyAddress->Option.getOr("")
     )
-    let (companyId, setCompanyId) = React.useState(() =>
-      detail.companyId->Belt.Option.getWithDefault("")
-    )
+    let (companyId, setCompanyId) = React.useState(() => detail.companyId->Option.getOr(""))
     let (removedMemberIds, setRemovedMemberIds) = React.useState((): array<string> => [])
     let (removedMemberInput, setRemovedMemberInput) = React.useState(() => "")
     let (error, setError) = React.useState(() => None)
@@ -325,7 +316,7 @@ module GenerateDocument = {
 
     let addRemovedMember = id => {
       setError(_ => None)
-      setRemovedMemberIds(ids => ids->Js.Array2.includes(id) ? ids : Belt.Array.concat(ids, [id]))
+      setRemovedMemberIds(ids => ids->Array.includes(id) ? ids : Array.concat(ids, [id]))
       setRemovedMemberInput(_ => "")
     }
 
@@ -338,7 +329,7 @@ module GenerateDocument = {
 
     // Only offered while the member list isn't available.
     let addPastedMember = _ => {
-      let id = removedMemberInput->Js.String2.trim->Js.String2.toLowerCase
+      let id = removedMemberInput->String.trim->String.toLowerCase
       if isUuid(id) {
         addRemovedMember(id)
       } else {
@@ -347,7 +338,7 @@ module GenerateDocument = {
     }
 
     let removeRemovedMember = id =>
-      setRemovedMemberIds(ids => ids->Belt.Array.keep(other => other != id))
+      setRemovedMemberIds(ids => ids->Array.filter(other => other != id))
 
     let viewRemovedMember = id =>
       switch MemberSearch.findById(loadedMembers, id) {
@@ -355,7 +346,7 @@ module GenerateDocument = {
         <span>
           {MemberSummaryTable.viewPaddedNumber(m.memberNumber, ())}
           {React.string(
-            " " ++ [m.firstName, m.lastName]->Belt.Array.keepMap(x => x)->Js.Array2.joinWith(" "),
+            " " ++ [m.firstName, m.lastName]->Array.filterMap(x => x)->Array.joinUnsafe(" "),
           )}
         </span>
       | None => <span className={styles["removedMemberId"]}> {React.string(id)} </span>
@@ -376,7 +367,7 @@ module GenerateDocument = {
         [
           (
             "meeting_date",
-            Json.Encode.option(Json.Encode.string, meetingDate->Belt.Option.map(localDay)),
+            Json.Encode.option(Json.Encode.string)(meetingDate->Option.map(localDay)),
           ),
           ("removed_member_ids", Json.Encode.stringArray(removedMemberIds)),
         ]
@@ -384,7 +375,7 @@ module GenerateDocument = {
         []
       }
       let body = Json.Encode.object(
-        Belt.Array.concatMany([
+        Array.flat([
           [
             ("document_type", Json.Encode.string(documentType)),
             ("workplace_short_name", Json.Encode.string(shortName)),
@@ -421,7 +412,7 @@ module GenerateDocument = {
           {React.string("Document")}
           <select value=documentType onChange=selectDocumentType>
             {documentTypes
-            ->Belt.Array.map(t => <option key=t.value value=t.value> {React.string(t.label)} </option>)
+            ->Array.map(t => <option key=t.value value=t.value> {React.string(t.label)} </option>)
             ->React.array}
           </select>
         </Form.Label>
@@ -468,17 +459,17 @@ module GenerateDocument = {
               </div>
             </Form.Label>
             // A valid ID that matched nobody; a matching one was already added.
-            {if membersLoaded && isUuid(Js.String2.trim(removedMemberInput)) {
+            {if membersLoaded && isUuid(String.trim(removedMemberInput)) {
               <Message.Warning>
                 {React.string("No member with this ID. Pick one from the list.")}
               </Message.Warning>
             } else {
               React.null
             }}
-            {if Belt.Array.length(removedMemberIds) > 0 {
+            {if Array.length(removedMemberIds) > 0 {
               <ul className={styles["removedMembers"]}>
                 {removedMemberIds
-                ->Belt.Array.map(id =>
+                ->Array.map(id =>
                   <li key=id>
                     {viewRemovedMember(id)}
                     <Button variant=Button.Danger onClick={_ => removeRemovedMember(id)}>
@@ -516,7 +507,8 @@ module GenerateDocument = {
       }}
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta> {React.string("Generate")} </Button>
@@ -614,7 +606,7 @@ module Representatives = {
 }
 
 /* Generated workplace documents (e.g. entrustments). Orca lists them only for
-   staff (`list-workplaces`), so the tab is not shown to workplace executives. */
+ staff (`list-workplaces`), so the tab is not shown to workplace executives. */
 module Files = {
   @react.component
   let make = (~api: Api.t, ~id: Uuid.t) => {
@@ -637,7 +629,7 @@ module Files = {
               label: "Files",
               minmax: ("150px", "600px"),
               view: files => {
-                let pageCount = Pagination.pageCount(~total=Belt.Array.length(files), ~pageSize)
+                let pageCount = Pagination.pageCount(~total=Array.length(files), ~pageSize)
                 let page = Pagination.clamp(page, ~pageCount)
                 <>
                   {View.filesTable(~api, ~files=files->Pagination.slice(~page, ~pageSize))}
@@ -744,15 +736,16 @@ module View = {
           </SessionContext.RequireRole>
           <SessionContext.RequireRole anyOf=[Session.ListOwnWorkplaceMembers]>
             <a
-              className={styles["navLink"]}
-              onClick={_ => RescriptReactRouter.push("/my-workplace")}>
+              className={styles["navLink"]} onClick={_ => RescriptReactRouter.push("/my-workplace")}
+            >
               {React.string("Show workplace members")}
             </a>
           </SessionContext.RequireRole>
           <SessionContext.RequireRole anyOf=[Session.ListOwnWorkplaceMembers]>
             <a
               className={styles["navLink"]}
-              onClick={_ => RescriptReactRouter.push("/my-workplace-missing-dues")}>
+              onClick={_ => RescriptReactRouter.push("/my-workplace-missing-dues")}
+            >
               {React.string("Show members with missing payments")}
             </a>
           </SessionContext.RequireRole>
@@ -803,9 +796,9 @@ module View = {
       <SessionContext.RequireRole anyOf=[Session.ManageWorkplaces]>
         {statusButtons(
           detail,
-          ~onEstablish=doTransition(basePath ++ "/establish"),
-          ~onAnnounce=doTransition(basePath ++ "/announce"),
-          ~onCancel=doTransition(basePath ++ "/cancel"),
+          ~onEstablish=doTransition(basePath ++ "/establish", ...),
+          ~onAnnounce=doTransition(basePath ++ "/announce", ...),
+          ~onCancel=doTransition(basePath ++ "/cancel", ...),
           ~onGenerateDocument=openGenerateDocumentModal,
         )}
       </SessionContext.RequireRole>

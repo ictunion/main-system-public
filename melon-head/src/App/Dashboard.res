@@ -1,7 +1,5 @@
 @module external styles: {..} = "./Dashboard/styles.module.scss"
 
-open Belt
-
 let applicationsRows: array<RowBasedTable.row<StatsData.Applications.basic>> = [
   ("Processing", s => React.string(s.processing->Int.toString)),
   ("Pending Verification", s => React.string(s.unverified->Int.toString)),
@@ -43,7 +41,7 @@ let workplacesRows: array<RowBasedTable.row<StatsData.Workplaces.basic>> = [
 
 let viewPercent = (p: option<float>): string =>
   switch p {
-  | Some(p) => Js.Float.toFixedWithPrecision(p, ~digits=1)
+  | Some(p) => Float.toFixed(p, ~digits=1)
   | None => "--"
   }
 
@@ -56,8 +54,7 @@ let duesRows: array<RowBasedTable.row<PaymentData.paymentStats>> = [
         " / " ++
         s.liableMembers->Int.toString ++
         " (" ++
-        viewPercent(s.percentPaid) ++
-        "%)",
+        viewPercent(s.percentPaid) ++ "%)",
       ),
   ),
 ]
@@ -101,7 +98,7 @@ let make = (
       api->Api.postJson(
         ~path="/session/current/pair-by-email",
         ~decoder=Session.Decode.session,
-        ~body=Js.Json.null,
+        ~body=JSON.Encode.null,
       )
 
     req->Future.get(res => {
@@ -131,7 +128,7 @@ let make = (
         {React.string("Hello ")}
         {React.string(
           session->RemoteData.unwrap(~default="--", s =>
-            s.tokenClaims.name->Option.getWithDefault("[anonymous]")
+            s.tokenClaims.name->Option.getOr("[anonymous]")
           ),
         )}
         {React.string("!")}
@@ -193,14 +190,14 @@ let make = (
         <RowBasedTable
           rows=applicationsRows data=applicationsBasicStats title=Some("Applications Stats")
         />
-        <a onClick={openLink("/applications")} className={styles["pageLink"]}>
+        <a onClick={openLink("/applications", ...)} className={styles["pageLink"]}>
           {React.string("See Applications")}
         </a>
       </div>
       <div className={styles["gridItem"]}>
         <h2 className={styles["itemTitle"]}> {React.string("Members")} </h2>
         <RowBasedTable rows=membersRows data=membersBasicStats title=Some("Members Stats") />
-        <a onClick={openLink("/members")} className={styles["pageLink"]}>
+        <a onClick={openLink("/members", ...)} className={styles["pageLink"]}>
           {React.string("See Members")}
         </a>
       </div>
@@ -209,7 +206,7 @@ let make = (
         <RowBasedTable
           rows=workplacesRows data=workplacesBasicStats title=Some("Workplaces Stats")
         />
-        <a onClick={openLink("/workplaces")} className={styles["pageLink"]}>
+        <a onClick={openLink("/workplaces", ...)} className={styles["pageLink"]}>
           {React.string("See Workplaces")}
         </a>
       </div>
@@ -218,7 +215,7 @@ let make = (
           <div className={styles["gridItem"]}>
             <h2 className={styles["itemTitle"]}> {React.string("Dues")} </h2>
             <RowBasedTable rows=duesRows data=paymentStats title=Some("Dues Stats") />
-            <a onClick={openLink("/missing-dues")} className={styles["pageLink"]}>
+            <a onClick={openLink("/missing-dues", ...)} className={styles["pageLink"]}>
               {React.string("See Missing Dues")}
             </a>
           </div>

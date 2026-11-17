@@ -1,18 +1,17 @@
 {
-  "name": "Test App",
+  "name": "melon-head",
   "sources": {
     "dir": "src",
-    "subdirs" : true
+    "subdirs": true
   },
   "suffix": ".bs.js",
   "package-specs": {
-    "module": "es6",
+    "module": "esmodule",
     "in-source": true
   },
-  "jsx": { "version": 4, "mode": "classic" },
-  "uncurried": false,
-  "bsc-flags": [ "-open JsonCombinators" ],
-  "bs-dependencies": [
+  "jsx": { "version": 4 },
+  "compiler-flags": ["-open JsonCombinators"],
+  "dependencies": [
     "@rescript/react",
     "@glennsl/rescript-json-combinators",
     "rescript-future",

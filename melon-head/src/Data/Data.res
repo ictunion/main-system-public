@@ -4,7 +4,7 @@ module type OpaqueString = {
   let toString: t => string
   let unsafeFromString: string => t
   let decode: Json.Decode.t<t>
-  let encode: t => Js.Json.t
+  let encode: t => JSON.t
 }
 
 module MakeOpaqueString = (): OpaqueString => {
@@ -27,28 +27,22 @@ module Local = MakeOpaqueString()
 
 /* Calendar days ("2026-05-01", `NaiveDate` in Orca) are handled as local
    midnight, so the date picker and `toLocaleDateString` show the same day the
-   API sent. Going through `Js.Date.toJSON` would convert to UTC first and shift
+   API sent. Going through `Date.toJSON` would convert to UTC first and shift
    the day back by the UTC offset (e.g. a date of birth picked in Prague would
    be stored one day earlier). */
 module Day = {
-  let fromString = (str: string): Js.Date.t => {
-    switch str->Js.String2.split("-")->Belt.Array.map(Belt.Int.fromString) {
-    | [Some(year), Some(month), Some(date)] =>
-      Js.Date.makeWithYMD(
-        ~year=Belt.Int.toFloat(year),
-        ~month=Belt.Int.toFloat(month - 1),
-        ~date=Belt.Int.toFloat(date),
-        (),
-      )
-    | _ => Js.Date.fromString(str)
+  let fromString = (str: string): Date.t => {
+    switch str->String.split("-")->Array.map(s => Int.fromString(s)) {
+    | [Some(year), Some(month), Some(date)] => Date.makeWithYMD(~year, ~month=month - 1, ~day=date)
+    | _ => Date.fromString(str)
     }
   }
 
-  let toString = (date: Js.Date.t): string => {
-    let pad = n => (n < 10 ? "0" : "") ++ Belt.Int.toString(n)
-    let year = date->Js.Date.getFullYear->Belt.Int.fromFloat->Belt.Int.toString
-    let month = (date->Js.Date.getMonth->Belt.Int.fromFloat + 1)->pad
-    let day = date->Js.Date.getDate->Belt.Int.fromFloat->pad
+  let toString = (date: Date.t): string => {
+    let pad = n => (n < 10 ? "0" : "") ++ Int.toString(n)
+    let year = date->Date.getFullYear->Int.toString
+    let month = (date->Date.getMonth + 1)->pad
+    let day = date->Date.getDate->pad
     year ++ "-" ++ month ++ "-" ++ day
   }
 }
@@ -57,24 +51,24 @@ type file = {
   id: Uuid.t,
   name: string,
   fileType: string,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
 }
 
 module Decode = {
   open Json.Decode
 
-  let day = string->map((. str) => Day.fromString(str))
+  let day = string->map(str => Day.fromString(str))
 
   let file = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    name: field.required(. "name", string),
-    fileType: field.required(. "file_type", string),
-    createdAt: field.required(. "created_at", date),
+    id: field.required("id", Uuid.decode),
+    name: field.required("name", string),
+    fileType: field.required("file_type", string),
+    createdAt: field.required("created_at", date),
   })
 }
 
 module Encode = {
   open Json.Encode
 
-  let day = (date: Js.Date.t): Js.Json.t => string(Day.toString(date))
+  let day = (date: Date.t): JSON.t => string(Day.toString(date))
 }

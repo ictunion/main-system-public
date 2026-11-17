@@ -1,14 +1,10 @@
 open Data
-open Belt
 
 /* Reduced member table for workplace executive committees (the MyWorkplace
    roster), backed by WorkplaceData.mineMember (the /workplaces/mine/members
    projection). */
 @react.component
-let make = (
-  ~data: Api.webData<array<WorkplaceData.mineMember>>,
-  ~children=React.null,
-) => {
+let make = (~data: Api.webData<array<WorkplaceData.mineMember>>, ~children=React.null) => {
   let columns: array<DataTable.column<WorkplaceData.mineMember>> = [
     {
       name: "ID",
@@ -48,7 +44,7 @@ let make = (
     {
       name: "Created On",
       minMax: ("150px", "1fr"),
-      view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+      view: r => React.string(r.createdAt->Date.toLocaleDateString),
     },
   ]
 

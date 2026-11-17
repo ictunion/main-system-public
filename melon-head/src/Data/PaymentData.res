@@ -5,7 +5,7 @@ type coveredMonth = {
 
 type transaction = {
   processedTransactionId: int,
-  transactionDate: Js.Date.t,
+  transactionDate: Date.t,
   amount: string,
   currency: string,
   coveredMonths: array<coveredMonth>,
@@ -29,7 +29,7 @@ type missingPaymentMember = {
 type commentedTransaction = {
   memberNumber: int,
   processedTransactionId: int,
-  transactionDate: Js.Date.t,
+  transactionDate: Date.t,
   amount: string,
   currency: string,
   adminComment: string,
@@ -50,44 +50,44 @@ module Decode = {
   open Json.Decode
 
   let coveredMonth = object(field => {
-    year: field.required(. "year", int),
-    month: field.required(. "month", int),
+    year: field.required("year", int),
+    month: field.required("month", int),
   })
 
   let transaction = object(field => {
-    processedTransactionId: field.required(. "processed_transaction_id", int),
-    transactionDate: field.required(. "transaction_date", date),
-    amount: field.required(. "amount", string),
-    currency: field.required(. "currency", string),
-    coveredMonths: field.required(. "covered_months", array(coveredMonth)),
+    processedTransactionId: field.required("processed_transaction_id", int),
+    transactionDate: field.required("transaction_date", date),
+    amount: field.required("amount", string),
+    currency: field.required("currency", string),
+    coveredMonths: field.required("covered_months", array(coveredMonth)),
   })
 
   let history = array(transaction)
 
   let missingPaymentMember = object(field => {
-    memberNumber: field.required(. "member_number", int),
-    totalMissedMonths: field.required(. "total_missed_months", int),
-    hasEverPaid: field.required(. "has_ever_paid", bool),
+    memberNumber: field.required("member_number", int),
+    totalMissedMonths: field.required("total_missed_months", int),
+    hasEverPaid: field.required("has_ever_paid", bool),
   })
 
   let missing = array(missingPaymentMember)
 
   let commentedTransaction = object(field => {
-    memberNumber: field.required(. "member_number", int),
-    processedTransactionId: field.required(. "processed_transaction_id", int),
-    transactionDate: field.required(. "transaction_date", date),
-    amount: field.required(. "amount", string),
-    currency: field.required(. "currency", string),
-    adminComment: field.required(. "admin_comment", string),
+    memberNumber: field.required("member_number", int),
+    processedTransactionId: field.required("processed_transaction_id", int),
+    transactionDate: field.required("transaction_date", date),
+    amount: field.required("amount", string),
+    currency: field.required("currency", string),
+    adminComment: field.required("admin_comment", string),
   })
 
   let commented = array(commentedTransaction)
 
   let paymentStats = object(field => {
-    windowFrom: field.required(. "window_from", string),
-    windowTo: field.required(. "window_to", string),
-    liableMembers: field.required(. "liable_members", int),
-    paidMembers: field.required(. "paid_members", int),
-    percentPaid: field.required(. "percent_paid", option(Json.Decode.float)),
+    windowFrom: field.required("window_from", string),
+    windowTo: field.required("window_to", string),
+    liableMembers: field.required("liable_members", int),
+    paidMembers: field.required("paid_members", int),
+    percentPaid: field.required("percent_paid", option(Json.Decode.float)),
   })
 }

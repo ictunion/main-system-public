@@ -1,7 +1,6 @@
 @module external styles: {..} = "./MissingDues/styles.module.scss"
 
 open Data
-open Belt
 
 /* One member's payment history, fetched when first shown. The join date
    comes from the member detail, since the list summary doesn't carry
@@ -50,8 +49,7 @@ module MissedMonthsCell = {
   @val @scope("window")
   external addWindowListener: (string, Dom.event => unit, bool) => unit = "addEventListener"
   @val @scope("window")
-  external removeWindowListener: (string, Dom.event => unit, bool) => unit =
-    "removeEventListener"
+  external removeWindowListener: (string, Dom.event => unit, bool) => unit = "removeEventListener"
 
   // Hovering only opens after a short pause, so sweeping the mouse down the
   // column doesn't fire a history request for every row it crosses.
@@ -65,58 +63,46 @@ module MissedMonthsCell = {
 
   let px = (n: float) => Float.toString(n) ++ "px"
 
-  let place = (anchor: rect) => {
-    let width = Js.Math.min_float(maxWidth, innerWidth -. 2.0 *. margin)
-    let left = Js.Math.max_float(margin, Js.Math.min_float(anchor.left, innerWidth -. margin -. width))
+  let place = (anchor: rect): ReactDOM.Style.t => {
+    let width = Math.min(maxWidth, innerWidth -. 2.0 *. margin)
+    let left = Math.max(margin, Math.min(anchor.left, innerWidth -. margin -. width))
     let spaceBelow = innerHeight -. anchor.bottom -. margin
     let spaceAbove = anchor.top -. margin
 
     if spaceBelow >= minHeightBelow || spaceBelow >= spaceAbove {
-      ReactDOM.Style.make(
-        ~left=px(left),
-        ~width=px(width),
-        ~top=px(anchor.bottom),
-        ~maxHeight=px(spaceBelow),
-        (),
-      )
+      {left: px(left), width: px(width), top: px(anchor.bottom), maxHeight: px(spaceBelow)}
     } else {
-      ReactDOM.Style.make(
-        ~left=px(left),
-        ~width=px(width),
-        ~bottom=px(innerHeight -. anchor.top),
-        ~maxHeight=px(spaceAbove),
-        (),
-      )
+      {
+        left: px(left),
+        width: px(width),
+        bottom: px(innerHeight -. anchor.top),
+        maxHeight: px(spaceAbove),
+      }
     }
   }
 
-  let hidden = ReactDOM.Style.make(~display="none", ())
+  let hidden: ReactDOM.Style.t = {display: "none"}
 
   @react.component
-  let make = (
-    ~api: Api.t,
-    ~bankApi: Api.t,
-    ~member: MemberData.summary,
-    ~missedMonths: int,
-  ) => {
-    let anchorRef = React.useRef(Js.Nullable.null)
-    let popoverRef = React.useRef(Js.Nullable.null)
+  let make = (~api: Api.t, ~bankApi: Api.t, ~member: MemberData.summary, ~missedMonths: int) => {
+    let anchorRef = React.useRef(Nullable.null)
+    let popoverRef = React.useRef(Nullable.null)
     let timer = React.useRef(None)
     let (hovered, setHovered) = React.useState(_ => false)
     let (pinned, setPinned) = React.useState(_ => false)
     /* None until first opened. After that the preview stays mounted (just
-       hidden) so reopening doesn't fetch the history again. */
+     hidden) so reopening doesn't fetch the history again. */
     let (placement, setPlacement) = React.useState(_ => None)
     let isOpen = hovered || pinned
 
     let cancelTimer = () => {
-      timer.current->Option.forEach(Js.Global.clearTimeout)
+      timer.current->Option.forEach(clearTimeout)
       timer.current = None
     }
 
     let after = (ms, f) => {
       cancelTimer()
-      timer.current = Some(Js.Global.setTimeout(f, ms))
+      timer.current = Some(setTimeout(f, ms))
     }
 
     React.useEffect0(() => Some(cancelTimer))
@@ -132,7 +118,7 @@ module MissedMonthsCell = {
       if isOpen {
         let updatePlacement = _ =>
           anchorRef.current
-          ->Js.Nullable.toOption
+          ->Nullable.toOption
           ->Option.forEach(el => setPlacement(_ => Some(place(el->getBoundingClientRect))))
 
         let onKeyDown = e =>
@@ -140,8 +126,10 @@ module MissedMonthsCell = {
             close()
           }
 
-        let isInside = (ref: React.ref<Js.Nullable.t<Dom.element>>, e) =>
-          ref.current->Js.Nullable.toOption->Option.mapWithDefault(false, el => el->contains(e->target))
+        let isInside = (ref: React.ref<Nullable.t<Dom.element>>, e) =>
+          ref.current
+          ->Nullable.toOption
+          ->Option.mapOr(false, el => el->contains(e->target))
 
         let onMouseDown = e =>
           if !isInside(anchorRef, e) && !isInside(popoverRef, e) {
@@ -179,13 +167,15 @@ module MissedMonthsCell = {
     <span
       className={styles["missedMonths"]}
       onMouseEnter={_ => after(openDelay, () => setHovered(_ => true))}
-      onMouseLeave={_ => after(closeDelay, () => setHovered(_ => false))}>
+      onMouseLeave={_ => after(closeDelay, () => setHovered(_ => false))}
+    >
       <button
         ref={ReactDOM.Ref.domRef(anchorRef)}
         className={styles["trigger"]}
         ariaLabel={Int.toString(missedMonths) ++ " missed months, show payment history"}
         ariaExpanded=isOpen
-        onClick>
+        onClick
+      >
         {React.string(Int.toString(missedMonths))}
       </button>
       {switch placement {
@@ -196,7 +186,8 @@ module MissedMonthsCell = {
           className={styles["popover"]}
           style={isOpen ? style : hidden}
           role="dialog"
-          ariaLabel="Payment history">
+          ariaLabel="Payment history"
+        >
           <header className={styles["popoverHeader"]}>
             <span>
               {React.string("Payment history of ")}
@@ -214,7 +205,7 @@ module MissedMonthsCell = {
 }
 
 /* Order of the missing dues list, switched by clicking the Missed Months or
-   Last Company header. One direction each, no toggling. */
+ Last Company header. One direction each, no toggling. */
 type sortBy =
   | ByMissedMonths
   | ByLastCompany
@@ -240,7 +231,7 @@ module HideSingleMissingFilter = {
    thread outlived their missing dues. */
 module DuesNotes = {
   let column = (
-    byId: Map.String.t<NoteData.summary>,
+    byId: Map.t<string, NoteData.summary>,
     onOpen: MemberData.summary => unit,
   ): MemberSummaryTable.column => Custom({
     name: "Notes",
@@ -252,14 +243,14 @@ module DuesNotes = {
      the selected period. Empty until the missing list has loaded, so nobody
      shows up here just because the bank data is still on its way. */
   let resolved = (
-    ~byId: Map.String.t<NoteData.summary>,
+    ~byId: Map.t<string, NoteData.summary>,
     ~missing: Api.webData<'a>,
     ~isMissing: MemberData.summary => bool,
     members: Api.webData<array<MemberData.summary>>,
   ) =>
     switch (missing, members) {
     | (Success(_), Success(rows)) =>
-      rows->Array.keep(m => Notes.summaryOf(byId, m.id)->Option.isSome && !isMissing(m))
+      rows->Array.filter(m => Notes.summaryOf(byId, m.id)->Option.isSome && !isMissing(m))
     | _ => []
     }
 
@@ -274,17 +265,18 @@ module DuesNotes = {
       switch member {
       | None => React.null
       | Some(m) => {
-          let name = [m.firstName, m.lastName]->Array.keepMap(n => n)->Js.Array2.joinWith(" ")
+          let name = [m.firstName, m.lastName]->Array.filterMap(n => n)->Array.joinUnsafe(" ")
           <Notes.Drawer
-          title={<>
-            {React.string("Dues notes of ")}
-            {MemberSummaryTable.viewPaddedNumber(m.memberNumber, ())}
-            {React.string(" " ++ name)}
-          </>}
-          onClose>
-          <Notes.Panel
-            key={Uuid.toString(m.id)} api target=NoteData.MemberDues targetId=m.id onChange
-          />
+            title={<>
+              {React.string("Dues notes of ")}
+              {MemberSummaryTable.viewPaddedNumber(m.memberNumber, ())}
+              {React.string(" " ++ name)}
+            </>}
+            onClose
+          >
+            <Notes.Panel
+              key={Uuid.toString(m.id)} api target=NoteData.MemberDues targetId=m.id onChange
+            />
           </Notes.Drawer>
         }
       }
@@ -313,7 +305,7 @@ module DuesNotes = {
 }
 
 /* Split out so a change of year or month remounts it (via `key` in the parent)
-   and re-runs the bank API request -- Hook.getData only fetches on mount. */
+ and re-runs the bank API request -- Hook.getData only fetches on mount. */
 module MissingList = {
   @react.component
   let make = (
@@ -334,23 +326,22 @@ module MissingList = {
 
     let (missing, _, _) = bankApi->Hook.getData(~path, ~decoder=PaymentData.Decode.missing)
 
-    let missingByNumber =
-      missing->RemoteData.unwrap(~default=Map.Int.empty, rows =>
-        rows
-        ->Array.map((r: PaymentData.missingPaymentMember) => (
-            r.memberNumber,
-            (r.totalMissedMonths, r.hasEverPaid),
-          ))
-        ->Map.Int.fromArray
-      )
+    let missingByNumber = missing->RemoteData.unwrap(~default=Map.make(), rows =>
+      rows
+      ->Array.map((r: PaymentData.missingPaymentMember) => (
+        r.memberNumber,
+        (r.totalMissedMonths, r.hasEverPaid),
+      ))
+      ->Map.fromArray
+    )
 
     let missedOf = (m: MemberData.summary) => {
-      let (months, _) = missingByNumber->Map.Int.getWithDefault(m.memberNumber, (0, true))
+      let (months, _) = missingByNumber->Map.get(m.memberNumber)->Option.getOr((0, true))
       months
     }
 
     let hasEverPaidOf = (m: MemberData.summary) => {
-      let (_, everPaid) = missingByNumber->Map.Int.getWithDefault(m.memberNumber, (0, true))
+      let (_, everPaid) = missingByNumber->Map.get(m.memberNumber)->Option.getOr((0, true))
       everPaid
     }
 
@@ -360,7 +351,7 @@ module MissingList = {
     let byLastCompany = (a, b) =>
       switch (MemberSummaryTable.lastCompanyOf(a), MemberSummaryTable.lastCompanyOf(b)) {
       | (Some(x), Some(y)) =>
-        switch Js.String2.localeCompare(x, y) {
+        switch String.localeCompare(x, y) {
         | 0.0 => byMissedMonths(a, b)
         | order => order > 0.0 ? 1 : -1
         }
@@ -375,22 +366,22 @@ module MissingList = {
     let (notesFor, setNotesFor) = React.useState(() => None)
     let notesColumn = DuesNotes.column(notesById, m => setNotesFor(_ => Some(m)))
 
-    let displayedMembers =
-      members->RemoteData.map(rows =>
-        rows
-        ->Array.keep(m =>
-          missingByNumber->Map.Int.has(m.memberNumber) &&
-          (!onlyNeverPaid || !hasEverPaidOf(m)) &&
-          (!hideSingleMissing || missedOf(m) != 1)
-        )
-        ->Array.copy
-        ->Js.Array2.sortInPlaceWith(
+    let displayedMembers = members->RemoteData.map(rows =>
+      rows
+      ->Array.filter(m =>
+        missingByNumber->Map.has(m.memberNumber) &&
+        (!onlyNeverPaid || !hasEverPaidOf(m)) &&
+        (!hideSingleMissing || missedOf(m) != 1)
+      )
+      ->Array.toSorted((a, b) =>
+        (
           switch sortBy {
           | ByMissedMonths => byMissedMonths
           | ByLastCompany => byLastCompany
-          },
-        )
+          }
+        )(a, b)->Int.toFloat
       )
+    )
 
     <>
       {switch missing {
@@ -424,14 +415,13 @@ module MissingList = {
           switch c {
           | LastCompany => Some(sortHeader(ByLastCompany))
           | _ => None
-          }}>
+          }}
+      >
         <p> {React.string("No members are missing dues for the selected period.")} </p>
       </MemberSummaryTable>
       <DuesNotes.Section
-        members={members->DuesNotes.resolved(
-          ~byId=notesById,
-          ~missing,
-          ~isMissing=m => missingByNumber->Map.Int.has(m.memberNumber),
+        members={members->DuesNotes.resolved(~byId=notesById, ~missing, ~isMissing=m =>
+          missingByNumber->Map.has(m.memberNumber)
         )}
         notesColumn
       />
@@ -443,7 +433,7 @@ module MissingList = {
 }
 
 /* Split out for the same reason as MissingList -- remount on year/month
-   change so Hook.getData re-fetches. */
+ change so Hook.getData re-fetches. */
 module CommentedList = {
   @react.component
   let make = (
@@ -459,19 +449,18 @@ module CommentedList = {
 
     let (commented, _, _) = bankApi->Hook.getData(~path, ~decoder=PaymentData.Decode.commented)
 
-    let commentByNumber =
-      commented->RemoteData.unwrap(~default=Map.Int.empty, rows =>
-        rows
-        ->Array.map((r: PaymentData.commentedTransaction) => (r.memberNumber, r.adminComment))
-        ->Map.Int.fromArray
-      )
+    let commentByNumber = commented->RemoteData.unwrap(~default=Map.make(), rows =>
+      rows
+      ->Array.map((r: PaymentData.commentedTransaction) => (r.memberNumber, r.adminComment))
+      ->Map.fromArray
+    )
 
     let commentOf = (m: MemberData.summary) =>
-      commentByNumber->Map.Int.getWithDefault(m.memberNumber, "")
+      commentByNumber->Map.get(m.memberNumber)->Option.getOr("")
 
     let displayedMembers =
       members->RemoteData.map(rows =>
-        rows->Array.keep(m => commentByNumber->Map.Int.has(m.memberNumber))
+        rows->Array.filter(m => commentByNumber->Map.has(m.memberNumber))
       )
 
     // Nothing to show and nothing pending -- don't render an empty table.
@@ -504,7 +493,8 @@ module CommentedList = {
             LastCompany,
             Email,
             Phone,
-          ]>
+          ]
+        >
           <p> {React.string("No commented transactions for the selected period.")} </p>
         </MemberSummaryTable>
       </>
@@ -513,7 +503,7 @@ module CommentedList = {
 }
 
 /* Split out so a change of tab remounts it (via `key` in the parent) and
-   re-fetches the member list for that status. */
+ re-fetches the member list for that status. */
 module Body = {
   @react.component
   let make = (
@@ -537,7 +527,7 @@ module Body = {
     let (members, _, _) =
       api->Hook.getData(~path=membersPath, ~decoder=Json.Decode.array(MemberData.Decode.summary))
 
-    let monthKey = month->Option.mapWithDefault("all", Int.toString)
+    let monthKey = month->Option.mapOr("all", x => Int.toString(x))
 
     <>
       <MissingList
@@ -569,7 +559,7 @@ let tabKey = (tab: option<MemberData.status>) =>
 
 @react.component
 let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
-  let currentYear = Js.Date.make()->Js.Date.getFullYear->Float.toInt
+  let currentYear = Date.make()->Date.getFullYear
 
   let url = RescriptReactRouter.useUrl()
   let (year, month) = YearMonthFilter.fromSearch(~search=url.search, ~currentYear)
@@ -596,11 +586,13 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
         </Button.Panel>
         <Tabbed.Tabs>
           <Tabbed.Tab
-            value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
+            value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")
+          >
             <span> {React.string("Current")} </span>
           </Tabbed.Tab>
           <Tabbed.Tab
-            value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
+            value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")
+          >
             <span> {React.string("Past")} </span>
           </Tabbed.Tab>
           <Tabbed.TabSpacer />

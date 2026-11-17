@@ -1,14 +1,13 @@
 @module external styles: {..} = "./MemberDetail/styles.module.scss"
 
 open Data
-open Belt
 
 type welcomeEmailPreferences = {
   csSubject: string,
   enSubject: string,
   csTemplate: string,
   enTemplate: string,
-  variables: MemberData.detail => Js.Dict.t<string>,
+  variables: MemberData.detail => dict<string>,
 }
 
 module Actions = {
@@ -65,7 +64,8 @@ module Actions = {
           onClick={_ =>
             modal->Modal.Interface.openModal(
               sendModal(~modal, ~api, ~id, ~body, ~subject, ~variables),
-            )}>
+            )}
+        >
           {React.string("Send")}
         </Button>
       </Button.Panel>
@@ -86,7 +86,7 @@ let make = (~api, ~id, ~modal, ~preferences: welcomeEmailPreferences) => {
     setText(_prev => emailTxt)
   }
   let (subject, setSubject) = React.useState(_ => "")
-  let (variables, setVariables) = React.useState(_ => Js.Dict.empty())
+  let (variables, setVariables) = React.useState(_ => Dict.make())
 
   React.useEffect0(() => {
     let req =
@@ -99,7 +99,7 @@ let make = (~api, ~id, ~modal, ~preferences: welcomeEmailPreferences) => {
       let memberLanguage: string = RemoteData.unwrap(
         detail,
         ~default="cannot happen",
-        member => member.language->Option.getWithDefault("en"),
+        member => member.language->Option.getOr("en"),
       )
       setText(
         _ =>
@@ -117,7 +117,7 @@ let make = (~api, ~id, ~modal, ~preferences: welcomeEmailPreferences) => {
             preferences.enSubject
           },
       )
-      setVariables(_ => RemoteData.unwrap(detail, ~default=Js.Dict.empty(), preferences.variables))
+      setVariables(_ => RemoteData.unwrap(detail, ~default=Dict.make(), preferences.variables))
     })
 
     Some(() => Future.cancel(req))

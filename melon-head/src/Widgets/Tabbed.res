@@ -25,10 +25,9 @@ module Tab = {
       styles["tab"]
     }
 
-    let style = switch color {
-    | None => ReactDOM.Style.make()
-    | Some(activeColor) =>
-      ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--active-color", activeColor)
+    let style: ReactDOM.Style.t = switch color {
+    | None => {}
+    | Some(activeColor) => ReactDOM.Style.unsafeAddProp({}, "--active-color", activeColor)
     }
 
     <button onClick={activate} className={cssClass} style> children </button>
@@ -45,7 +44,7 @@ module TabSpacer = {
 module Content = {
   @react.component
   let make = (~children=React.null, ~tab, ~handlers) => {
-    if fst(handlers) == tab {
+    if Pair.first(handlers) == tab {
       <div> children </div>
     } else {
       React.null

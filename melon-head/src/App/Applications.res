@@ -5,7 +5,6 @@
  */
 
 open Data
-open Belt
 
 module Processing = {
   @react.component
@@ -46,10 +45,10 @@ module Processing = {
           view: r =>
             <a onClick={_ => openNewNoteModal(r.id, r.note)}>
               {
-                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                let note = if Option.getOr(r.note, "Add note") == "" {
                   "Add note"
                 } else {
-                  Option.getWithDefault(r.note, "Add note")
+                  Option.getOr(r.note, "Add note")
                 }
 
                 React.string(note)
@@ -74,9 +73,10 @@ module Processing = {
         {
           name: "Verified on",
           minMax: ("220px", "2fr"),
-          view: r => React.string(r.verifiedAt->Js.Date.toLocaleDateString),
+          view: r => React.string(r.verifiedAt->Date.toLocaleDateString),
         },
-      ]>
+      ]
+    >
       {React.string("There are no applications in processiong.")}
     </DataTable>
   }
@@ -121,10 +121,10 @@ module Unverified = {
           view: r =>
             <a onClick={_ => openNewNoteModal(r.id, r.note)}>
               {
-                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                let note = if Option.getOr(r.note, "Add note") == "" {
                   "Add note"
                 } else {
-                  Option.getWithDefault(r.note, "Add note")
+                  Option.getOr(r.note, "Add note")
                 }
 
                 React.string(note)
@@ -150,11 +150,10 @@ module Unverified = {
           name: "Email Sent On",
           minMax: ("220px", "2fr"),
           view: r =>
-            React.string(
-              r.verificationSentAt->Option.mapWithDefault("NOT SENT!", Js.Date.toLocaleDateString),
-            ),
+            React.string(r.verificationSentAt->Option.mapOr("NOT SENT!", Date.toLocaleDateString)),
         },
-      ]>
+      ]
+    >
       {React.string("There are no applications with pending verification.")}
     </DataTable>
   }
@@ -199,10 +198,10 @@ module Accepted = {
           view: r =>
             <a onClick={_ => openNewNoteModal(r.id, r.note)}>
               {
-                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                let note = if Option.getOr(r.note, "Add note") == "" {
                   "Add note"
                 } else {
-                  Option.getWithDefault(r.note, "Add note")
+                  Option.getOr(r.note, "Add note")
                 }
 
                 React.string(note)
@@ -227,9 +226,10 @@ module Accepted = {
         {
           name: "Accepted On",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.acceptedAt->Js.Date.toLocaleDateString),
+          view: r => React.string(r.acceptedAt->Date.toLocaleDateString),
         },
-      ]>
+      ]
+    >
       {React.string("There are no accepted applications so far.")}
     </DataTable>
   }
@@ -274,10 +274,10 @@ module Rejected = {
           view: r =>
             <a onClick={_ => openNewNoteModal(r.id, r.note)}>
               {
-                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                let note = if Option.getOr(r.note, "Add note") == "" {
                   "Add note"
                 } else {
-                  Option.getWithDefault(r.note, "Add note")
+                  Option.getOr(r.note, "Add note")
                 }
 
                 React.string(note)
@@ -302,9 +302,10 @@ module Rejected = {
         {
           name: "Rejected On",
           minMax: ("150px", "1fr"),
-          view: r => React.string(r.rejectedAt->Js.Date.toLocaleDateString),
+          view: r => React.string(r.rejectedAt->Date.toLocaleDateString),
         },
-      ]>
+      ]
+    >
       {React.string("There are no rejected applications so far.")}
     </DataTable>
   }
@@ -349,10 +350,10 @@ module Invalid = {
           view: r =>
             <a onClick={_ => openNewNoteModal(r.id, r.note)}>
               {
-                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                let note = if Option.getOr(r.note, "Add note") == "" {
                   "Add note"
                 } else {
-                  Option.getWithDefault(r.note, "Add note")
+                  Option.getOr(r.note, "Add note")
                 }
 
                 React.string(note)
@@ -377,9 +378,10 @@ module Invalid = {
         {
           name: "Invalidated On",
           minMax: ("170px", "1fr"),
-          view: r => React.string(r.invalidatedAt->Js.Date.toLocaleDateString),
+          view: r => React.string(r.invalidatedAt->Date.toLocaleDateString),
         },
-      ]>
+      ]
+    >
       {React.string("There are no invalidated applications so far.")}
     </DataTable>
   }
@@ -424,10 +426,10 @@ module All = {
           view: r =>
             <a onClick={_ => openNewNoteModal(r.id, r.note)}>
               {
-                let note = if Option.getWithDefault(r.note, "Add note") == "" {
+                let note = if Option.getOr(r.note, "Add note") == "" {
                   "Add note"
                 } else {
-                  Option.getWithDefault(r.note, "Add note")
+                  Option.getOr(r.note, "Add note")
                 }
 
                 React.string(note)
@@ -449,7 +451,8 @@ module All = {
           minMax: ("125px", "1fr"),
           view: r => React.string(r.registrationLocal->Local.toString),
         },
-      ]>
+      ]
+    >
       {React.string("There are no applications so far.")}
     </DataTable>
   }
@@ -541,22 +544,26 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
         <Tabbed.Tab
           value={Some(ApplicationData.Unverified)}
           handlers={tabHandlers}
-          color=Some("var(--color5)")>
+          color=Some("var(--color5)")
+        >
           {React.string("Pending Verification")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.unverified)} />
         </Tabbed.Tab>
         <Tabbed.Tab
-          value={Some(ApplicationData.Accepted)} handlers={tabHandlers} color=Some("var(--color6)")>
+          value={Some(ApplicationData.Accepted)} handlers={tabHandlers} color=Some("var(--color6)")
+        >
           {React.string("Accepted")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.accepted)} />
         </Tabbed.Tab>
         <Tabbed.Tab
-          value={Some(ApplicationData.Rejected)} handlers={tabHandlers} color=Some("var(--color7)")>
+          value={Some(ApplicationData.Rejected)} handlers={tabHandlers} color=Some("var(--color7)")
+        >
           {React.string("Rejected")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.rejected)} />
         </Tabbed.Tab>
         <Tabbed.Tab
-          value={Some(ApplicationData.Invalid)} handlers={tabHandlers} color=Some("var(--color8)")>
+          value={Some(ApplicationData.Invalid)} handlers={tabHandlers} color=Some("var(--color8)")
+        >
           {React.string("Invalid")}
           <Chip.Count value={basicStats->RemoteData.map(r => r.invalid)} />
         </Tabbed.Tab>

@@ -8,7 +8,7 @@ let make = (~api, ~id, ~modal) => {
     enTemplate,
     csSubject: "Vítej v Odborové organizaci pracujících v ICT!",
     enSubject: "Welcome to the Trade union of workers in ICT!",
-    variables: _ => Js.Dict.empty(),
+    variables: _ => Dict.make(),
   }
 
   <MemberWelcomeEmail api id modal preferences />

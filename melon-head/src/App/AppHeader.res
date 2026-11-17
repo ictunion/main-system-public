@@ -1,5 +1,5 @@
 @module external styles: {..} = "./AppHeader/styles.module.scss"
-@module external melonSvg: string = "/static/svg/melon-head.svg"
+@module external melonLogo: string = "/static/svg/melon-head.svg"
 
 @react.component
 let make = (
@@ -17,7 +17,7 @@ let make = (
       </div>
     </button>
     <h1 className={styles["appTitle"]} onClick=openHome>
-      <img src=melonSvg className={styles["logo"]} />
+      <img src=melonLogo className={styles["logo"]} />
       {React.string("Orca / Melon Head")}
     </h1>
     <button className={styles["profileBtn"]} onClick=openProfile>

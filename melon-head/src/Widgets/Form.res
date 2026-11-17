@@ -2,15 +2,13 @@
 
 @send external focus: Dom.element => unit = "focus"
 
-open Belt
-
 /* Bind to react-datepicker */
 %%raw("import 'react-datepicker/dist/react-datepicker.css'")
 module DatePicker = {
   @react.component @module("react-datepicker")
   external make: (
-    ~selected: option<Js.Date.t>,
-    ~onChange: Js.Date.t => unit,
+    ~selected: option<Date.t>,
+    ~onChange: Date.t => unit,
     ~dateFormat: string,
     ~placeholderText: string,
     ~dropdownMode: string,
@@ -109,7 +107,7 @@ module SelectField = {
     ~value: string,
     ~onChange: string => unit,
   ): React.element => {
-    let options = if value == "" || options->Js.Array2.includes(value) {
+    let options = if value == "" || options->Array.includes(value) {
       options
     } else {
       Array.concat(options, [value])
@@ -181,12 +179,12 @@ module MemberNumber = {
     }
 
     // DOM node of text input
-    let inputEl = React.useRef(Js.Nullable.null)
+    let inputEl = React.useRef(Nullable.null)
 
     // Focus input
     React.useEffect1(() => {
       if hasCustomNumber {
-        inputEl.current->Js.Nullable.toOption->Belt.Option.forEach(input => input->focus)
+        inputEl.current->Nullable.toOption->Option.forEach(input => input->focus)
       }
       None
     }, [number])
@@ -274,7 +272,7 @@ module LanguageSelect = {
 
 module Date = {
   @react.component
-  let make = (~value: option<Js.Date.t>, ~onChange, ~label: string) => {
+  let make = (~value: option<Date.t>, ~onChange, ~label: string) => {
     <Field>
       <Label>
         {React.string(label)}

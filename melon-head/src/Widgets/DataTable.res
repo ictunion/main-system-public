@@ -1,9 +1,7 @@
-open Belt
-
 @module external styles: {..} = "./DataTable/styles.module.scss"
 
 /* Makes a column's header a sort switch. The table doesn't sort anything
-   itself -- the caller orders the rows and says which column is active. */
+ itself -- the caller orders the rows and says which column is active. */
 type sort = {
   active: bool,
   onSelect: unit => unit,
@@ -26,7 +24,8 @@ module HeadCell = {
         <button
           className={styles["sortBtn"] ++ (active ? " " ++ styles["sortBtnActive"] : "")}
           ariaPressed={active ? #"true" : #"false"}
-          onClick={_ => onSelect()}>
+          onClick={_ => onSelect()}
+        >
           {React.string(column.name)}
         </button>
       }}
@@ -39,7 +38,9 @@ module THead = {
   let make = (~columns: array<column<'t>>) => {
     <div className={styles["thead"]}>
       {React.array(
-        Array.mapWithIndex(columns, (index, column) => <HeadCell key={Int.toString(index)} column />),
+        Array.mapWithIndex(columns, (column, index) =>
+          <HeadCell key={Int.toString(index)} column />
+        ),
       )}
     </div>
   }
@@ -58,7 +59,7 @@ module Tr = {
   let make = (~columns: array<column<'t>>, ~row: 't) => {
     <div className={styles["tr"]}>
       {React.array(
-        Array.mapWithIndex(columns, (index, column) => <Td key={Int.toString(index)} column row />),
+        Array.mapWithIndex(columns, (column, index) => <Td key={Int.toString(index)} column row />),
       )}
     </div>
   }
@@ -77,10 +78,9 @@ let make = (
   let gridTemplate: string = Array.map(columns, r => {
     let (min, max) = r.minMax
     "minmax(" ++ min ++ "," ++ max ++ ") "
-  })->Js.String.concatMany("")
+  })->Array.join("")
 
-  let style =
-    ReactDOM.Style.make()->ReactDOM.Style.unsafeAddProp("--grid-template-columns", gridTemplate)
+  let style = ReactDOM.Style.unsafeAddProp({}, "--grid-template-columns", gridTemplate)
 
   <div className={styles["root"]} style>
     <div className={styles["scrollContainer"]}>
@@ -91,8 +91,8 @@ let make = (
           <div className={styles["emptyContainer"]}> children </div>
         } else {
           React.array(
-            rows->Array.mapWithIndex((index, row) => {
-              let key = rowKey->Option.mapWithDefault(Int.toString(index), f => f(row))
+            rows->Array.mapWithIndex((row, index) => {
+              let key = rowKey->Option.mapOr(Int.toString(index), f => f(row))
               <Tr key columns row />
             }),
           )

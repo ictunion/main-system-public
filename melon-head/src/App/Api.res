@@ -8,7 +8,7 @@ type error =
   | Empty
   | NetworkError
   | Timeout
-  | DecodingError(string, Js.Json.t)
+  | DecodingError(string, JSON.t)
   | ApiError(apiError)
 
 type status = {
@@ -28,27 +28,27 @@ module Decode = {
   open Json.Decode
 
   let status = object(field => {
-    httpStatus: field.required(. "http_status", int),
-    httpMessage: field.required(. "http_message", string),
-    authorizationConnected: field.required(. "authorization_connected", bool),
-    databaseConnected: field.required(. "database_connected", bool),
-    proxySupportEnabled: field.required(. "proxy_support_enabled", bool),
+    httpStatus: field.required("http_status", int),
+    httpMessage: field.required("http_message", string),
+    authorizationConnected: field.required("authorization_connected", bool),
+    databaseConnected: field.required("database_connected", bool),
+    proxySupportEnabled: field.required("proxy_support_enabled", bool),
   })
 
   let apiError = object(field => {
-    field.required(.
+    field.required(
       "error",
       object(field => {
-        code: field.required(. "code", int),
-        description: field.required(. "description", string),
-        reason: field.required(. "reason", string),
+        code: field.required("code", int),
+        description: field.required("description", string),
+        reason: field.required("reason", string),
       }),
     )
   })
 
   let acceptedResponse = object(field => {
-    status: field.required(. "status", int),
-    message: field.required(. "message", string),
+    status: field.required("status", int),
+    message: field.required("message", string),
   })
 }
 
@@ -58,7 +58,7 @@ let showError = (err: error): string => {
   | NetworkError => "Network error occured"
   | Timeout => "Request timeout"
   | DecodingError(err, json) =>
-    "Error decoding data: " ++ err ++ ". Response: " ++ Js.Json.stringify(json)
+    "Error decoding data: " ++ err ++ ". Response: " ++ JSON.stringify(json)
   | ApiError(apiError) => apiError.description
   }
 }
@@ -110,21 +110,21 @@ let makeBank = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
     // prefix-free (e.g. "/payments/..."). When bank_api_url is unset the host
     // is meaningless -- callers must gate requests on Config.bankEnabled
     // instead of relying on this falling back to a dead URL.
-    host: config.bankApiUrl->Belt.Option.getWithDefault("") ++ "/api",
+    host: config.bankApiUrl->Option.getOr("") ++ "/api",
     oidcUser,
   }
 }
 
 let makeJsonHeaders = api => {
-  Js.Dict.fromList(list{
+  Dict.fromArray([
     ("Authorization", "Bearer " ++ getToken(api)),
     ("Accept", "application/json"),
     ("Content-Type", "application/json"),
-  })
+  ])
 }
 
 let makeTextHeaders = api => {
-  Js.Dict.fromList(list{("Authorization", "Bearer " ++ getToken(api)), ("Accept", "text/csv")})
+  Dict.fromArray([("Authorization", "Bearer " ++ getToken(api)), ("Accept", "text/csv")])
 }
 
 let fromJsonRequest = (future, decoder) => {
@@ -164,7 +164,7 @@ let deleteJson = (
   api: t,
   ~path: string,
   ~decoder: Json.Decode.t<'a>,
-  ~body: option<Js.Json.t>,
+  ~body: option<JSON.t>,
 ): Future.t<result<'a, error>> => {
   Request.make(
     ~url=api.host ++ path,
@@ -172,11 +172,11 @@ let deleteJson = (
     ~method=#DELETE,
     (),
     ~headers=makeJsonHeaders(api),
-    ~body=?body->Belt.Option.map(Js.Json.stringify),
+    ~body=?body->Option.map(b => JSON.stringify(b)),
   )->fromJsonRequest(decoder)
 }
 
-let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Json.t): Future.t<
+let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: JSON.t): Future.t<
   result<'a, error>,
 > => {
   ()
@@ -185,7 +185,7 @@ let postJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Js
     ~responseType=Json,
     ~method=#POST,
     ~headers=makeJsonHeaders(api),
-    ~body=Js.Json.stringify(body),
+    ~body=JSON.stringify(body),
   )
   ->fromJsonRequest(decoder)
 }
@@ -201,7 +201,7 @@ let put = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>): Future.t<result<
   ->fromJsonRequest(decoder)
 }
 
-let patchJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.Json.t): Future.t<
+let patchJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: JSON.t): Future.t<
   result<'a, error>,
 > => {
   ()
@@ -210,7 +210,7 @@ let patchJson = (api: t, ~path: string, ~decoder: Json.Decode.t<'a>, ~body: Js.J
     ~responseType=Json,
     ~method=#PATCH,
     ~headers=makeJsonHeaders(api),
-    ~body=Js.Json.stringify(body),
+    ~body=JSON.stringify(body),
   )
   ->fromJsonRequest(decoder)
 }

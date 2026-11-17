@@ -2,7 +2,6 @@
 
 @send external focus: Dom.element => unit = "focus"
 
-open Belt
 open RemoteData
 open Data
 
@@ -25,7 +24,7 @@ let layout: DataGrid.t<ApplicationData.detail> = [
       },
       {
         label: "Date of Birth",
-        view: d => View.option(d.dateOfBirth, a => a->Js.Date.toLocaleDateString->React.string),
+        view: d => View.option(d.dateOfBirth, a => a->Date.toLocaleDateString->React.string),
         minmax: ("250px", "250px"),
       },
     ],
@@ -100,15 +99,15 @@ let metadataRows: array<RowBasedTable.row<ApplicationData.detail>> = [
 ]
 
 let timeRows: array<RowBasedTable.row<ApplicationData.detail>> = [
-  ("Created", d => d.createdAt->Js.Date.toLocaleString->React.string),
+  ("Created", d => d.createdAt->Date.toLocaleString->React.string),
   (
     "Verification Sent",
-    d => View.option(d.verificationSentAt, a => a->Js.Date.toLocaleString->React.string),
+    d => View.option(d.verificationSentAt, a => a->Date.toLocaleString->React.string),
   ),
-  ("Email Verified", d => View.option(d.verifiedAt, a => a->Js.Date.toLocaleString->React.string)),
-  ("Rejected", d => View.option(d.rejectedAt, a => a->Js.Date.toLocaleString->React.string)),
-  ("Invalidated", d => View.option(d.invalidatedAt, a => a->Js.Date.toLocaleString->React.string)),
-  ("Accepted", d => View.option(d.acceptedAt, a => a->Js.Date.toLocaleString->React.string)),
+  ("Email Verified", d => View.option(d.verifiedAt, a => a->Date.toLocaleString->React.string)),
+  ("Rejected", d => View.option(d.rejectedAt, a => a->Date.toLocaleString->React.string)),
+  ("Invalidated", d => View.option(d.invalidatedAt, a => a->Date.toLocaleString->React.string)),
+  ("Accepted", d => View.option(d.acceptedAt, a => a->Date.toLocaleString->React.string)),
 ]
 
 let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
@@ -198,7 +197,7 @@ module Actions = {
           api->Api.patchJson(
             ~path="/applications/" ++ Uuid.toString(id) ++ "/invalidate",
             ~decoder=ApplicationData.Decode.detail,
-            ~body=Js.Json.null,
+            ~body=JSON.Encode.null,
           )
 
         req->Future.get(res => {
@@ -252,10 +251,12 @@ module Actions = {
       let disabled = Form.MemberNumber.validate(memberNumber)->Option.isSome
 
       let doAccept = _ => {
-        let body: Js.Json.t = Json.Encode.object([
+        let body: JSON.t = Json.Encode.object([
           (
             "member_number",
-            Json.Encode.option(Json.Encode.int, memberNumber->Option.flatMap(Int.fromString)),
+            Json.Encode.option(Json.Encode.int)(
+              memberNumber->Option.flatMap(s => Int.fromString(s)),
+            ),
           ),
         ])
         let path = "/applications/" ++ Uuid.toString(id) ++ "/accept"
@@ -305,7 +306,7 @@ module Actions = {
           api->Api.patchJson(
             ~path="/applications/" ++ Uuid.toString(id) ++ "/verify",
             ~decoder=ApplicationData.Decode.detail,
-            ~body=Js.Json.null,
+            ~body=JSON.Encode.null,
           )
 
         req->Future.get(res => {
@@ -354,7 +355,7 @@ module Actions = {
           api->Api.postJson(
             ~path="/applications/" ++ Uuid.toString(id) ++ "/resend-email",
             ~decoder=Api.Decode.acceptedResponse,
-            ~body=Js.Json.null,
+            ~body=JSON.Encode.null,
           )
 
         req->Future.get(res => {
@@ -399,7 +400,7 @@ module Actions = {
           api->Api.patchJson(
             ~path="/applications/" ++ Uuid.toString(id) ++ "/unreject",
             ~decoder=ApplicationData.Decode.detail,
-            ~body=Js.Json.null,
+            ~body=JSON.Encode.null,
           )
 
         req->Future.get(res => {
@@ -447,7 +448,7 @@ module Actions = {
           api->Api.patchJson(
             ~path="/applications/" ++ Uuid.toString(id) ++ "/uninvalidate",
             ~decoder=ApplicationData.Decode.detail,
-            ~body=Js.Json.null,
+            ~body=JSON.Encode.null,
           )
 
         req->Future.get(res => {
@@ -591,13 +592,15 @@ module Actions = {
             modal->Modal.Interface.openModal(
               invalidateModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
             )}
-          variant=Button.Careful>
+          variant=Button.Careful
+        >
           {React.string("Invalidate")}
         </Button>
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(verifyModal(~id, ~api, ~setDetail, ~modal))}
-          variant=Button.Careful>
+          variant=Button.Careful
+        >
           {React.string("Mark as Verified")}
         </Button>
         <Button
@@ -605,13 +608,15 @@ module Actions = {
             modal->Modal.Interface.openModal(
               rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
             )}
-          variant=Button.Danger>
+          variant=Button.Danger
+        >
           {React.string("Reject")}
         </Button>
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(resendModal(~id, ~api, ~modal, ~openApplications))}
-          variant=Button.Normal>
+          variant=Button.Normal
+        >
           {React.string("Re-send Email")}
         </Button>
       </Button.Panel>
@@ -623,7 +628,8 @@ module Actions = {
             modal->Modal.Interface.openModal(
               invalidateModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
             )}
-          variant=Button.Careful>
+          variant=Button.Careful
+        >
           {React.string("Invalidate")}
         </Button>
         <Button
@@ -631,7 +637,8 @@ module Actions = {
             modal->Modal.Interface.openModal(
               rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
             )}
-          variant=Button.Danger>
+          variant=Button.Danger
+        >
           {React.string("Reject")}
         </Button>
         <Button
@@ -639,7 +646,8 @@ module Actions = {
             modal->Modal.Interface.openModal(
               acceptModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
             )}
-          variant=Button.Cta>
+          variant=Button.Cta
+        >
           {React.string("Accept")}
         </Button>
       </Button.Panel>
@@ -649,7 +657,8 @@ module Actions = {
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(unRejectModal(~id, ~api, ~setDetail, ~modal))}
-          variant=Button.Danger>
+          variant=Button.Danger
+        >
           {React.string("Re-Evaluate")}
         </Button>
       </Button.Panel>
@@ -660,7 +669,8 @@ module Actions = {
         <Button
           onClick={_ =>
             modal->Modal.Interface.openModal(unInvalidateModal(~id, ~api, ~setDetail, ~modal))}
-          variant=Button.Danger>
+          variant=Button.Danger
+        >
           {React.string("Re-Evaluate")}
         </Button>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
@@ -669,7 +679,8 @@ module Actions = {
               modal->Modal.Interface.openModal(
                 hardDeleteModal(~id, ~api, ~modal, ~openApplications),
               )}
-            variant=Button.Danger>
+            variant=Button.Danger
+          >
             {React.string("HARD DELETE")}
           </Button>
         </SessionContext.RequireRole>
@@ -839,7 +850,7 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
                 minmax: ("150px", "600px"),
                 view: files =>
                   files
-                  ->Array.getByU((. f) => {
+                  ->Array.find(f => {
                     f.name == "signature" && f.fileType == "png"
                   })
                   ->viewSignature(~api),

@@ -1,5 +1,3 @@
-open Belt
-
 @module external styles: {..} = "./Page/styles.module.scss"
 
 @react.component

@@ -1,7 +1,6 @@
 @module external styles: {..} = "./Notes/styles.module.scss"
 
 open Data
-open Belt
 
 @val external confirm: string => bool = "confirm"
 @get external key: Dom.event => string = "key"
@@ -20,10 +19,10 @@ let useSummary = (api: Api.t, target: NoteData.target) => {
     api->Hook.getData(~path=pathOf(target), ~decoder=Json.Decode.array(NoteData.Decode.summary))
 
   let byId = React.useMemo1(() =>
-    data->RemoteData.unwrap(~default=Map.String.empty, rows =>
+    data->RemoteData.unwrap(~default=Map.make(), rows =>
       rows
       ->Array.map((s: NoteData.summary) => (Uuid.toString(s.targetId), s))
-      ->Map.String.fromArray
+      ->Map.fromArray
     )
   , [data])
 
@@ -34,11 +33,11 @@ let useSummary = (api: Api.t, target: NoteData.target) => {
   (byId, data, refresh)
 }
 
-let summaryOf = (byId: Map.String.t<NoteData.summary>, id: Uuid.t) =>
-  byId->Map.String.get(Uuid.toString(id))
+let summaryOf = (byId: Map.t<string, NoteData.summary>, id: Uuid.t) =>
+  byId->Map.get(Uuid.toString(id))
 
 /* Table cell: latest note and the total count, e.g. "called on Monday [3]".
-   No author or date, to keep the column narrow. */
+ No author or date, to keep the column narrow. */
 module Cell = {
   @react.component
   let make = (~summary: option<NoteData.summary>, ~onOpen: unit => unit) =>
@@ -60,7 +59,7 @@ module Editor = {
   @react.component
   let make = (~initial="", ~submitLabel: string, ~onSubmit: string => unit, ~onCancel=?) => {
     let (text, setText) = React.useState(() => initial)
-    let trimmed = Js.String2.trim(text)
+    let trimmed = String.trim(text)
 
     <form
       className={styles["editor"]}
@@ -69,7 +68,8 @@ module Editor = {
         if trimmed != "" {
           onSubmit(trimmed)
         }
-      }}>
+      }}
+    >
       <textarea
         className={styles["textarea"]}
         rows=3
@@ -193,7 +193,7 @@ module Panel = {
               <li key={Uuid.toString(n.id)} className={styles["note"]}>
                 <header className={styles["noteHeader"]}>
                   <strong> {React.string(n.authorName)} </strong>
-                  <span> {React.string(n.createdAt->Js.Date.toLocaleString)} </span>
+                  <span> {React.string(n.createdAt->Date.toLocaleString)} </span>
                 </header>
                 {switch editing {
                 | Some(id) if id == n.id =>
@@ -208,9 +208,7 @@ module Panel = {
                     <p className={styles["body"]}> {React.string(n.body)} </p>
                     {canModify(n)
                       ? <div className={styles["actions"]}>
-                          <a onClick={_ => setEditing(_ => Some(n.id))}>
-                            {React.string("Edit")}
-                          </a>
+                          <a onClick={_ => setEditing(_ => Some(n.id))}> {React.string("Edit")} </a>
                           <a onClick={_ => remove(n.id)}> {React.string("Delete")} </a>
                         </div>
                       : React.null}
@@ -240,7 +238,7 @@ module Panel = {
 }
 
 /* Right-side drawer, so the table row stays visible while working through a
-   list. Closes on Escape, a click on the backdrop or the close button. */
+ list. Closes on Escape, a click on the backdrop or the close button. */
 module Drawer = {
   @react.component
   let make = (~title: React.element, ~onClose: unit => unit, ~children) => {

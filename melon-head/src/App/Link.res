@@ -11,21 +11,19 @@ module Email = {
 module Tel = {
   @react.component
   let make = (~phoneNumber: Data.PhoneNumber.t) => {
-    open Js
-
     let phoneString = Data.PhoneNumber.toString(phoneNumber)
 
     // Most phone numbers should have this format
     // so we can as well format it in more readable way.
     // Otherwise we just use the string directly
     let formatted = if phoneString->String.length == 13 {
-      phoneString->String.slice(~from=0, ~to_=4) ++
+      phoneString->String.slice(~start=0, ~end=4) ++
       " " ++
-      phoneString->String.slice(~from=4, ~to_=7) ++
+      phoneString->String.slice(~start=4, ~end=7) ++
       " " ++
-      phoneString->String.slice(~from=7, ~to_=10) ++
+      phoneString->String.slice(~start=7, ~end=10) ++
       " " ++
-      phoneString->String.slice(~from=10, ~to_=13)
+      phoneString->String.slice(~start=10, ~end=13)
     } else {
       phoneString
     }
@@ -37,7 +35,7 @@ module Tel = {
 module Uuid = {
   @react.component
   let make = (~uuid: Data.Uuid.t, ~toPath: string => string) => {
-    let shorten = uuid->Data.Uuid.toString->Js.String.substrAtMost(~from=0, ~length=7) ++ "..."
+    let shorten = uuid->Data.Uuid.toString->String.slice(~start=0, ~end=7) ++ "..."
     let path = toPath(uuid->Data.Uuid.toString)
     let openPath = (e: JsxEvent.Mouse.t) => {
       e->JsxEvent.Mouse.preventDefault

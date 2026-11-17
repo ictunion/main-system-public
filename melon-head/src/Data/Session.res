@@ -67,20 +67,16 @@ type t = {
 }
 
 let hasRole = (session, ~role: orcaRole): bool => {
-  open Belt
-
   let allRoles = session.tokenClaims.orcaRoles
   Array.some(allRoles, r => r == role)
 }
 
 let hasRealmRole = (session, ~role: realmRole): bool => {
-  open Belt
   let allRoles = session.tokenClaims.realmRoles
   Array.some(allRoles, r => r == role)
 }
 
 let hasBankRole = (session, ~role: bankRole): bool => {
-  open Belt
   let allRoles = session.tokenClaims.bankRoles
   Array.some(allRoles, r => r == role)
 }
@@ -95,7 +91,7 @@ type user = {
 module Decode = {
   open Json.Decode
 
-  let orcaRole = string->map((. str) => {
+  let orcaRole = string->map(str => {
     switch str {
     | "list-applications" => ListApplications
     | "view-application" => ViewApplication
@@ -112,7 +108,7 @@ module Decode = {
     }
   })
 
-  let realmRole = string->map((. str) => {
+  let realmRole = string->map(str => {
     switch str {
     | "manage-users" => ManageUsers
     | _ => UnknownRealmRole(str)
@@ -120,20 +116,20 @@ module Decode = {
   })
 
   let orcaRoles = object(field =>
-    field.optional(.
+    field.optional(
       "orca",
-      object(field => field.required(. "roles", array(orcaRole))),
-    )->Belt.Option.getWithDefault([])
+      object(field => field.required("roles", array(orcaRole))),
+    )->Option.getOr([])
   )
 
   let realmRoles = object(field =>
-    field.optional(.
+    field.optional(
       "realm-management",
-      object(field => field.required(. "roles", array(realmRole))),
-    )->Belt.Option.getWithDefault([])
+      object(field => field.required("roles", array(realmRole))),
+    )->Option.getOr([])
   )
 
-  let bankRole = string->map((. str) => {
+  let bankRole = string->map(str => {
     switch str {
     | "payment-history" => PaymentHistory
     | "view-workplace-payment-history" => WorkplacePaymentHistory
@@ -142,30 +138,30 @@ module Decode = {
   })
 
   let bankRoles = object(field =>
-    field.optional(.
+    field.optional(
       "bank-system",
-      object(field => field.required(. "roles", array(bankRole))),
-    )->Belt.Option.getWithDefault([])
+      object(field => field.required("roles", array(bankRole))),
+    )->Option.getOr([])
   )
 
   let tokenClaims = object(field => {
-    sub: field.required(. "sub", Data.Uuid.decode),
-    email: field.required(. "email", Email.decode),
-    name: field.required(. "name", option(string)),
-    orcaRoles: field.required(. "resource_access", orcaRoles),
-    realmRoles: field.required(. "resource_access", realmRoles),
-    bankRoles: field.required(. "resource_access", bankRoles),
+    sub: field.required("sub", Data.Uuid.decode),
+    email: field.required("email", Email.decode),
+    name: field.required("name", option(string)),
+    orcaRoles: field.required("resource_access", orcaRoles),
+    realmRoles: field.required("resource_access", realmRoles),
+    bankRoles: field.required("resource_access", bankRoles),
   })
 
   let session = object(field => {
-    tokenClaims: field.required(. "token_claims", tokenClaims),
-    memberId: field.required(. "member_id", option(Data.Uuid.decode)),
+    tokenClaims: field.required("token_claims", tokenClaims),
+    memberId: field.required("member_id", option(Data.Uuid.decode)),
   })
 
   let user = object(field => {
-    id: field.required(. "id", Data.Uuid.decode),
-    email: field.required(. "email", Email.decode),
-    firstName: field.required(. "first_name", option(string)),
-    lastName: field.required(. "last_name", option(string)),
+    id: field.required("id", Data.Uuid.decode),
+    email: field.required("email", Email.decode),
+    firstName: field.required("first_name", option(string)),
+    lastName: field.required("last_name", option(string)),
   })
 }

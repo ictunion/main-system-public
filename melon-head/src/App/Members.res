@@ -1,7 +1,5 @@
 @module external styles: {..} = "./Members/styles.module.scss"
 
-open Belt
-
 module NewMember = {
   open MemberData
 
@@ -27,7 +25,7 @@ module NewMember = {
     let (error, setError) = React.useState(() => None)
 
     let onSubmit = _ => {
-      let body: Js.Json.t = MemberData.Encode.newMember(newMember)
+      let body: JSON.t = MemberData.Encode.newMember(newMember)
       let req = api->Api.postJson(~path="/members", ~decoder=MemberData.Decode.summary, ~body)
 
       req->Future.get(res => {
@@ -38,7 +36,7 @@ module NewMember = {
               setNewMember(_ => {
                 ...emptyMember,
                 memberNumber: newMember.memberNumber
-                ->Option.flatMap(Int.fromString)
+                ->Option.flatMap(s => Int.fromString(s))
                 ->Option.map(n => Int.toString(n + 1)),
               })
             } else {
@@ -112,7 +110,8 @@ module NewMember = {
       />
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" disabled variant=Button.Cta>
@@ -177,7 +176,7 @@ module All = {
     let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
 
     let displayedMembers = if filterSectoral {
-      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+      members->RemoteData.map(arr => arr->Array.filter(m => Array.length(m.workplaceIds) == 0))
     } else {
       members
     }
@@ -199,7 +198,8 @@ module All = {
       <MemberSummaryTable
         data=displayedMembers
         onNoteClick={(id, note) => openNewNoteModal(id, note)}
-        columns={Array.concat(MemberSummaryTable.defaultColumns, [MemberSummaryTable.LeftOn])}>
+        columns={Array.concat(MemberSummaryTable.defaultColumns, [MemberSummaryTable.LeftOn])}
+      >
         <p> {React.string("Currently there are no member.")} </p>
         <p>
           <small>
@@ -224,7 +224,7 @@ module New = {
     let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
 
     let displayedMembers = if filterSectoral {
-      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+      members->RemoteData.map(arr => arr->Array.filter(m => Array.length(m.workplaceIds) == 0))
     } else {
       members
     }
@@ -248,7 +248,8 @@ module New = {
       <MemberSummaryTable
         data=displayedMembers
         onNoteClick={(id, note) => openNewNoteModal(id, note)}
-        columns=MemberSummaryTable.defaultColumns>
+        columns=MemberSummaryTable.defaultColumns
+      >
         <p> {React.string("There are no new members who need to be onboarded.")} </p>
         <SessionContext.RequireRole anyOf=[Session.SuperPowers]>
           <p>
@@ -276,7 +277,7 @@ module Current = {
     let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
 
     let displayedMembers = if filterSectoral {
-      members->RemoteData.map(arr => arr->Array.keep(m => Array.length(m.workplaceIds) == 0))
+      members->RemoteData.map(arr => arr->Array.filter(m => Array.length(m.workplaceIds) == 0))
     } else {
       members
     }
@@ -298,7 +299,8 @@ module Current = {
       <MemberSummaryTable
         data=displayedMembers
         onNoteClick={(id, note) => openNewNoteModal(id, note)}
-        columns=MemberSummaryTable.defaultColumns>
+        columns=MemberSummaryTable.defaultColumns
+      >
         <p> {React.string("There are no members yet.")} </p>
         <p>
           <small>
@@ -326,20 +328,18 @@ module Past = {
     let (filterSectoral, setFilterSectoral) = React.useState(_ => false)
 
     let sortByLeftAt = (arr: array<MemberData.summary>) =>
-      arr
-      ->Array.copy
-      ->Js.Array2.sortInPlaceWith((a, b) =>
+      arr->Array.toSorted((a, b) =>
         switch (a.leftAt, b.leftAt) {
-        | (Some(da), Some(db)) => Js.Date.getTime(db) -. Js.Date.getTime(da) > 0.0 ? 1 : -1
-        | (Some(_), None) => -1
-        | (None, Some(_)) => 1
-        | (None, None) => 0
+        | (Some(da), Some(db)) => Date.getTime(db) -. Date.getTime(da) > 0.0 ? 1.0 : -1.0
+        | (Some(_), None) => -1.0
+        | (None, Some(_)) => 1.0
+        | (None, None) => 0.0
         }
       )
 
     let displayedMembers = members->RemoteData.map(arr => {
       let filtered = if filterSectoral {
-        arr->Array.keep(m => Array.length(m.workplaceIds) == 0)
+        arr->Array.filter(m => Array.length(m.workplaceIds) == 0)
       } else {
         arr
       }
@@ -359,7 +359,8 @@ module Past = {
       <MemberSummaryTable
         data=displayedMembers
         onNoteClick={(id, note) => openNewNoteModal(id, note)}
-        columns={Array.concat(MemberSummaryTable.defaultColumns, [MemberSummaryTable.LeftOn])}>
+        columns={Array.concat(MemberSummaryTable.defaultColumns, [MemberSummaryTable.LeftOn])}
+      >
         <p> {React.string("There are no ex-members.")} </p>
       </MemberSummaryTable>
     </div>
@@ -395,12 +396,14 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
         <Chip.Count value={basicStats->RemoteData.map(r => r.new)} />
       </Tabbed.Tab>
       <Tabbed.Tab
-        value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")>
+        value=Some(MemberData.CurrentMember) handlers=tabHandlers color=Some("var(--color6)")
+      >
         <span> {React.string("Current")} </span>
         <Chip.Count value={basicStats->RemoteData.map(r => r.current)} />
       </Tabbed.Tab>
       <Tabbed.Tab
-        value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")>
+        value=Some(MemberData.PastMember) handlers=tabHandlers color=Some("var(--color7)")
+      >
         <span> {React.string("Past")} </span>
         <Chip.Count value={basicStats->RemoteData.map(r => r.past)} />
       </Tabbed.Tab>

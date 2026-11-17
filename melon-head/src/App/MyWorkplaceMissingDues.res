@@ -1,5 +1,3 @@
-open Belt
-
 module NeverPaidFilter = {
   @react.component
   let make = (~checked, ~onChange: unit => unit) =>
@@ -60,23 +58,22 @@ module MissingList = {
         ~decoder=Json.Decode.array(WorkplaceData.DecodeMine.member),
       )
 
-    let missingByNumber =
-      missing->RemoteData.unwrap(~default=Map.Int.empty, rows =>
-        rows
-        ->Array.map((r: PaymentData.missingPaymentMember) => (
-            r.memberNumber,
-            (r.totalMissedMonths, r.hasEverPaid),
-          ))
-        ->Map.Int.fromArray
-      )
+    let missingByNumber = missing->RemoteData.unwrap(~default=Map.make(), rows =>
+      rows
+      ->Array.map((r: PaymentData.missingPaymentMember) => (
+        r.memberNumber,
+        (r.totalMissedMonths, r.hasEverPaid),
+      ))
+      ->Map.fromArray
+    )
 
     let missedOf = (m: MemberData.summary) => {
-      let (months, _) = missingByNumber->Map.Int.getWithDefault(m.memberNumber, (0, true))
+      let (months, _) = missingByNumber->Map.get(m.memberNumber)->Option.getOr((0, true))
       months
     }
 
     let hasEverPaidOf = (m: MemberData.summary) => {
-      let (_, everPaid) = missingByNumber->Map.Int.getWithDefault(m.memberNumber, (0, true))
+      let (_, everPaid) = missingByNumber->Map.get(m.memberNumber)->Option.getOr((0, true))
       everPaid
     }
 
@@ -86,15 +83,13 @@ module MissingList = {
     let (notesFor, setNotesFor) = React.useState(() => None)
     let notesColumn = MissingDues.DuesNotes.column(notesById, m => setNotesFor(_ => Some(m)))
 
-    let displayedMembers =
-      summaries->RemoteData.map(rows =>
-        rows
-        ->Array.keep(m =>
-          missingByNumber->Map.Int.has(m.memberNumber) && (!onlyNeverPaid || !hasEverPaidOf(m))
-        )
-        ->Array.copy
-        ->Js.Array2.sortInPlaceWith((a, b) => missedOf(b) - missedOf(a))
+    let displayedMembers = summaries->RemoteData.map(rows =>
+      rows
+      ->Array.filter(m =>
+        missingByNumber->Map.has(m.memberNumber) && (!onlyNeverPaid || !hasEverPaidOf(m))
       )
+      ->Array.toSorted((a, b) => Int.toFloat(missedOf(b) - missedOf(a)))
+    )
 
     <>
       {switch missing {
@@ -113,7 +108,8 @@ module MissingList = {
             minMax: ("140px", "1fr"),
             // Rows exist only if the missing list loaded, which already needs
             // view-workplace-payment-history -- the same role the history needs.
-            view: r => <MissingDues.MissedMonthsCell api bankApi member=r missedMonths={missedOf(r)} />,
+            view: r =>
+              <MissingDues.MissedMonthsCell api bankApi member=r missedMonths={missedOf(r)} />,
           }),
           Custom({
             name: "Ever Paid",
@@ -123,14 +119,15 @@ module MissingList = {
           notesColumn,
           Email,
           Phone,
-        ]>
+        ]
+      >
         <p> {React.string("No members are missing dues for the selected period.")} </p>
       </MemberSummaryTable>
       <MissingDues.DuesNotes.Section
         members={summaries->MissingDues.DuesNotes.resolved(
           ~byId=notesById,
           ~missing,
-          ~isMissing=m => missingByNumber->Map.Int.has(m.memberNumber),
+          ~isMissing=m => missingByNumber->Map.has(m.memberNumber),
         )}
         notesColumn
       />
@@ -143,7 +140,7 @@ module MissingList = {
 
 @react.component
 let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
-  let currentYear = Js.Date.make()->Js.Date.getFullYear->Float.toInt
+  let currentYear = Date.make()->Date.getFullYear
 
   let url = RescriptReactRouter.useUrl()
   let (year, month) = YearMonthFilter.fromSearch(~search=url.search, ~currentYear)
@@ -160,7 +157,7 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
         <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />
       </Button.Panel>
       <MissingList
-        key={Int.toString(year) ++ "-" ++ month->Option.mapWithDefault("all", Int.toString)}
+        key={Int.toString(year) ++ "-" ++ month->Option.mapOr("all", x => Int.toString(x))}
         bankApi
         api
         year

@@ -1,25 +1,20 @@
 @module external styles: {..} = "./PaymentHistory/styles.module.scss"
 
-open Belt
-
 module Intl = {
   type dateTimeFormat
 
   @new @scope("Intl")
-  external makeDateTimeFormat: (Js.Nullable.t<string>, {"month": string}) => dateTimeFormat =
+  external makeDateTimeFormat: (Nullable.t<string>, {"month": string}) => dateTimeFormat =
     "DateTimeFormat"
 
-  @send external format: (dateTimeFormat, Js.Date.t) => string = "format"
+  @send external format: (dateTimeFormat, Date.t) => string = "format"
 }
 
 // Uses the browser's locale (Intl default), so month names aren't hardcoded to English.
-let monthFormatter = Intl.makeDateTimeFormat(Js.Nullable.undefined, {"month": "long"})
+let monthFormatter = Intl.makeDateTimeFormat(Nullable.undefined, {"month": "long"})
 
-let monthNames = Array.makeBy(12, month =>
-  Intl.format(
-    monthFormatter,
-    Js.Date.makeWithYM(~year=2000.0, ~month=Belt.Int.toFloat(month), ()),
-  )
+let monthNames = Array.fromInitializer(~length=12, month =>
+  Intl.format(monthFormatter, Date.makeWithYM(~year=2000, ~month))
 )
 
 @get external scrollWidth: Dom.element => int = "scrollWidth"
@@ -27,13 +22,13 @@ let monthNames = Array.makeBy(12, month =>
 
 // Dues are owed from the month onboarding finished, or creation if it never did.
 let joinDateOf = (detail: MemberData.detail) =>
-  detail.onboardingFinishAt->Option.getWithDefault(detail.createdAt)
+  detail.onboardingFinishAt->Option.getOr(detail.createdAt)
 
-let yearOf = (date: Js.Date.t): int => date->Js.Date.getFullYear->Float.toInt
-let monthOf = (date: Js.Date.t): int => date->Js.Date.getMonth->Float.toInt + 1
+let yearOf = (date: Date.t): int => date->Date.getFullYear
+let monthOf = (date: Date.t): int => date->Date.getMonth + 1
 
 let findTransactions = (transactions: array<PaymentData.transaction>, ~year, ~month) =>
-  transactions->Array.keep(t =>
+  transactions->Array.filter(t =>
     t.coveredMonths->Array.some(cm => cm.year == year && cm.month == month)
   )
 
@@ -55,9 +50,9 @@ let viewAmount = (t: PaymentData.transaction) => t.amount ++ " " ++ t.currency
 
 // Decimal places written in an amount string ("150.50" -> 2).
 let decimalsOf = (amount: string) =>
-  switch amount->Js.String2.indexOf(".") {
+  switch amount->String.indexOf(".") {
   | -1 => 0
-  | i => amount->Js.String2.length - i - 1
+  | i => amount->String.length - i - 1
   }
 
 /* Several transactions can land on the same month, so they are summed per
@@ -68,22 +63,22 @@ let viewAmounts = (ts: array<PaymentData.transaction>) =>
   switch ts {
   | [t] => viewAmount(t)
   | _ if ts->Array.some(t => t.amount->Float.fromString->Option.isNone) =>
-    ts->Array.map(viewAmount)->Js.Array2.joinWith(" + ")
+    ts->Array.map(viewAmount)->Array.joinUnsafe(" + ")
   | _ =>
     ts
     ->Array.reduce([], (acc, t) =>
-      acc->Js.Array2.includes(t.currency) ? acc : acc->Array.concat([t.currency])
+      acc->Array.includes(t.currency) ? acc : acc->Array.concat([t.currency])
     )
     ->Array.map(currency => {
-      let inCurrency = ts->Array.keep(t => t.currency == currency)
+      let inCurrency = ts->Array.filter(t => t.currency == currency)
       let total =
         inCurrency->Array.reduce(0.0, (sum, t) =>
-          sum +. t.amount->Float.fromString->Option.getWithDefault(0.0)
+          sum +. t.amount->Float.fromString->Option.getOr(0.0)
         )
       let decimals = inCurrency->Array.reduce(0, (d, t) => max(d, decimalsOf(t.amount)))
-      total->Js.Float.toFixedWithPrecision(~digits=decimals) ++ " " ++ currency
+      total->Float.toFixed(~digits=decimals) ++ " " ++ currency
     })
-    ->Js.Array2.joinWith(" + ")
+    ->Array.joinUnsafe(" + ")
   }
 
 /* A member owes dues starting the month they joined, and a given month's
@@ -121,10 +116,10 @@ let cellStatus = (
   }
 
   /* Transactions whose amount is shown on this month; the rest of the
-     matches cover it but show their amount on a later month. */
+   matches cover it but show their amount on a later month. */
   let (waivedHere, paidHere) =
     matches
-    ->Array.keep(t =>
+    ->Array.filter(t =>
       switch mostRecentCoveredMonth(t) {
       | Some(recent) => recent.year == year && recent.month == month
       | None => true
@@ -146,7 +141,7 @@ let cellStatus = (
     | None => false
     }
 
-    if year < joinYear || (year == joinYear && month < joinMonth) || afterLeaving {
+    if year < joinYear || year == joinYear && month < joinMonth || afterLeaving {
       NotMember
     } else if year > graceYear || (year == graceYear && month >= graceMonth) {
       year == graceYear && month == graceMonth ? Due : Future
@@ -155,7 +150,8 @@ let cellStatus = (
       | Loading => LoadingCell
       | Success(_)
       | Idle
-      | Failure(_) => Missing
+      | Failure(_) =>
+        Missing
       }
     }
   }
@@ -169,9 +165,9 @@ let viewCellStatus = (status: cellStatus) =>
   | Paid(amount) => <span className={styles["paid"]}> {React.string(amount)} </span>
   | Waived => <span className={styles["notDue"]}> {React.string("Waived")} </span>
   | PaidElsewhere(recent) =>
-    let monthName = monthNames->Array.get(recent.month - 1)->Option.getWithDefault("")
+    let monthName = monthNames->Array.get(recent.month - 1)->Option.getOr("")
     <span className={styles["paid"]}>
-      {React.string("Paid in " ++ monthName ++ " " ++ Js.Int.toString(recent.year))}
+      {React.string("Paid in " ++ monthName ++ " " ++ Int.toString(recent.year))}
     </span>
   | Missing => <span className={styles["missing"]}> {React.string("MISSING")} </span>
   | LoadingCell => <span> {React.string("...")} </span>
@@ -181,21 +177,23 @@ let viewCellStatus = (status: cellStatus) =>
    Only a loaded history counts: while loading, or after a failure, there is
    nothing to say the member owes anything. */
 let hasMissingMonth = (
-  ~joinDate: Js.Date.t,
-  ~leftAt: option<Js.Date.t>,
+  ~joinDate: Date.t,
+  ~leftAt: option<Date.t>,
   ~paymentsData: Api.webData<array<PaymentData.transaction>>,
 ) =>
   switch paymentsData {
   | Success(_) =>
     let joinYear = yearOf(joinDate)
     let joinMonth = monthOf(joinDate)
-    let now = Js.Date.make()
+    let now = Date.make()
     let currentYear = now->yearOf
     let currentMonth = now->monthOf
     let leftYearMonth = leftAt->Option.map(d => (yearOf(d), monthOf(d)))
 
-    Array.makeBy(max(currentYear - joinYear + 1, 1), i => joinYear + i)->Array.some(year =>
-      Array.makeBy(12, i => i + 1)->Array.some(month =>
+    Array.fromInitializer(~length=max(currentYear - joinYear + 1, 1), i =>
+      joinYear + i
+    )->Array.some(year =>
+      Array.fromInitializer(~length=12, i => i + 1)->Array.some(month =>
         switch cellStatus(
           ~year,
           ~month,
@@ -217,21 +215,21 @@ let hasMissingMonth = (
   }
 
 /* Month-by-month dues grid for one member, from the month they joined
-   (`joinDate`) to now. Months from `leftAt` on read as NOT MEMBER. */
+ (`joinDate`) to now. Months from `leftAt` on read as NOT MEMBER. */
 @react.component
 let make = (
   ~paymentsData: Api.webData<array<PaymentData.transaction>>,
-  ~joinDate: Js.Date.t,
-  ~leftAt: option<Js.Date.t>,
+  ~joinDate: Date.t,
+  ~leftAt: option<Date.t>,
 ) => {
   let joinYear = yearOf(joinDate)
   let joinMonth = monthOf(joinDate)
-  let now = Js.Date.make()
+  let now = Date.make()
   let currentYear = now->yearOf
   let currentMonth = now->monthOf
   let leftYearMonth = leftAt->Option.map(d => (yearOf(d), monthOf(d)))
 
-  let years = Array.makeBy(max(currentYear - joinYear + 1, 1), i => joinYear + i)
+  let years = Array.fromInitializer(~length=max(currentYear - joinYear + 1, 1), i => joinYear + i)
 
   let statusOf = (~year, ~month) =>
     cellStatus(
@@ -250,9 +248,9 @@ let make = (
   /* The wide grid lists years oldest to newest, so keep it scrolled to the
      right edge where the current year is. Re-run when the data arrives,
      since filled-in cells can widen the columns. */
-  let wideRef = React.useRef(Js.Nullable.null)
+  let wideRef = React.useRef(Nullable.null)
   React.useEffect1(() => {
-    wideRef.current->Js.Nullable.toOption->Option.forEach(el => el->setScrollLeft(el->scrollWidth))
+    wideRef.current->Nullable.toOption->Option.forEach(el => el->setScrollLeft(el->scrollWidth))
     None
   }, [paymentsData])
 
@@ -261,25 +259,26 @@ let make = (
     | Failure(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
     | _ => React.null
     }}
+
     /* Narrow screens: one year at a time, picked by tab. */
     <div className={styles["paymentsNarrow"]}>
       <Tabbed.Tabs>
         {years
         ->Array.map(year =>
-          <Tabbed.Tab key={year->Js.Int.toString} value=year handlers=yearHandlers>
-            {React.string(year->Js.Int.toString)}
+          <Tabbed.Tab key={year->Int.toString} value=year handlers=yearHandlers>
+            {React.string(year->Int.toString)}
           </Tabbed.Tab>
         )
         ->React.array}
       </Tabbed.Tabs>
       {years
       ->Array.map(year =>
-        <Tabbed.Content key={year->Js.Int.toString} tab=year handlers=yearHandlers>
+        <Tabbed.Content key={year->Int.toString} tab=year handlers=yearHandlers>
           <table className={styles["paymentsTable"]}>
             <tbody>
               {monthNames
-              ->Array.mapWithIndex((index, name) =>
-                <tr key={index->Js.Int.toString}>
+              ->Array.mapWithIndex((name, index) =>
+                <tr key={index->Int.toString}>
                   <td> {React.string(name)} </td>
                   <td> {viewCellStatus(statusOf(~year, ~month=index + 1))} </td>
                 </tr>
@@ -291,6 +290,7 @@ let make = (
       )
       ->React.array}
     </div>
+
     /* Wide screens: every year side by side, scrolling horizontally. */
     <div className={styles["paymentsWide"]} ref={ReactDOM.Ref.domRef(wideRef)}>
       <table className={styles["paymentsGrid"]}>
@@ -299,19 +299,19 @@ let make = (
             <th />
             {years
             ->Array.map(year =>
-              <th key={year->Js.Int.toString}> {React.string(year->Js.Int.toString)} </th>
+              <th key={year->Int.toString}> {React.string(year->Int.toString)} </th>
             )
             ->React.array}
           </tr>
         </thead>
         <tbody>
           {monthNames
-          ->Array.mapWithIndex((index, name) =>
-            <tr key={index->Js.Int.toString}>
+          ->Array.mapWithIndex((name, index) =>
+            <tr key={index->Int.toString}>
               <td> {React.string(name)} </td>
               {years
               ->Array.map(year =>
-                <td key={year->Js.Int.toString}>
+                <td key={year->Int.toString}>
                   {viewCellStatus(statusOf(~year, ~month=index + 1))}
                 </td>
               )

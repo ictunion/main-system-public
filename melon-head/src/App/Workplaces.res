@@ -1,7 +1,5 @@
 @module external styles: {..} = "./Workplaces/styles.module.scss"
 
-open Belt
-
 type tab = InPreparation | Active | Inactive
 
 module NewWorkplace = {
@@ -22,7 +20,7 @@ module NewWorkplace = {
     let (error, setError) = React.useState(() => None)
 
     let onSubmit = _ => {
-      let body: Js.Json.t = WorkplaceData.Encode.newWorkplace(newWorkplace)
+      let body: JSON.t = WorkplaceData.Encode.newWorkplace(newWorkplace)
       let req = api->Api.postJson(~path="/workplaces", ~decoder=WorkplaceData.Decode.summary, ~body)
 
       req->Future.get(res => {
@@ -73,7 +71,8 @@ module NewWorkplace = {
       />
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta> {React.string("Create New Workplace")} </Button>
@@ -113,7 +112,8 @@ let columns: array<DataTable.column<WorkplaceData.summary>> = [
       <Button
         variant=Button.Cta
         onClick={_ =>
-          RescriptReactRouter.push("/workplaces/" ++ Data.Uuid.toString(r.id) ++ "/members")}>
+          RescriptReactRouter.push("/workplaces/" ++ Data.Uuid.toString(r.id) ++ "/members")}
+      >
         {React.string("Members")}
       </Button>,
   },

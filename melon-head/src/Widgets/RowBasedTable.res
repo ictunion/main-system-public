@@ -1,12 +1,10 @@
 @module external styles: {..} = "./RowBasedTable/styles.module.scss"
 
-open Belt
-
 type row<'a> = (string, 'a => React.element)
 
 @react.component
 let make = (~rows: array<row<'a>>, ~data: Api.webData<'a>, ~title=None) => {
-  let viewRow = (index, (name, getter)) =>
+  let viewRow = ((name, getter), index) =>
     <tr key={Int.toString(index)}>
       <td> {React.string(name)} </td>
       <td> {data->RemoteData.unwrap(getter, ~default=React.null)} </td>

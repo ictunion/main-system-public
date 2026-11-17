@@ -1,7 +1,7 @@
 open Data
 
 /* What a note is attached to. `MemberDues` is a member's missing-dues thread,
-   kept apart from the general `Member` notes because workplace reps can see it. */
+ kept apart from the general `Member` notes because workplace reps can see it. */
 type target =
   | Application
   | Member
@@ -21,7 +21,7 @@ type note = {
   body: string,
   authorSub: option<Uuid.t>,
   authorName: string,
-  createdAt: Js.Date.t,
+  createdAt: Date.t,
 }
 
 /* One per target that has at least one note -- what a table cell shows. */
@@ -35,22 +35,22 @@ module Decode = {
   open Json.Decode
 
   let note = object(field => {
-    id: field.required(. "id", Uuid.decode),
-    body: field.required(. "body", string),
-    authorSub: field.required(. "author_sub", option(Uuid.decode)),
-    authorName: field.required(. "author_name", string),
-    createdAt: field.required(. "created_at", date),
+    id: field.required("id", Uuid.decode),
+    body: field.required("body", string),
+    authorSub: field.required("author_sub", option(Uuid.decode)),
+    authorName: field.required("author_name", string),
+    createdAt: field.required("created_at", date),
   })
 
   let summary = object(field => {
-    targetId: field.required(. "target_id", Uuid.decode),
-    count: field.required(. "count", int),
-    latestBody: field.required(. "latest_body", string),
+    targetId: field.required("target_id", Uuid.decode),
+    count: field.required("count", int),
+    latestBody: field.required("latest_body", string),
   })
 }
 
 module Encode = {
-  open Json.Encode
+  open! Json.Encode
 
   let strOption = str => {
     if str == "" {

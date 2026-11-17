@@ -1,7 +1,5 @@
 @module external styles: {..} = "./YearMonthFilter/styles.module.scss"
 
-open Belt
-
 /* Year/month picker shared by MissingDues and MyWorkplaceMissingDues. Reads
    and writes its selection through the URL (`?year=&month=`) rather than
    local state, so a filtered view can be shared by link and survives
@@ -26,9 +24,9 @@ let monthNames = [
 
 let paramValue = (search: string, key: string): option<string> =>
   search
-  ->Js.String2.split("&")
-  ->Array.getBy(pair => pair->Js.String2.startsWith(key ++ "="))
-  ->Option.map(pair => pair->Js.String2.sliceToEnd(~from=String.length(key) + 1))
+  ->String.split("&")
+  ->Array.find(pair => pair->String.startsWith(key ++ "="))
+  ->Option.map(pair => pair->String.slice(~start=String.length(key) + 1))
 
 /* Parses `RescriptReactRouter.useUrl().search`. The year falls back to the
    current year when absent or unparseable; the month defaults to "all" (not
@@ -37,9 +35,9 @@ let fromSearch = (~search: string, ~currentYear: int): (int, option<int>) => {
   let year =
     search
     ->paramValue("year")
-    ->Option.flatMap(Int.fromString)
-    ->Option.keep(y => y >= firstYear && y <= currentYear)
-    ->Option.getWithDefault(currentYear)
+    ->Option.flatMap(s => Int.fromString(s))
+    ->Option.filter(y => y >= firstYear && y <= currentYear)
+    ->Option.getOr(currentYear)
 
   let month = switch search->paramValue("month") {
   | None => None
@@ -56,8 +54,8 @@ let fromSearch = (~search: string, ~currentYear: int): (int, option<int>) => {
 
 @react.component
 let make = (~basePath: string, ~year: int, ~month: option<int>, ~currentYear: int) => {
-  let years = Array.makeBy(currentYear - firstYear + 1, i => firstYear + i)
-  let months = Array.makeBy(12, i => i + 1)
+  let years = Array.fromInitializer(~length=currentYear - firstYear + 1, i => firstYear + i)
+  let months = Array.fromInitializer(~length=12, i => i + 1)
 
   let pushUrl = (~year: int, ~month: option<int>) =>
     RescriptReactRouter.push(
@@ -65,12 +63,12 @@ let make = (~basePath: string, ~year: int, ~month: option<int>, ~currentYear: in
       "?year=" ++
       Int.toString(year) ++
       "&month=" ++
-      month->Option.mapWithDefault("all", Int.toString),
+      month->Option.mapOr("all", x => Int.toString(x)),
     )
 
   let onYear = (e: JsxEvent.Form.t) => {
     let v = ReactEvent.Form.currentTarget(e)["value"]
-    pushUrl(~year=v->Int.fromString->Option.getWithDefault(currentYear), ~month)
+    pushUrl(~year=v->Int.fromString->Option.getOr(currentYear), ~month)
   }
 
   let onMonth = (e: JsxEvent.Form.t) => {
@@ -93,12 +91,12 @@ let make = (~basePath: string, ~year: int, ~month: option<int>, ~currentYear: in
     </label>
     <label className={styles["filter"]}>
       {React.string("Month")}
-      <select value={month->Option.mapWithDefault("all", Int.toString)} onChange=onMonth>
+      <select value={month->Option.mapOr("all", x => Int.toString(x))} onChange=onMonth>
         <option value="all"> {React.string("All months")} </option>
         {months
         ->Array.map(m =>
           <option key={Int.toString(m)} value={Int.toString(m)}>
-            {React.string(monthNames->Array.getExn(m - 1))}
+            {React.string(monthNames->Array.get(m - 1)->Option.getOrThrow)}
           </option>
         )
         ->React.array}

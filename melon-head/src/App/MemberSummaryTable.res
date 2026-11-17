@@ -1,18 +1,17 @@
 open Data
-open Belt
 
 let viewPaddedNumber = (n: int, ~isRepresentative: option<bool>=None, ()): React.element => {
   let stringified = Int.toString(n)
   let prefix = "0000000"
-  let shortenedPrefix = prefix->Js.String.slice(~from=0, ~to_=7 - String.length(stringified))
-  let style = ReactDOM.Style.make(~color="rgba(var(--rgb_color1), 0.7)", ())
+  let shortenedPrefix = prefix->String.slice(~start=0, ~end=7 - String.length(stringified))
+  let style: ReactDOM.Style.t = {color: "rgba(var(--rgb_color1), 0.7)"}
 
   <span>
     <span style> {React.string(shortenedPrefix)} </span>
     {React.string(stringified)}
     {switch isRepresentative {
     | Some(true) =>
-      <span title="Workplace representative" style={ReactDOM.Style.make(~color="#E8B322", ())}>
+      <span title="Workplace representative" style={{color: "#E8B322"}}>
         {React.string(" ★")}
       </span>
     | _ => React.null
@@ -47,7 +46,7 @@ type column =
   | Custom(DataTable.column<MemberData.summary>)
 
 /* What most member listings show, in order. Callers with page-specific needs
-   (extra columns, a different set) build their own array instead. */
+ (extra columns, a different set) build their own array instead. */
 let defaultColumns: array<column> = [
   Id,
   MemberNumber,
@@ -64,7 +63,7 @@ let lastCompanyOf = (r: MemberData.summary): option<string> =>
   r.companyNames->Array.get(0)->Option.flatMap(a => a)
 
 /* `sortOf` makes a built-in column's header a sort switch (see
-   DataTable.sort); a Custom column carries its own `sort` instead. */
+ DataTable.sort); a Custom column carries its own `sort` instead. */
 @react.component
 let make = (
   ~data: Api.webData<array<MemberData.summary>>,
@@ -133,18 +132,18 @@ let make = (
       Some({
         name: "Created On",
         minMax: ("150px", "1fr"),
-        view: r => React.string(r.createdAt->Js.Date.toLocaleDateString),
+        view: r => React.string(r.createdAt->Date.toLocaleDateString),
       })
     | LeftOn =>
       Some({
         name: "Left On",
         minMax: ("150px", "1fr"),
-        view: r => r.leftAt->View.option(d => React.string(d->Js.Date.toLocaleDateString)),
+        view: r => r.leftAt->View.option(d => React.string(d->Date.toLocaleDateString)),
       })
     | Custom(col) => Some(col)
     }
 
-  let resolvedColumns = columns->Array.keepMap(c =>
+  let resolvedColumns = columns->Array.filterMap(c =>
     switch c {
     | Custom(_) => toColumn(c)
     | _ => toColumn(c)->Option.map(col => {...col, sort: ?sortOf(c)})

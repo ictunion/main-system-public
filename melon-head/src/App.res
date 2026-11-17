@@ -36,6 +36,7 @@ module ConfiguredApp = {
             isNavOpen
             openProfile={_ => setIsProfileOpen(_ => true)}
           />
+
           /* Routing to pages */
           {switch url.path {
           | list{} =>
@@ -60,8 +61,7 @@ module ConfiguredApp = {
           | list{"my-workplace"} => <MyWorkplace api />
           | list{"my-workplace-settings"} => <MyWorkplaceSettings api modal />
           | list{"missing-dues"} => <MissingDues api bankApi bankEnabled />
-          | list{"my-workplace-missing-dues"} =>
-            <MyWorkplaceMissingDues api bankApi bankEnabled />
+          | list{"my-workplace-missing-dues"} => <MyWorkplaceMissingDues api bankApi bankEnabled />
           | _ =>
             <Page>
               <ErrorPage.NotFound />
@@ -89,7 +89,7 @@ module ConfiguredApp = {
 
 module App = {
   @react.component
-  let make = (~oidc: Oidc.t, ~config: Js.Json.t) => {
+  let make = (~oidc: Oidc.t, ~config: JSON.t) => {
     switch Config.make(config) {
     | Ok(config) => <ConfiguredApp oidc config={config} />
     | Error(err) =>

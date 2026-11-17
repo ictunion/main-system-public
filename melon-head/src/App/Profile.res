@@ -42,7 +42,7 @@ let make = (
                 <td> {React.string("name")} </td>
                 <td>
                   <span className={styles["shorten"]}>
-                    {React.string(ses.tokenClaims.name->Belt.Option.getWithDefault("[anonymous]"))}
+                    {React.string(ses.tokenClaims.name->Option.getOr("[anonymous]"))}
                   </span>
                 </td>
               </tr>
@@ -56,15 +56,23 @@ let make = (
               </tr>
               <tr>
                 <td> {React.string("realm")} </td>
-                <td className={styles["realm-roles"]}> {React.array(Array.map(r => {
+                <td className={styles["realm-roles"]}>
+                  {React.array(
+                    ses.tokenClaims.realmRoles->Array.map(r => {
                       <ShowRole role={Session.showRealmRole(r)} key={Session.showRealmRole(r)} />
-                    }, ses.tokenClaims.realmRoles))} </td>
+                    }),
+                  )}
+                </td>
               </tr>
               <tr>
                 <td> {React.string("roles")} </td>
-                <td className={styles["roles"]}> {React.array(Array.map(r => {
+                <td className={styles["roles"]}>
+                  {React.array(
+                    ses.tokenClaims.orcaRoles->Array.map(r => {
                       <ShowRole role={Session.showOrcaRole(r)} key={Session.showOrcaRole(r)} />
-                    }, ses.tokenClaims.orcaRoles))} </td>
+                    }),
+                  )}
+                </td>
               </tr>
             </tbody>
           </table>

@@ -1,7 +1,5 @@
 @module external styles: {..} = "./ErrorPage/styles.module.scss"
 
-open Belt
-
 module Shared = {
   @react.component
   let make = (
@@ -16,7 +14,7 @@ module Shared = {
         {React.string(title)}
       </h1>
       <p className={styles["desc"]}> {React.string(description)} </p>
-      {Option.getWithDefault(children, React.null)}
+      {Option.getOr(children, React.null)}
     </div>
 }
 
@@ -39,11 +37,12 @@ module Forbidden = {
   @react.component
   let make = (~roles: array<Session.orcaRole>) =>
     <Shared
-      code=403 title="Forbidden" description="This page requires explicit role you don't have.">
+      code=403 title="Forbidden" description="This page requires explicit role you don't have."
+    >
       <p className={styles["desc"]}>
         {React.string("This page requires at least one of the following roles: ")}
         {roles
-        ->Array.mapWithIndex((index, role) =>
+        ->Array.mapWithIndex((role, index) =>
           <code className={styles["code"]} key={Int.toString(index)}>
             {React.string(role->Session.showOrcaRole)}
           </code>

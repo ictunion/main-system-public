@@ -14,7 +14,7 @@ buildNpmPackage {
     python312
   ];
   src = nix-gitignore.gitignoreSource [] ./.;
-  npmDepsHash = "sha256-llukTSIhKyKEsOi1isDOpEKedutvMgf2hkV6x4p8nLU=";
+  npmDepsHash = "sha256-D4WT9dEg+1RSA9GiInoi9HW5OpF01eglaBDCpwXwMAc=";
 
   configurePhase = ''
     echo '${config-json}' > config.json
@@ -25,7 +25,7 @@ buildNpmPackage {
   '';
 
   checkPhase = ''
-    npx rescript format -all -check
+    npx rescript format --check
   '';
 
   installPhase = ''

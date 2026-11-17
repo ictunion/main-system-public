@@ -1,7 +1,6 @@
 @module external styles: {..} = "./MemberDetail/styles.module.scss"
 
 open Data
-open Belt
 
 // todo: we should make Note editable also in application detail
 // https://github.com/ictunion/main-system/issues/164
@@ -46,7 +45,7 @@ let layout: DataGrid.t<MemberData.detail> = [
       },
       {
         label: "Date of Birth",
-        view: d => View.option(d.dateOfBirth, a => a->Js.Date.toLocaleDateString->React.string),
+        view: d => View.option(d.dateOfBirth, a => a->Date.toLocaleDateString->React.string),
         minmax: ("250px", "250px"),
       },
     ],
@@ -152,12 +151,12 @@ let workplaceExecutiveLayout: DataGrid.t<MemberData.detail> = [
 ]
 
 let timeRows: array<RowBasedTable.row<MemberData.detail>> = [
-  ("Created", d => d.createdAt->Js.Date.toLocaleString->React.string),
+  ("Created", d => d.createdAt->Date.toLocaleString->React.string),
   (
     "Onboarded at",
-    d => View.option(d.onboardingFinishAt, a => a->Js.Date.toLocaleString->React.string),
+    d => View.option(d.onboardingFinishAt, a => a->Date.toLocaleString->React.string),
   ),
-  ("Left at", d => View.option(d.leftAt, a => a->Js.Date.toLocaleString->React.string)),
+  ("Left at", d => View.option(d.leftAt, a => a->Date.toLocaleString->React.string)),
 ]
 
 module Loading = {
@@ -184,7 +183,7 @@ module Actions = {
           api->Api.patchJson(
             ~path="/members/" ++ Uuid.toString(id) ++ "/accept",
             ~decoder=MemberData.Decode.detail,
-            ~body=Js.Json.null,
+            ~body=JSON.Encode.null,
           )
 
         req->Future.get(res => {
@@ -355,7 +354,7 @@ module Actions = {
         api->Api.postJson(
           ~path="/members/" ++ Uuid.toString(id) ++ "/create_oid_account",
           ~decoder=Api.Decode.acceptedResponse,
-          ~body=Js.Json.null,
+          ~body=JSON.Encode.null,
         )
       req->Future.get(res => {
         switch res {
@@ -384,26 +383,30 @@ module Actions = {
           vcardButton
           <Button
             variant=Button.Cta
-            onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}>
+            onClick={_ => RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/welcome")}
+          >
             {React.string("Send welcome email")}
           </Button>
           <Button
             variant=Button.Cta
             onClick={_ =>
-              RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/workplacewelcome")}>
+              RescriptReactRouter.push("/members/" ++ Uuid.toString(id) ++ "/workplacewelcome")}
+          >
             {React.string("Send workplace welcome email")}
           </Button>
           <Button
             variant=Button.Cta
             onClick={_ =>
-              modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}>
+              modal->Modal.Interface.openModal(acceptModal(~modal, ~api, ~id, ~setDetail))}
+          >
             {React.string("Accept member")}
           </Button>
           createOidButton
           <Button
             variant=Button.Danger
             onClick={_ =>
-              modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
+              modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}
+          >
             {React.string("Remove member")}
           </Button>
         </Button.Panel>
@@ -414,7 +417,8 @@ module Actions = {
           <Button
             variant=Button.Danger
             onClick={_ =>
-              modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}>
+              modal->Modal.Interface.openModal(removeModal(~modal, ~api, ~id, ~setDetail))}
+          >
             {React.string("Remove member")}
           </Button>
         </Button.Panel>
@@ -452,7 +456,7 @@ module MemberWorkplaceSelect = {
       // that here so the checkbox never shows stale state for a workplace the
       // member was just moved out of.
       let (isRepresentative, setIsRepresentative) = React.useState(() =>
-        detail.isRepresentative->Option.getWithDefault(false)
+        detail.isRepresentative->Option.getOr(false)
       )
 
       let onWorkplaceChange = e => {
@@ -518,7 +522,8 @@ module MemberWorkplaceSelect = {
             | Some(id) => Uuid.toString(id)
             | None => ""
             }}
-            onChange=onWorkplaceChange>
+            onChange=onWorkplaceChange
+          >
             <option value=""> {React.string("(none)")} </option>
             {workplaces->Array.map(viewWorkplaces)->React.array}
           </select>
@@ -530,7 +535,9 @@ module MemberWorkplaceSelect = {
             <dd>
               <label>
                 <input
-                  type_="checkbox" checked=isRepresentative onChange={onRepresentativeChange(wid)}
+                  type_="checkbox"
+                  checked=isRepresentative
+                  onChange={onRepresentativeChange(wid, ...)}
                 />
               </label>
             </dd>
@@ -610,8 +617,8 @@ let viewOccupation = (
       switch res {
       | Ok(_) =>
         setOccupationsData(prev =>
-          prev->RemoteData.map(xs =>
-            xs->Array.keep((o: MemberData.occupation) => o.id != occupation.id)
+          prev->RemoteData.map(
+            xs => xs->Array.filter((o: MemberData.occupation) => o.id != occupation.id),
           )
         )
       | Error(_) => ()
@@ -623,7 +630,7 @@ let viewOccupation = (
     <td> {occupation.companyName->View.option(React.string)} </td>
     <td> {occupation.position->View.option(React.string)} </td>
     <td> {React.string(occupation.source)} </td>
-    <td> {occupation.createdAt->Js.Date.toLocaleDateString->React.string} </td>
+    <td> {occupation.createdAt->Date.toLocaleDateString->React.string} </td>
     <td>
       {if occupation.source != "application" {
         <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
@@ -640,15 +647,21 @@ module AddOccupation = {
   let emptyOccupation: MemberData.newOccupation = {companyName: "", position: "", source: "orca"}
 
   let fromCurrent = (current: MemberData.occupation): MemberData.newOccupation => {
-    companyName: current.companyName->Option.map(name => "Ex-" ++ name)->Option.getWithDefault(""),
-    position: current.position->Option.getWithDefault(""),
+    companyName: current.companyName->Option.map(name => "Ex-" ++ name)->Option.getOr(""),
+    position: current.position->Option.getOr(""),
     source: "orca",
   }
 
   @react.component
-  let make = (~modal, ~api: Api.t, ~id, ~current: option<MemberData.occupation>, ~setOccupationsData) => {
+  let make = (
+    ~modal,
+    ~api: Api.t,
+    ~id,
+    ~current: option<MemberData.occupation>,
+    ~setOccupationsData,
+  ) => {
     let (newOccupation, setNewOccupation) = React.useState(_ =>
-      current->Option.mapWithDefault(emptyOccupation, fromCurrent)
+      current->Option.mapOr(emptyOccupation, fromCurrent)
     )
     let (error, setError) = React.useState(() => None)
 
@@ -687,7 +700,8 @@ module AddOccupation = {
       />
       <Button.Panel>
         <Button
-          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}>
+          type_="button" variant=Button.Danger onClick={_ => modal->Modal.Interface.closeModal}
+        >
           {React.string("Cancel")}
         </Button>
         <Button type_="submit" variant=Button.Cta> {React.string("Add Occupation")} </Button>
@@ -719,9 +733,7 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
   let session = React.useContext(SessionContext.context)
 
   let isStaff =
-    session->RemoteData.unwrap(~default=false, s =>
-      Session.hasRole(s, ~role=Session.ListMembers)
-    )
+    session->RemoteData.unwrap(~default=false, s => Session.hasRole(s, ~role=Session.ListMembers))
 
   /* Staff see any member's payment history via payment-history; a workplace
      executive via view-workplace-payment-history, which the bank service
@@ -740,18 +752,16 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
   /* Single payment history request, shared by the Payments tab and the Missing
      Dues back button. Skipped without a payment role (and until the member
      number is known). */
-  let (paymentsData, _, _) =
-    bankApi->Hook.getData(
-      ~enabled=canSeePayments &&
-      switch detail {
-      | Success(_) => true
-      | _ => false
-      },
-      ~path="/payments/" ++
-      detail->RemoteData.unwrap(~default="", d => Int.toString(d.memberNumber)) ++
-      "/history",
-      ~decoder=PaymentData.Decode.history,
-    )
+  let (paymentsData, _, _) = bankApi->Hook.getData(
+    ~enabled=canSeePayments &&
+    switch detail {
+    | Success(_) => true
+    | _ => false
+    },
+    ~path="/payments/" ++
+    detail->RemoteData.unwrap(~default="", d => Int.toString(d.memberNumber)) ++ "/history",
+    ~decoder=PaymentData.Decode.history,
+  )
 
   let (filesData, _, _) =
     api->Hook.getData(
@@ -781,16 +791,12 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
   let session = React.useContext(SessionContext.context)
 
   let isStaff =
-    session
-    ->RemoteData.unwrap(~default=false, s =>
-      Session.hasRole(s, ~role=Session.ListMembers)
-    )
+    session->RemoteData.unwrap(~default=false, s => Session.hasRole(s, ~role=Session.ListMembers))
 
   let canManageMembers =
     session->RemoteData.unwrap(~default=false, s => Session.hasRole(s, ~role=Session.ManageMembers))
 
-  <Page
-    requireAnyRole=[ListMembers, ListOwnWorkplaceMembers] mainResource=detail>
+  <Page requireAnyRole=[ListMembers, ListOwnWorkplaceMembers] mainResource=detail>
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Member ")}
@@ -897,6 +903,7 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
       {if isStaff {
         <>
           <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
+
           /* Files are scanned membership applications -- signatures and identity
            documents. Staff only, regardless of workplace scope. */
           <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
@@ -906,45 +913,46 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
       }}
       // <Tabbed.Tab value=Workplace handlers=tabHandlers> {React.string("Workplace")} </Tabbed.Tab>
     </Tabbed.Tabs>
-{if isStaff {
-    <Tabbed.Content tab=Occupations handlers=tabHandlers>
-      <div className={styles["occupations"]}>
-        <table>
-          <thead>
-            <tr>
-              <th> {React.string("Company")} </th>
-              <th> {React.string("Position")} </th>
-              <th> {React.string("Source")} </th>
-              <th> {React.string("Created at")} </th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {switch occupationsData {
-            | Success(occupations) =>
-              occupations
-              ->Array.map(viewOccupation(~api, ~memberId=id, ~setOccupationsData))
-              ->React.array
-            | _ => React.null
-            }}
-          </tbody>
-        </table>
-        <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
-          <div className={styles["occupationsFooter"]}>
-            <Button variant=Button.Cta onClick=openAddOccupationModal>
-              {React.string("+ Add Occupation")}
-            </Button>
-          </div>
-        </SessionContext.RequireRole>
-      </div>
-    </Tabbed.Content>
+    {if isStaff {
+      <Tabbed.Content tab=Occupations handlers=tabHandlers>
+        <div className={styles["occupations"]}>
+          <table>
+            <thead>
+              <tr>
+                <th> {React.string("Company")} </th>
+                <th> {React.string("Position")} </th>
+                <th> {React.string("Source")} </th>
+                <th> {React.string("Created at")} </th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {switch occupationsData {
+              | Success(occupations) =>
+                occupations
+                ->Array.map(viewOccupation(~api, ~memberId=id, ~setOccupationsData, ...))
+                ->React.array
+              | _ => React.null
+              }}
+            </tbody>
+          </table>
+          <SessionContext.RequireRole anyOf=[Session.ManageMembers]>
+            <div className={styles["occupationsFooter"]}>
+              <Button variant=Button.Cta onClick=openAddOccupationModal>
+                {React.string("+ Add Occupation")}
+              </Button>
+            </div>
+          </SessionContext.RequireRole>
+        </div>
+      </Tabbed.Content>
     } else {
       React.null
     }}
     {if canSeePayments {
       <Tabbed.Content tab=Payments handlers=tabHandlers>
         {switch detail {
-        | Success(d) => <PaymentHistory paymentsData joinDate={PaymentHistory.joinDateOf(d)} leftAt=d.leftAt />
+        | Success(d) =>
+          <PaymentHistory paymentsData joinDate={PaymentHistory.joinDateOf(d)} leftAt=d.leftAt />
         | _ => <Loading />
         }}
       </Tabbed.Content>
@@ -979,6 +987,7 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
     } else {
       React.null
     }}
+
     /* Accept / remove / create-account all need staff roles server side; a
      workplace executive would only get a 403 out of them. The vCard download
      is for anyone who can open the page. */
