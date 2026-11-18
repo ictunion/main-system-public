@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use figment::{
     Figment, Profile,
     providers::{Env, Format, Toml},
@@ -54,6 +55,9 @@ pub struct Config {
     pub union_chairperson_member_id: Option<Uuid>,
     /// Contact e-mail of the union chairperson printed on generated documents
     pub union_chairperson_email: Option<String>,
+    /// PNG image of the chairperson's signature printed on generated workplace documents.
+    /// Configured as base64 so the image never has to be committed to the repository.
+    pub union_chairperson_signature: Option<Vec<u8>>,
 }
 
 impl Config {
@@ -161,6 +165,12 @@ impl Config {
             .ok()
             .filter(|email: &String| !email.is_empty());
 
+        let union_chairperson_signature = figment
+            .extract_inner::<String>("union_chairperson_signature")
+            .ok()
+            .filter(|value| !value.is_empty())
+            .map(|value| decode_png(&value));
+
         Self {
             email_sender_email,
             email_sender_name,
@@ -193,6 +203,7 @@ impl Config {
             newsletter_sync_token,
             union_chairperson_member_id,
             union_chairperson_email,
+            union_chairperson_signature,
         }
     }
 
@@ -229,6 +240,24 @@ fn extract_or<T: DeserializeOwned>(figment: &Figment, key: &str, default: T) -> 
         Err(err) if err.missing() => default,
         Err(err) => panic!("Invalid `{key}` configuration: {err}"),
     }
+}
+
+/// Decode base64 PNG (whitespace is ignored so the value can be wrapped)
+///
+/// # Panics
+///
+/// If the value isn't valid base64 or doesn't decode to a PNG image.
+fn decode_png(value: &str) -> Vec<u8> {
+    const PNG_MAGIC: &[u8] = b"\x89PNG\r\n\x1a\n";
+    let value: String = value.split_whitespace().collect();
+    let bytes = BASE64_STANDARD
+        .decode(value)
+        .unwrap_or_else(|err| panic!("Invalid `union_chairperson_signature` base64: {err}"));
+    assert!(
+        bytes.starts_with(PNG_MAGIC),
+        "`union_chairperson_signature` is not a PNG image"
+    );
+    bytes
 }
 
 /// Log level with the same values and meaning as Rocket's `log_level` setting
@@ -278,5 +307,25 @@ impl<'de> Deserialize<'de> for LogLevel {
                 &"one of `critical`, `normal`, `debug` or `off`",
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decodes_wrapped_base64_png() {
+        // PNG magic followed by one byte, wrapped as `base64` does by default
+        assert_eq!(
+            decode_png("iVBORw0K\nGgoA\n"),
+            b"\x89PNG\r\n\x1a\n\0".to_vec()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "not a PNG image")]
+    fn rejects_non_png() {
+        decode_png("aGVsbG8=");
     }
 }

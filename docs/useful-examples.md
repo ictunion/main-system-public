@@ -76,7 +76,9 @@ on the committee as of the meeting date (unknown ids are a `409`).
 `{"document_type": "member_confirmation", "workplace_short_name": "ACME CZ"}`.
 `workplace_announcement` takes the same fields as `entrustment` except `meeting_date` and `removed_member_ids`.
 
-Every document needs `union_chairperson_member_id` in `Rocket.toml` and at
+Every document needs `union_chairperson_member_id` in `Rocket.toml`, the
+signature PNG as base64 in env
+(`export ROCKET_UNION_CHAIRPERSON_SIGNATURE="$(base64 -w0 signature.png)"`) and at
 least one representative on the workplace (otherwise `409`). The workplace
 announcement also needs `union_chairperson_email`.
 

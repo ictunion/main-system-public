@@ -93,6 +93,10 @@ pub(super) async fn process_new_document(
     let chairperson_id = config
         .union_chairperson_member_id
         .ok_or(ProcessingError::MissingChairpersonMemberId)?;
+    let signature = config
+        .union_chairperson_signature
+        .as_deref()
+        .ok_or(ProcessingError::MissingChairpersonSignature)?;
     let chairperson_name = query::get_member_full_name(db_pool, chairperson_id.into()).await?;
 
     let representatives = query::list_workplace_representatives(db_pool, workplace_id).await?;
@@ -134,6 +138,7 @@ pub(super) async fn process_new_document(
 
     fs::write(format!("{processing_dir}/data.tex"), tex_header).await?;
     fs::write(format!("{processing_dir}/{name}.tex"), document.template()).await?;
+    fs::write(format!("{processing_dir}/signature.png"), signature).await?;
 
     let pdf_data = render_tex(config, &processing_dir, name).await?;
     let file_name = file_name(name, document.workplace_short_name());

@@ -1,6 +1,7 @@
 \documentclass[11pt]{article}
 
 \usepackage{fontspec}
+\usepackage{graphicx}
 
 %% Basic font
 \setmainfont[
@@ -128,12 +129,15 @@
 
   \pair{V~Praze dne \dotline}{In Prague, date \dotline}
 
-  \vspace{20mm}
+  \vspace{4mm}
 
+  % signature.png is written next to the document from `union_chairperson_signature` config
   \pair[\centering]{
+    \includegraphics[height=28mm]{signature}\\
     \ChairpersonName\\
     Předsedkyně Výboru Odborové organizace pracujících v~ICT
   }{
+    \includegraphics[height=28mm]{signature}\\
     \ChairpersonName\\
     Chairperson of the Board of the Odborová organizace pracujících v~ICT
   }

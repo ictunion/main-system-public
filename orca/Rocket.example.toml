@@ -40,6 +40,10 @@ tex_exe = "xelatex"
 # Printed on the workplace announcement.
 # Can be set via ROCKET_UNION_CHAIRPERSON_EMAIL env variable.
 union_chairperson_email = ""
+# Base64 encoded PNG of the chairperson's signature printed at the bottom of workplace documents.
+# Never commit the image -- set it via ROCKET_UNION_CHAIRPERSON_SIGNATURE env variable,
+# e.g. `export ROCKET_UNION_CHAIRPERSON_SIGNATURE="$(base64 -w0 signature.png)"`
+# union_chairperson_signature = ""
 
 # Authentication / Authorization
 keycloak_host = "http://localhost:8180"

@@ -152,6 +152,8 @@ enum ProcessingError {
     NoRepresentatives(Id<Workplace>),
     #[error("union_chairperson_email is not configured")]
     MissingChairpersonEmail,
+    #[error("union_chairperson_signature is not configured")]
+    MissingChairpersonSignature,
 }
 
 async fn process(

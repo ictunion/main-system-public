@@ -676,6 +676,10 @@ async fn create_document(
         error!("Can't generate workplace document: union_chairperson_member_id not configured");
         return Err(ApiError::Status(StatusCode::INTERNAL_SERVER_ERROR));
     }
+    if config.union_chairperson_signature.is_none() {
+        error!("Can't generate workplace document: union_chairperson_signature not configured");
+        return Err(ApiError::Status(StatusCode::INTERNAL_SERVER_ERROR));
+    }
 
     let representatives = query::list_representatives(&db_pool, workplace_id).await?;
     if representatives.is_empty() {
