@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , company_id\n    , company_address\n    , workplace_short_name\n    , COUNT(mw.member_id) AS \"member_count!: i64\"\nFROM workplaces\nLEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id\nGROUP BY workplaces.id\n    , workplaces.name\n    , workplaces.email\n    , workplaces.created_at\n    , workplaces.keycloak_group_id\n    , workplaces.keycloak_executive_group_id\n    , workplaces.announced_at\n    , workplaces.established_at\n    , workplaces.cancelled_at\n    , workplaces.newsletter_id\n    , workplaces.company_id\n    , workplaces.company_address\n    , workplaces.workplace_short_name\nORDER BY workplaces.created_at DESC\n",
+  "query": "\nSELECT id\n    , name\n    , email\n    , created_at\n    , keycloak_group_id\n    , keycloak_executive_group_id\n    , announced_at\n    , established_at\n    , cancelled_at\n    , newsletter_id\n    , company_id\n    , company_address\n    , workplace_short_name\n    , COUNT(mw.member_id) AS \"member_count!: i64\"\nFROM workplaces\nLEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id\nWHERE $1 OR workplaces.cancelled_at IS NULL\nGROUP BY workplaces.id\n    , workplaces.name\n    , workplaces.email\n    , workplaces.created_at\n    , workplaces.keycloak_group_id\n    , workplaces.keycloak_executive_group_id\n    , workplaces.announced_at\n    , workplaces.established_at\n    , workplaces.cancelled_at\n    , workplaces.newsletter_id\n    , workplaces.company_id\n    , workplaces.company_address\n    , workplaces.workplace_short_name\nORDER BY workplaces.created_at DESC\n",
   "describe": {
     "columns": [
       {
@@ -75,7 +75,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Bool"
+      ]
     },
     "nullable": [
       false,
@@ -94,5 +96,5 @@
       null
     ]
   },
-  "hash": "f5eb3ffd1cd1ad7377a21d626564a803f22572f07e400cf7cad8eb87ddbc9056"
+  "hash": "badbd66994ef92697653e9ca30ac76e878e2d35a98ec11d5a89ee7dca9a70ce9"
 }

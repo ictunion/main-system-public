@@ -62,6 +62,7 @@ type summary = {
   companyName: option<string>,
   registrationLocal: Local.t,
   createdAt: Date.t,
+  approvedByRepsAt: option<Date.t>,
 }
 
 type acceptedSummary = {
@@ -77,6 +78,7 @@ type acceptedSummary = {
   createdAt: Date.t,
   acceptedAt: Date.t,
   memberId: Uuid.t,
+  approvedByRepsAt: option<Date.t>,
 }
 
 type rejectedSummary = {
@@ -91,6 +93,7 @@ type rejectedSummary = {
   registrationLocal: Local.t,
   createdAt: Date.t,
   rejectedAt: Date.t,
+  approvedByRepsAt: option<Date.t>,
 }
 
 type invalidSummary = {
@@ -105,6 +108,7 @@ type invalidSummary = {
   registrationLocal: Local.t,
   createdAt: Date.t,
   invalidatedAt: Date.t,
+  approvedByRepsAt: option<Date.t>,
 }
 
 type processingSummary = {
@@ -119,6 +123,7 @@ type processingSummary = {
   registrationLocal: Local.t,
   createdAt: Date.t,
   verifiedAt: Date.t,
+  approvedByRepsAt: option<Date.t>,
 }
 
 type unverifiedSummary = {
@@ -133,6 +138,12 @@ type unverifiedSummary = {
   registrationLocal: Local.t,
   createdAt: Date.t,
   verificationSentAt: option<Date.t>,
+  approvedByRepsAt: option<Date.t>,
+}
+
+type workplace = {
+  workplace: WorkplaceData.summary,
+  approvedByRepsAt: option<Date.t>,
 }
 
 module Decode = {
@@ -174,6 +185,7 @@ module Decode = {
     companyName: field.required("company_name", option(string)),
     registrationLocal: field.required("registration_local", Local.decode),
     createdAt: field.required("created_at", date),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
   })
 
   let acceptedSummary = object(field => {
@@ -189,6 +201,7 @@ module Decode = {
     createdAt: field.required("created_at", date),
     acceptedAt: field.required("accepted_at", date),
     memberId: field.required("member_id", Uuid.decode),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
   })
 
   let rejectedSummary = object(field => {
@@ -203,6 +216,7 @@ module Decode = {
     registrationLocal: field.required("registration_local", Local.decode),
     createdAt: field.required("created_at", date),
     rejectedAt: field.required("rejected_at", date),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
   })
 
   let invalidSummary = object(field => {
@@ -217,6 +231,7 @@ module Decode = {
     registrationLocal: field.required("registration_local", Local.decode),
     createdAt: field.required("created_at", date),
     invalidatedAt: field.required("invalidated_at", date),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
   })
 
   let processingSummary = object(field => {
@@ -231,6 +246,7 @@ module Decode = {
     registrationLocal: field.required("registration_local", Local.decode),
     createdAt: field.required("created_at", date),
     verifiedAt: field.required("confirmed_at", date),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
   })
 
   let unverifiedSummary = object(field => {
@@ -245,5 +261,11 @@ module Decode = {
     registrationLocal: field.required("registration_local", Local.decode),
     createdAt: field.required("created_at", date),
     verificationSentAt: field.required("verification_sent_at", option(date)),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
+  })
+
+  let workplace = object(field => {
+    workplace: field.required("workplace", WorkplaceData.Decode.summary),
+    approvedByRepsAt: field.required("approved_by_reps_at", option(date)),
   })
 }

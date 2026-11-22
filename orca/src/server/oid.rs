@@ -67,6 +67,15 @@ pub enum Role {
     /// `ListWorkplaces` and are not restricted to their own. See
     /// `api::workplaces::detail`.
     ListOwnWorkplace,
+    /// Scoped capability: list applications assigned to the workplaces the
+    /// caller is an executive of, and open their redacted detail. Scope is
+    /// resolved per request like `ListOwnWorkplaceMembers`. Staff use
+    /// `ListApplications` / `ViewApplication`. See `api::applications`.
+    ListOwnWorkplaceApplications,
+    /// Scoped capability: approve (recommend for acceptance) or reject
+    /// applications assigned to the caller's executive workplaces. Never
+    /// accept, unreject or anything else -- those need `ResolveApplications`.
+    ResolveOwnWorkplaceApplications,
     /// Edit and delete notes written by other users, and clear whole note
     /// threads. Only together with the target's own write role. See `api::notes`.
     ManageNotes,
@@ -85,6 +94,8 @@ impl Role {
             Self::ManageWorkplaces => "manage-workplaces",
             Self::ListOwnWorkplaceMembers => "list-own-workplace-members",
             Self::ListOwnWorkplace => "list-own-workplace",
+            Self::ListOwnWorkplaceApplications => "list-own-workplace-applications",
+            Self::ResolveOwnWorkplaceApplications => "resolve-own-workplace-applications",
             Self::ManageNotes => "manage-notes",
             Self::SuperPowers => "super-powers",
         }

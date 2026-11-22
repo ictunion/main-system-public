@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO members_workplaces\n( member_id\n, workplace_id\n)\nSELECT $2, rrw.workplace_id\nFROM registration_requests_workplaces AS rrw\nWHERE rrw.registration_request_id = $1\nON CONFLICT DO NOTHING\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "25cad1f0e1b257ad74572156ffa01fb85a097e8207890c5cd8d866cf7bcd3171"
+}

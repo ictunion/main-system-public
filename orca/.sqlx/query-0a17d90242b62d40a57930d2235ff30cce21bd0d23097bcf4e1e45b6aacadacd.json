@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT rr.id AS \"id!\"\n, rr.email\n, rr.first_name\n, rr.last_name\n, rr.phone_number\n, rr.note\n, rr.city\n, rr.company_name\n, rr.registration_local AS \"registration_local!\"\n, rr.created_at AS \"created_at!\"\n, m.created_at AS \"accepted_at!\"\n, m.id AS \"member_id!\"\nFROM registration_requests_accepted as rr\nLEFT JOIN members AS m ON rr.id = m.registration_request_id\nORDER BY rr.created_at DESC\n",
+  "query": "\nSELECT rr.id AS \"id!\"\n, rr.email\n, rr.first_name\n, rr.last_name\n, rr.phone_number\n, CASE WHEN $1::uuid[] IS NULL THEN rr.note END AS note\n, CASE WHEN $1::uuid[] IS NULL THEN rr.city END AS city\n, rr.company_name\n, rr.registration_local AS \"registration_local!\"\n, rr.created_at AS \"created_at!\"\n, rr.rejected_at AS \"rejected_at!\"\n, rrw.approved_by_reps_at AS \"approved_by_reps_at?\"\nFROM registration_requests_rejected AS rr\nLEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id\nWHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))\nORDER BY rr.created_at DESC\n",
   "describe": {
     "columns": [
       {
@@ -55,17 +55,19 @@
       },
       {
         "ordinal": 10,
-        "name": "accepted_at!",
+        "name": "rejected_at!",
         "type_info": "Timestamptz"
       },
       {
         "ordinal": 11,
-        "name": "member_id!",
-        "type_info": "Uuid"
+        "name": "approved_by_reps_at?",
+        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "UuidArray"
+      ]
     },
     "nullable": [
       true,
@@ -73,14 +75,14 @@
       true,
       true,
       true,
+      null,
+      null,
       true,
       true,
       true,
       true,
-      true,
-      false,
-      false
+      true
     ]
   },
-  "hash": "ca79fc8b34b62d3ae87e21a68edc2f3fc65c8207eafdb2c8a3dd4177d569b443"
+  "hash": "0a17d90242b62d40a57930d2235ff30cce21bd0d23097bcf4e1e45b6aacadacd"
 }

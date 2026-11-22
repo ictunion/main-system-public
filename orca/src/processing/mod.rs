@@ -257,6 +257,14 @@ async fn process_new_member_created(
             .await?;
     }
 
+    // Workplace assigned before the account existed (copied from the
+    // application on accept) -- join its group now that we have a sub.
+    for group_id in query::list_member_workplace_group_ids(db_pool, member_id).await? {
+        oid_provider
+            .connect_keycloak_user_and_group(&token, sub_uuid, group_id)
+            .await?;
+    }
+
     Ok(())
 }
 

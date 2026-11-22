@@ -1,5 +1,6 @@
 use axum::extract::State;
-use axum::routing::{delete, get, patch, post};
+use axum::http::StatusCode;
+use axum::routing::{delete, get, patch, post, put};
 use axum::{Json, Router};
 use chrono::{DateTime, NaiveDate, Utc};
 use log::error;
@@ -10,7 +11,8 @@ use uuid::Uuid;
 use crate::api::Response;
 use crate::api::files::FileInfo;
 use crate::api::members;
-use crate::data::{Id, Member, MemberNumber, RegistrationRequest};
+use crate::api::workplaces::{self, WorkplaceSummary};
+use crate::data::{Id, Member, MemberNumber, RegistrationRequest, Workplace};
 use crate::db::{self, DbPool};
 use crate::newsletter::Newsletter;
 use crate::processing::{Command, QueueSender};
@@ -34,6 +36,7 @@ pub struct ApplicationSummary {
     company_name: Option<String>,
     registration_local: String,
     created_at: DateTime<Utc>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
 async fn list(
@@ -43,7 +46,7 @@ async fn list(
 ) -> Response<Json<Vec<ApplicationSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_summaries(&db_pool).await?;
+    let summaries = query::list_summaries(&db_pool, None).await?;
 
     Ok(Json(summaries))
 }
@@ -61,6 +64,7 @@ pub struct ApplicationUnverifiedSummary {
     registration_local: String,
     created_at: DateTime<Utc>,
     verification_sent_at: Option<DateTime<Utc>>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
 async fn list_unverified(
@@ -70,7 +74,7 @@ async fn list_unverified(
 ) -> Response<Json<Vec<ApplicationUnverifiedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_unverified_summaries(&db_pool).await?;
+    let summaries = query::list_unverified_summaries(&db_pool, None).await?;
 
     Ok(Json(summaries))
 }
@@ -89,6 +93,7 @@ pub struct ApplicationAcceptedSummary {
     created_at: DateTime<Utc>,
     accepted_at: DateTime<Utc>,
     member_id: Id<Member>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
 async fn list_accepted(
@@ -98,7 +103,7 @@ async fn list_accepted(
 ) -> Response<Json<Vec<ApplicationAcceptedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_accepted_summaries(&db_pool).await?;
+    let summaries = query::list_accepted_summaries(&db_pool, None).await?;
 
     Ok(Json(summaries))
 }
@@ -116,6 +121,7 @@ pub struct ApplicationRejectedSummary {
     registration_local: String,
     created_at: DateTime<Utc>,
     rejected_at: DateTime<Utc>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
 async fn list_rejected(
@@ -125,7 +131,7 @@ async fn list_rejected(
 ) -> Response<Json<Vec<ApplicationRejectedSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_rejected_summaries(&db_pool).await?;
+    let summaries = query::list_rejected_summaries(&db_pool, None).await?;
 
     Ok(Json(summaries))
 }
@@ -143,6 +149,7 @@ pub struct ApplicationProcessingSummary {
     registration_local: String,
     created_at: DateTime<Utc>,
     confirmed_at: DateTime<Utc>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
 async fn list_processing(
@@ -152,7 +159,7 @@ async fn list_processing(
 ) -> Response<Json<Vec<ApplicationProcessingSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_processing_summaries(&db_pool).await?;
+    let summaries = query::list_processing_summaries(&db_pool, None).await?;
 
     Ok(Json(summaries))
 }
@@ -170,6 +177,7 @@ pub struct ApplicationInvalidSummary {
     registration_local: String,
     created_at: DateTime<Utc>,
     invalidated_at: DateTime<Utc>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
 async fn list_invalid(
@@ -179,7 +187,7 @@ async fn list_invalid(
 ) -> Response<Json<Vec<ApplicationInvalidSummary>>> {
     oid_provider.require_role(&token, Role::ListApplications)?;
 
-    let summaries = query::list_invalid_summaries(&db_pool).await?;
+    let summaries = query::list_invalid_summaries(&db_pool, None).await?;
 
     Ok(Json(summaries))
 }
@@ -211,17 +219,86 @@ pub struct ApplicationDetail {
     pub(crate) language: Option<String>,
 }
 
+impl ApplicationDetail {
+    /// Drop what a workplace executive committee has no need for. Same fields
+    /// as `MemberDetail::redact_for_workplace_executive`, plus the request
+    /// fingerprint. Done server-side so the reduced client never receives them.
+    fn redact_for_workplace_executive(mut self) -> Self {
+        self.note = None;
+        self.date_of_birth = None;
+        self.address = None;
+        self.city = None;
+        self.postal_code = None;
+        self.registration_ip = None;
+        self.registration_user_agent = None;
+        self
+    }
+}
+
+/// How much of an application the caller may see and do.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ApplicationScope {
+    /// Admins: the whole record, every action their roles allow.
+    Admin,
+    /// Workplace executive committee, and the application is assigned to one
+    /// of their workplaces: redacted view, approve/reject only.
+    WorkplaceExecutive,
+}
+
+/// Decide whether the caller may act on this one application.
+///
+/// Any of `admin_roles` passes unrestricted. Otherwise the caller needs
+/// `scoped_role` and the application must be assigned to a workplace whose
+/// executive committee they sit on (resolved from Keycloak, never from the
+/// URL). Out of scope is refused with the same error as holding no role.
+async fn application_scope(
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+    token: &JwtToken,
+    id: Id<RegistrationRequest>,
+    admin_roles: &[Role],
+    scoped_role: Role,
+) -> Result<ApplicationScope, ApiError> {
+    let Err(admin_denial) = oid_provider.require_any_role(token, admin_roles) else {
+        return Ok(ApplicationScope::Admin);
+    };
+
+    if oid_provider.require_role(token, scoped_role).is_ok() {
+        let workplace_ids =
+            workplaces::executive_workplace_id_list(db_pool, oid_provider, token).await?;
+
+        if !workplace_ids.is_empty()
+            && query::is_application_of_workplaces(db_pool, id, &workplace_ids).await?
+        {
+            return Ok(ApplicationScope::WorkplaceExecutive);
+        }
+    }
+
+    Err(admin_denial.into())
+}
+
 async fn detail(
     State(db_pool): State<DbPool>,
     State(oid_provider): State<Arc<Provider>>,
     token: JwtToken,
     ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
-    oid_provider.require_any_role(&token, &[Role::ViewApplication])?;
+    let scope = application_scope(
+        &db_pool,
+        &oid_provider,
+        &token,
+        id,
+        &[Role::ViewApplication],
+        Role::ListOwnWorkplaceApplications,
+    )
+    .await?;
 
     let detail = query::get_application(&db_pool, id).await?;
 
-    Ok(Json(detail))
+    Ok(Json(match scope {
+        ApplicationScope::Admin => detail,
+        ApplicationScope::WorkplaceExecutive => detail.redact_for_workplace_executive(),
+    }))
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -316,6 +393,17 @@ impl ApplicationStatus {
     pub fn assert_invalidated(self) -> Result<(), ApiError> {
         self.assert_status(Self::Invalid)
     }
+
+    /// Workplace assignment is frozen once the applicant became a member; from
+    /// then on the member's own workplace (`members_workplaces`) is what counts.
+    pub fn assert_not_accepted(self) -> Result<(), ApiError> {
+        if self == Self::Accepted {
+            return Err(ApiError::data_conflict(
+                "Workplace of an accepted application can't be changed.",
+            ));
+        }
+        Ok(())
+    }
 }
 
 async fn reject(
@@ -324,7 +412,15 @@ async fn reject(
     token: JwtToken,
     ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<Json<ApplicationDetail>> {
-    oid_provider.require_role(&token, Role::ResolveApplications)?;
+    let scope = application_scope(
+        &db_pool,
+        &oid_provider,
+        &token,
+        id,
+        &[Role::ResolveApplications],
+        Role::ResolveOwnWorkplaceApplications,
+    )
+    .await?;
 
     // transaction suppose to rollback on drop automatically
     // so we don't need to explicitely clean it
@@ -337,10 +433,49 @@ async fn reject(
         .assert_waiting_or_in_processing_or()?;
 
     let detail = query::reject_application(&mut *tx, id).await?;
+    query::clear_application_approval(&mut *tx, id).await?;
 
     tx.commit().await?;
 
-    Ok(Json(detail))
+    Ok(Json(match scope {
+        ApplicationScope::Admin => detail,
+        ApplicationScope::WorkplaceExecutive => detail.redact_for_workplace_executive(),
+    }))
+}
+
+/// Workplace executive committee recommends the application for acceptance.
+/// Staff still perform the accept (it needs Keycloak admin rights), with or
+/// without this approval.
+async fn approve(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
+) -> Response<SuccessResponse> {
+    // No staff role: approving is the workplace's say, staff just accept
+    application_scope(
+        &db_pool,
+        &oid_provider,
+        &token,
+        id,
+        &[],
+        Role::ResolveOwnWorkplaceApplications,
+    )
+    .await?;
+
+    let mut tx = db_pool.begin().await?;
+
+    query::get_application_status_data(&mut *tx, id)
+        .await?
+        .to_status()
+        .assert_in_proceesing()?;
+
+    query::approve_application(&mut *tx, id).await?;
+
+    tx.commit().await?;
+
+    // 202 with a body: melon-head's JSON client treats an empty 204 as an error
+    Ok(SuccessResponse::Accepted)
 }
 
 async fn invalidate(
@@ -384,6 +519,8 @@ async fn unreject(
         .assert_rejected()?;
 
     let detail = query::unreject_application(&mut *tx, id).await?;
+
+    tx.commit().await?;
 
     Ok(Json(detail))
 }
@@ -468,6 +605,10 @@ async fn accept(
         members::OccupationSource::Application.as_str(),
     )
     .await?;
+
+    // Application could be assigned to workplace, we need to copy this assignment
+    // also to the newly created member
+    query::copy_workplace_to_member(&mut *tx, id, member_id).await?;
 
     // Since we return just member_id from the insert query
     // let's just do an extra query for application detail
@@ -588,6 +729,178 @@ async fn update_note(
     Ok(Json(detail))
 }
 
+#[derive(Debug, sqlx::FromRow)]
+pub struct ApplicationWorkplaceRow {
+    workplace_id: Id<Workplace>,
+    approved_by_reps_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApplicationWorkplace {
+    workplace: WorkplaceSummary,
+    approved_by_reps_at: Option<DateTime<Utc>>,
+}
+
+async fn workplace(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
+) -> Response<Json<ApplicationWorkplace>> {
+    application_scope(
+        &db_pool,
+        &oid_provider,
+        &token,
+        id,
+        &[Role::ViewApplication],
+        Role::ListOwnWorkplaceApplications,
+    )
+    .await?;
+
+    let Some(row) = query::get_application_workplace(&db_pool, id).await? else {
+        return Err(ApiError::Status(StatusCode::NOT_FOUND));
+    };
+
+    let workplace = workplaces::query::detail(&db_pool, row.workplace_id).await?;
+
+    Ok(Json(ApplicationWorkplace {
+        workplace,
+        approved_by_reps_at: row.approved_by_reps_at,
+    }))
+}
+
+async fn assign_workplace(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath((id, workplace_id)): ApiPath<(Id<RegistrationRequest>, Id<Workplace>)>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
+
+    // 404 for an unknown workplace instead of a 500 from the FK violation
+    workplaces::query::detail(&db_pool, workplace_id).await?;
+
+    let mut tx = db_pool.begin().await?;
+
+    query::get_application_status_data(&mut *tx, id)
+        .await?
+        .to_status()
+        .assert_not_accepted()?;
+
+    let rows_affected = query::assign_workplace(&mut *tx, id, workplace_id).await?;
+
+    tx.commit().await?;
+
+    if rows_affected == 0 {
+        Ok(SuccessResponse::NoContent)
+    } else {
+        Ok(SuccessResponse::Created)
+    }
+}
+
+async fn unassign_workplace(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+    ApiPath(id): ApiPath<Id<RegistrationRequest>>,
+) -> Response<SuccessResponse> {
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
+
+    let mut tx = db_pool.begin().await?;
+
+    query::get_application_status_data(&mut *tx, id)
+        .await?
+        .to_status()
+        .assert_not_accepted()?;
+
+    let rows_affected = query::unassign_workplace(&mut *tx, id).await?;
+
+    tx.commit().await?;
+
+    if rows_affected == 0 {
+        Ok(SuccessResponse::NoContent)
+    } else {
+        Ok(SuccessResponse::Accepted)
+    }
+}
+
+/// Workplaces whose applications the caller may list as an executive; empty
+/// (so every listing is empty) when they sit on no committee. No workplace ID
+/// is taken from the URL, same as `/workplaces/mine/members`.
+pub(crate) async fn own_workplace_ids(
+    db_pool: &DbPool,
+    oid_provider: &Provider,
+    token: &JwtToken,
+) -> Response<Vec<Uuid>> {
+    oid_provider.require_role(token, Role::ListOwnWorkplaceApplications)?;
+
+    workplaces::executive_workplace_id_list(db_pool, oid_provider, token).await
+}
+
+async fn list_workplace(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<ApplicationSummary>>> {
+    let ids = own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+    Ok(Json(query::list_summaries(&db_pool, Some(&ids)).await?))
+}
+
+async fn list_workplace_unverified(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<ApplicationUnverifiedSummary>>> {
+    let ids = own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+    Ok(Json(
+        query::list_unverified_summaries(&db_pool, Some(&ids)).await?,
+    ))
+}
+
+async fn list_workplace_accepted(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<ApplicationAcceptedSummary>>> {
+    let ids = own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+    Ok(Json(
+        query::list_accepted_summaries(&db_pool, Some(&ids)).await?,
+    ))
+}
+
+async fn list_workplace_rejected(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<ApplicationRejectedSummary>>> {
+    let ids = own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+    Ok(Json(
+        query::list_rejected_summaries(&db_pool, Some(&ids)).await?,
+    ))
+}
+
+async fn list_workplace_processing(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<ApplicationProcessingSummary>>> {
+    let ids = own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+    Ok(Json(
+        query::list_processing_summaries(&db_pool, Some(&ids)).await?,
+    ))
+}
+
+async fn list_workplace_invalid(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<ApplicationInvalidSummary>>> {
+    let ids = own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+    Ok(Json(
+        query::list_invalid_summaries(&db_pool, Some(&ids)).await?,
+    ))
+}
+
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list))
@@ -596,14 +909,23 @@ pub(crate) fn router() -> Router<AppState> {
         .route("/rejected", get(list_rejected))
         .route("/processing", get(list_processing))
         .route("/invalid", get(list_invalid))
+        .route("/workplace", get(list_workplace))
+        .route("/workplace/unverified", get(list_workplace_unverified))
+        .route("/workplace/accepted", get(list_workplace_accepted))
+        .route("/workplace/rejected", get(list_workplace_rejected))
+        .route("/workplace/processing", get(list_workplace_processing))
+        .route("/workplace/invalid", get(list_workplace_invalid))
         .route("/{id}", get(detail).delete(reject))
         .route("/{id}/invalidate", patch(invalidate))
         .route("/{id}/unreject", patch(unreject))
         .route("/{id}/uninvalidate", patch(uninvalidate))
         .route("/{id}/accept", post(accept))
+        .route("/{id}/approve", patch(approve))
         .route("/{id}/files", get(list_files))
         .route("/{id}/verify", patch(verify))
         .route("/{id}/resend-email", post(resend_email))
         .route("/{id}/hard", delete(hard_delete))
         .route("/{id}/note", patch(update_note))
+        .route("/{id}/workplace", get(workplace).delete(unassign_workplace))
+        .route("/{id}/workplace/{workplace_id}", put(assign_workplace))
 }

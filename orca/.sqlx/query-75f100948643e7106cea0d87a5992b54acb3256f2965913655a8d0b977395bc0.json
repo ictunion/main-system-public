@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT id AS \"id!\"\n, email\n, first_name\n, last_name\n, phone_number\n, note\n, city\n, company_name\n, registration_local AS \"registration_local!\"\n, created_at AS \"created_at!\"\n, confirmed_at AS \"confirmed_at!\"\nFROM registration_requests_processing\nORDER BY confirmed_at DESC\n",
+  "query": "\nSELECT rr.id AS \"id!\"\n, rr.email\n, rr.first_name\n, rr.last_name\n, rr.phone_number\n, CASE WHEN $1::uuid[] IS NULL THEN rr.note END AS note\n, CASE WHEN $1::uuid[] IS NULL THEN rr.city END AS city\n, rr.company_name\n, rr.registration_local AS \"registration_local!\"\n, rr.created_at AS \"created_at!\"\n, rr.invalidated_at AS \"invalidated_at!\"\n, rrw.approved_by_reps_at AS \"approved_by_reps_at?\"\nFROM registration_requests_invalid AS rr\nLEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id\nWHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))\nORDER BY rr.created_at DESC\n",
   "describe": {
     "columns": [
       {
@@ -55,12 +55,19 @@
       },
       {
         "ordinal": 10,
-        "name": "confirmed_at!",
+        "name": "invalidated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "approved_by_reps_at?",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "UuidArray"
+      ]
     },
     "nullable": [
       true,
@@ -68,7 +75,8 @@
       true,
       true,
       true,
-      true,
+      null,
+      null,
       true,
       true,
       true,
@@ -76,5 +84,5 @@
       true
     ]
   },
-  "hash": "49ad380f18942ac307a9c3900165034c197b9294c1576bbfc28e475acb5d2c1d"
+  "hash": "75f100948643e7106cea0d87a5992b54acb3256f2965913655a8d0b977395bc0"
 }

@@ -9,7 +9,12 @@ use crate::db::DbPool;
 // member count includes also members, who have already left union
 // current process is to remove association between past members and workplaces manually
 // in the future, it should be done when clicking on "remove member" in member detail
-pub async fn list_summaries(pool: &DbPool) -> sqlx::Result<Vec<WorkplaceSummary>> {
+/// `include_inactive: false` leaves out cancelled (past, dissolved) workplaces,
+/// for pickers that assign members/applications to a workplace.
+pub async fn list_summaries(
+    pool: &DbPool,
+    include_inactive: bool,
+) -> sqlx::Result<Vec<WorkplaceSummary>> {
     sqlx::query_as!(
         WorkplaceSummary,
         r#"
@@ -29,6 +34,7 @@ SELECT id
     , COUNT(mw.member_id) AS "member_count!: i64"
 FROM workplaces
 LEFT JOIN members_workplaces mw ON mw.workplace_id = workplaces.id
+WHERE $1 OR workplaces.cancelled_at IS NULL
 GROUP BY workplaces.id
     , workplaces.name
     , workplaces.email
@@ -43,7 +49,8 @@ GROUP BY workplaces.id
     , workplaces.company_address
     , workplaces.workplace_short_name
 ORDER BY workplaces.created_at DESC
-"#
+"#,
+        include_inactive
     )
     .fetch_all(pool)
     .await

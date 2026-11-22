@@ -3,3 +3,14 @@
     flex-direction: column;
     gap: 6px;
 }
+
+.with-approval {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.approved {
+    color: var(--color6);
+    font-weight: bold;
+}

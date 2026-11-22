@@ -3,11 +3,12 @@ use axum::routing::get;
 use axum::{Json, Router};
 use serde::Serialize;
 use std::sync::Arc;
+use uuid::Uuid;
 
 mod query;
 
 use super::Response;
-use crate::api::AppState;
+use crate::api::{AppState, applications};
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider};
 
@@ -28,19 +29,32 @@ async fn applications_basic_stats(
     // Every authenticated user is able to see stats
     oid_provider.decode_jwt(&token)?;
 
-    let unverified = query::count_unverified_applications(&db_pool).await?;
-    let accepted = query::count_accepted_applications(&db_pool).await?;
-    let rejected = query::count_rejected_applications(&db_pool).await?;
-    let processing = query::count_processing_applications(&db_pool).await?;
-    let invalid = query::count_invalid_applications(&db_pool).await?;
+    Ok(Json(count_applications(&db_pool, None).await?))
+}
 
-    Ok(Json(ApplicationsBasicStats {
-        unverified,
-        accepted,
-        rejected,
-        processing,
-        invalid,
-    }))
+/// Same counts, limited to applications assigned to the caller's executive
+/// workplaces (tab counts of the rep "Workplace Applications" page).
+async fn applications_workplace_basic_stats(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<ApplicationsBasicStats>> {
+    let ids = applications::own_workplace_ids(&db_pool, &oid_provider, &token).await?;
+
+    Ok(Json(count_applications(&db_pool, Some(&ids)).await?))
+}
+
+async fn count_applications(
+    db_pool: &DbPool,
+    workplace_ids: Option<&[Uuid]>,
+) -> sqlx::Result<ApplicationsBasicStats> {
+    Ok(ApplicationsBasicStats {
+        unverified: query::count_unverified_applications(db_pool, workplace_ids).await?,
+        accepted: query::count_accepted_applications(db_pool, workplace_ids).await?,
+        rejected: query::count_rejected_applications(db_pool, workplace_ids).await?,
+        processing: query::count_processing_applications(db_pool, workplace_ids).await?,
+        invalid: query::count_invalid_applications(db_pool, workplace_ids).await?,
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -106,6 +120,10 @@ async fn workplaces_basic_stats(
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/applications/basic", get(applications_basic_stats))
+        .route(
+            "/applications/workplace/basic",
+            get(applications_workplace_basic_stats),
+        )
         .route("/members/basic", get(members_basic_stats))
         .route("/workplaces/basic", get(workplaces_basic_stats))
 }

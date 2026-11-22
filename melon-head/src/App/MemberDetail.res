@@ -525,6 +525,12 @@ module MemberWorkplaceSelect = {
             onChange=onWorkplaceChange
           >
             <option value=""> {React.string("(none)")} </option>
+            {switch detail.workplaceId {
+            // still assigned to a workplace that has since become inactive
+            | Some(id) if !(workplaces->Array.some(w => w.id == id)) =>
+              <option value={Uuid.toString(id)}> {React.string("(inactive workplace)")} </option>
+            | _ => React.null
+            }}
             {workplaces->Array.map(viewWorkplaces)->React.array}
           </select>
         </dd>
@@ -552,7 +558,7 @@ module MemberWorkplaceSelect = {
   let make = (~api, ~detail: Api.webData<MemberData.detail>) => {
     let (workplaces, _, _) =
       api->Hook.getData(
-        ~path="/workplaces",
+        ~path="/workplaces/assignable",
         ~decoder=Json.Decode.array(WorkplaceData.Decode.summary),
       )
 
@@ -586,6 +592,35 @@ module MissingDuesButton = {
     } else {
       React.null
     }
+  }
+}
+
+/* Requests the files only once rendered, i.e. when the Files tab is open --
+ workplace reps never get that tab, so they never hit the staff-only endpoint. */
+module FilesTab = {
+  @react.component
+  let make = (~api: Api.t, ~id: Uuid.t) => {
+    let (filesData, _, _) =
+      api->Hook.getData(
+        ~path="/members/" ++ Uuid.toString(id) ++ "/files",
+        ~decoder=Json.Decode.array(Data.Decode.file),
+      )
+
+    <DataGrid
+      data=filesData
+      layout={[
+        {
+          label: "",
+          cells: [
+            {
+              label: "Files",
+              minmax: ("150px,", "600px"),
+              view: files => View.filesTable(~api, ~files),
+            },
+          ],
+        },
+      ]}
+    />
   }
 }
 
@@ -762,12 +797,6 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
     detail->RemoteData.unwrap(~default="", d => Int.toString(d.memberNumber)) ++ "/history",
     ~decoder=PaymentData.Decode.history,
   )
-
-  let (filesData, _, _) =
-    api->Hook.getData(
-      ~path="/members/" ++ Uuid.toString(id) ++ "/files",
-      ~decoder=Json.Decode.array(Data.Decode.file),
-    )
 
   let (occupationsData, setOccupationsData, _) =
     api->Hook.getData(
@@ -967,21 +996,7 @@ let make = (~api, ~bankApi, ~bankEnabled, ~id, ~modal) => {
           </div>
         </Tabbed.Content>
         <Tabbed.Content tab=Files handlers=tabHandlers>
-          <DataGrid
-            data=filesData
-            layout={[
-              {
-                label: "",
-                cells: [
-                  {
-                    label: "Files",
-                    minmax: ("150px,", "600px"),
-                    view: files => View.filesTable(~api, ~files),
-                  },
-                ],
-              },
-            ]}
-          />
+          <FilesTab api id />
         </Tabbed.Content>
       </>
     } else {

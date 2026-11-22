@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT workplace_id AS \"workplace_id: Id<Workplace>\"\n, approved_by_reps_at\nFROM registration_requests_workplaces\nWHERE registration_request_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "workplace_id: Id<Workplace>",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "approved_by_reps_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "8d7dbefb940944a77e1e487e2d674a49e0c94bcaeac8929331438386a45b0708"
+}

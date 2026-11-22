@@ -11,6 +11,8 @@ type orcaRole =
   | ManageWorkplaces
   | ListOwnWorkplaceMembers
   | ListOwnWorkplace
+  | ListOwnWorkplaceApplications
+  | ResolveOwnWorkplaceApplications
   | ManageNotes
   | SuperPowers
 
@@ -26,6 +28,8 @@ let showOrcaRole = (r: orcaRole): string =>
   | ManageWorkplaces => "manage-workplaces"
   | ListOwnWorkplaceMembers => "list-own-workplace-members"
   | ListOwnWorkplace => "list-own-workplace"
+  | ListOwnWorkplaceApplications => "list-own-workplace-applications"
+  | ResolveOwnWorkplaceApplications => "resolve-own-workplace-applications"
   | ManageNotes => "manage-notes"
   | SuperPowers => "super-powers"
   }
@@ -102,6 +106,8 @@ module Decode = {
     | "manage-workplaces" => ManageWorkplaces
     | "list-own-workplace-members" => ListOwnWorkplaceMembers
     | "list-own-workplace" => ListOwnWorkplace
+    | "list-own-workplace-applications" => ListOwnWorkplaceApplications
+    | "resolve-own-workplace-applications" => ResolveOwnWorkplaceApplications
     | "manage-notes" => ManageNotes
     | "super-powers" => SuperPowers
     | _ => UnknownOrcaRole(str)

@@ -1,33 +1,90 @@
+use uuid::Uuid;
+
 use crate::db::DbPool;
 
-pub async fn count_unverified_applications(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_unverified"#)
-        .fetch_one(pool)
-        .await
+pub async fn count_unverified_applications(
+    pool: &DbPool,
+    workplace_ids: Option<&[Uuid]>,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"
+SELECT COUNT(*) as "count!"
+FROM registration_requests_unverified AS rr
+LEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id
+WHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))
+"#,
+        workplace_ids
+    )
+    .fetch_one(pool)
+    .await
 }
 
-pub async fn count_accepted_applications(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_accepted"#)
-        .fetch_one(pool)
-        .await
+pub async fn count_accepted_applications(
+    pool: &DbPool,
+    workplace_ids: Option<&[Uuid]>,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"
+SELECT COUNT(*) as "count!"
+FROM registration_requests_accepted AS rr
+LEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id
+WHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))
+"#,
+        workplace_ids
+    )
+    .fetch_one(pool)
+    .await
 }
 
-pub async fn count_rejected_applications(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_rejected"#)
-        .fetch_one(pool)
-        .await
+pub async fn count_rejected_applications(
+    pool: &DbPool,
+    workplace_ids: Option<&[Uuid]>,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"
+SELECT COUNT(*) as "count!"
+FROM registration_requests_rejected AS rr
+LEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id
+WHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))
+"#,
+        workplace_ids
+    )
+    .fetch_one(pool)
+    .await
 }
 
-pub async fn count_processing_applications(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_processing"#)
-        .fetch_one(pool)
-        .await
+pub async fn count_processing_applications(
+    pool: &DbPool,
+    workplace_ids: Option<&[Uuid]>,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"
+SELECT COUNT(*) as "count!"
+FROM registration_requests_processing AS rr
+LEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id
+WHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))
+"#,
+        workplace_ids
+    )
+    .fetch_one(pool)
+    .await
 }
 
-pub async fn count_invalid_applications(pool: &DbPool) -> sqlx::Result<i64> {
-    sqlx::query_scalar!(r#"SELECT COUNT(*) as "count!" FROM registration_requests_invalid"#)
-        .fetch_one(pool)
-        .await
+pub async fn count_invalid_applications(
+    pool: &DbPool,
+    workplace_ids: Option<&[Uuid]>,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"
+SELECT COUNT(*) as "count!"
+FROM registration_requests_invalid AS rr
+LEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id
+WHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))
+"#,
+        workplace_ids
+    )
+    .fetch_one(pool)
+    .await
 }
 
 pub async fn count_new_members(pool: &DbPool) -> sqlx::Result<i64> {

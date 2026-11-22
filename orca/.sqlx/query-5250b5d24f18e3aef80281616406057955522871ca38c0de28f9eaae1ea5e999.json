@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT COUNT(*) as \"count!\"\nFROM registration_requests_unverified AS rr\nLEFT JOIN registration_requests_workplaces AS rrw ON rrw.registration_request_id = rr.id\nWHERE ($1::uuid[] IS NULL OR rrw.workplace_id = ANY($1))\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5250b5d24f18e3aef80281616406057955522871ca38c0de28f9eaae1ea5e999"
+}

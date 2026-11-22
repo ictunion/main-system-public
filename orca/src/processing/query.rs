@@ -222,3 +222,21 @@ INSERT INTO workplaces_files
     .await?;
     Ok(())
 }
+
+/// Keycloak groups of the workplaces a member belongs to.
+pub async fn list_member_workplace_group_ids(
+    pool: &DbPool,
+    member_id: Id<Member>,
+) -> sqlx::Result<Vec<Uuid>> {
+    sqlx::query_scalar!(
+        r#"
+SELECT w.keycloak_group_id
+FROM members_workplaces AS mw
+JOIN workplaces AS w ON w.id = mw.workplace_id
+WHERE mw.member_id = $1
+"#,
+        member_id as _,
+    )
+    .fetch_all(pool)
+    .await
+}

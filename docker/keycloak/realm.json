@@ -303,6 +303,24 @@
       ],
       "orca": [
         {
+          "id": "2f6c1e7a-5b3d-4c8e-9a1f-7d2b4e6c8a01",
+          "name": "list-own-workplace-applications",
+          "description": "Allows workplace reps to list and view (redacted) applications assigned to their workplace",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
+          "attributes": {}
+        },
+        {
+          "id": "9e4a7c2b-1d6f-4b3a-8c5e-2a7f9b1d4e02",
+          "name": "resolve-own-workplace-applications",
+          "description": "Allows workplace reps to approve or reject applications assigned to their workplace",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "3577db7d-91cf-4d27-898e-c1c8a73b2a6b",
+          "attributes": {}
+        },
+        {
           "id": "8b44558d-79f7-4d30-bb0d-de4a9b1cef06",
           "name": "list-own-workplace",
           "description": "Allows workplace reps to see their own workplace profile/settings page",
@@ -703,8 +721,9 @@
       "clientRoles": {
         "orca": [
           "list-own-workplace",
-          "view-application",
-          "list-own-workplace-members"
+          "list-own-workplace-members",
+          "list-own-workplace-applications",
+          "resolve-own-workplace-applications"
         ],
         "bank-system": [
           "view-workplace-payment-history"

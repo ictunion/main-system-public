@@ -23,12 +23,26 @@
     overflow: hidden;
 }
 
-.status {
+/* Same as .header-row in MemberDetail/styles.module.scss */
+.header-row {
     display: flex;
     align-items: center;
     gap: 6px;
     font-weight: 600;
     font-size: 16px;
+
+    dd {
+        margin-left: 0;
+        margin-right: 12px;
+
+        & select {
+            background: #d7eff2;
+            border: 1px solid #30849b;
+            color: #0d3945;
+            height: 20px;
+            border-radius: 9px;
+        }
+    }
 }
 
 .metadata {
@@ -58,4 +72,9 @@
     align-items: center;
     border-radius: 6px;
     border: 2px solid var(--color4);
+}
+
+.approved {
+    color: var(--color6);
+    font-weight: 600;
 }

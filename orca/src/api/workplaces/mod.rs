@@ -50,7 +50,22 @@ async fn list_all(
 ) -> Response<Json<Vec<WorkplaceSummary>>> {
     oid_provider.require_role(&token, Role::ListWorkplaces)?;
 
-    let summaries = query::list_summaries(&db_pool).await?;
+    let summaries = query::list_summaries(&db_pool, true).await?;
+
+    Ok(Json(summaries))
+}
+
+/// Workplaces a member or application can be assigned to: everything except
+/// inactive (cancelled) ones. Backs the workplace pickers on the member and
+/// application detail pages.
+async fn list_assignable(
+    State(db_pool): State<DbPool>,
+    State(oid_provider): State<Arc<Provider>>,
+    token: JwtToken,
+) -> Response<Json<Vec<WorkplaceSummary>>> {
+    oid_provider.require_role(&token, Role::ListWorkplaces)?;
+
+    let summaries = query::list_summaries(&db_pool, false).await?;
 
     Ok(Json(summaries))
 }
@@ -719,6 +734,7 @@ async fn create_document(
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_all).post(create_workplace))
+        .route("/assignable", get(list_assignable))
         .route("/mine", get(list_mine))
         .route("/mine/members", get(list_mine_members))
         .route("/active", get(list_active))

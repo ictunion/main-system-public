@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO registration_requests_workplaces\n    ( registration_request_id\n    , workplace_id\n    )\nVALUES ( $1, $2 )\nON CONFLICT ( registration_request_id )\nDO UPDATE\nSET workplace_id = EXCLUDED.workplace_id\n    , assigned_at = now()\n    , approved_by_reps_at = NULL\nWHERE registration_requests_workplaces.workplace_id <> EXCLUDED.workplace_id\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9205f37f01cb54845931d55a08a3bf95f97eb04de40893d91b3d876aca7cde97"
+}

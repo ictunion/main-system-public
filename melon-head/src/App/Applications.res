@@ -6,12 +6,42 @@
 
 open Data
 
+/* Admin: every application. Workplace: only applications assigned to the
+ * caller's workplace (executive committee view), without notes and city. */
+type scope = Admin | Workplace
+
+let apiPrefix = scope =>
+  switch scope {
+  | Admin => "/applications"
+  | Workplace => "/applications/workplace"
+  }
+
+/* The workplace listing comes without note and city (redacted server-side) */
+let forScope = (columns: array<DataTable.column<'t>>, scope) =>
+  switch scope {
+  | Admin => columns
+  | Workplace => columns->Array.filter(c => c.name != "Note" && c.name != "City")
+  }
+
+let viewLastName = (~lastName, ~approvedByRepsAt) =>
+  <span className={styles["withApproval"]}>
+    {lastName->View.option(React.string)}
+    {approvedByRepsAt->Option.mapOr(React.null, at =>
+      <span
+        className={styles["approved"]}
+        title={"Approved by workplace representatives at " ++ at->Date.toLocaleString}
+      >
+        {React.string("✓")}
+      </span>
+    )}
+  </span>
+
 module Processing = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope: scope) => {
     let (processing, _, refreshApplications) =
       api->Hook.getData(
-        ~path="/applications/processing",
+        ~path={apiPrefix(scope) ++ "/processing"},
         ~decoder=Json.Decode.array(ApplicationData.Decode.processingSummary),
       )
 
@@ -21,62 +51,61 @@ module Processing = {
         NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
-    <DataTable
-      data=processing
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "1fr"),
-          view: r => r.firstName->View.option(React.string),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.lastName->View.option(React.string),
-        },
-        {
-          name: "Note",
-          minMax: ("250px", "10fr"),
-          view: r =>
-            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-              {
-                let note = if Option.getOr(r.note, "Add note") == "" {
-                  "Add note"
-                } else {
-                  Option.getOr(r.note, "Add note")
-                }
-
-                React.string(note)
+    let columns: array<DataTable.column<ApplicationData.processingSummary>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => viewLastName(~lastName=r.lastName, ~approvedByRepsAt=r.approvedByRepsAt),
+      },
+      {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r =>
+          <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+            {
+              let note = if Option.getOr(r.note, "Add note") == "" {
+                "Add note"
+              } else {
+                Option.getOr(r.note, "Add note")
               }
-            </a>,
-        },
-        {
-          name: "City",
-          minMax: ("250px", "1fr"),
-          view: r => r.city->View.option(React.string),
-        },
-        {
-          name: "Company Name",
-          minMax: ("250px", "1fr"),
-          view: r => r.companyName->View.option(React.string),
-        },
-        {
-          name: "Language",
-          minMax: ("125px", "1fr"),
-          view: r => React.string(r.registrationLocal->Local.toString),
-        },
-        {
-          name: "Verified on",
-          minMax: ("220px", "2fr"),
-          view: r => React.string(r.verifiedAt->Date.toLocaleDateString),
-        },
-      ]
-    >
+
+              React.string(note)
+            }
+          </a>,
+      },
+      {
+        name: "City",
+        minMax: ("250px", "1fr"),
+        view: r => r.city->View.option(React.string),
+      },
+      {
+        name: "Company Name",
+        minMax: ("250px", "1fr"),
+        view: r => r.companyName->View.option(React.string),
+      },
+      {
+        name: "Language",
+        minMax: ("125px", "1fr"),
+        view: r => React.string(r.registrationLocal->Local.toString),
+      },
+      {
+        name: "Verified on",
+        minMax: ("220px", "2fr"),
+        view: r => React.string(r.verifiedAt->Date.toLocaleDateString),
+      },
+    ]
+
+    <DataTable data=processing columns={columns->forScope(scope)}>
       {React.string("There are no applications in processiong.")}
     </DataTable>
   }
@@ -84,10 +113,10 @@ module Processing = {
 
 module Unverified = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope: scope) => {
     let (unverified, _, refreshApplications) =
       api->Hook.getData(
-        ~path="/applications/unverified",
+        ~path={apiPrefix(scope) ++ "/unverified"},
         ~decoder=Json.Decode.array(ApplicationData.Decode.unverifiedSummary),
       )
 
@@ -97,63 +126,62 @@ module Unverified = {
         NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
-    <DataTable
-      data=unverified
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "1fr"),
-          view: r => r.firstName->View.option(React.string),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.lastName->View.option(React.string),
-        },
-        {
-          name: "Note",
-          minMax: ("250px", "10fr"),
-          view: r =>
-            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-              {
-                let note = if Option.getOr(r.note, "Add note") == "" {
-                  "Add note"
-                } else {
-                  Option.getOr(r.note, "Add note")
-                }
-
-                React.string(note)
+    let columns: array<DataTable.column<ApplicationData.unverifiedSummary>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => viewLastName(~lastName=r.lastName, ~approvedByRepsAt=r.approvedByRepsAt),
+      },
+      {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r =>
+          <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+            {
+              let note = if Option.getOr(r.note, "Add note") == "" {
+                "Add note"
+              } else {
+                Option.getOr(r.note, "Add note")
               }
-            </a>,
-        },
-        {
-          name: "City",
-          minMax: ("250px", "2fr"),
-          view: r => r.city->View.option(React.string),
-        },
-        {
-          name: "Company Name",
-          minMax: ("250px", "1fr"),
-          view: r => r.companyName->View.option(React.string),
-        },
-        {
-          name: "Language",
-          minMax: ("125px", "1fr"),
-          view: r => React.string(r.registrationLocal->Local.toString),
-        },
-        {
-          name: "Email Sent On",
-          minMax: ("220px", "2fr"),
-          view: r =>
-            React.string(r.verificationSentAt->Option.mapOr("NOT SENT!", Date.toLocaleDateString)),
-        },
-      ]
-    >
+
+              React.string(note)
+            }
+          </a>,
+      },
+      {
+        name: "City",
+        minMax: ("250px", "2fr"),
+        view: r => r.city->View.option(React.string),
+      },
+      {
+        name: "Company Name",
+        minMax: ("250px", "1fr"),
+        view: r => r.companyName->View.option(React.string),
+      },
+      {
+        name: "Language",
+        minMax: ("125px", "1fr"),
+        view: r => React.string(r.registrationLocal->Local.toString),
+      },
+      {
+        name: "Email Sent On",
+        minMax: ("220px", "2fr"),
+        view: r =>
+          React.string(r.verificationSentAt->Option.mapOr("NOT SENT!", Date.toLocaleDateString)),
+      },
+    ]
+
+    <DataTable data=unverified columns={columns->forScope(scope)}>
       {React.string("There are no applications with pending verification.")}
     </DataTable>
   }
@@ -161,10 +189,10 @@ module Unverified = {
 
 module Accepted = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope: scope) => {
     let (all, _, refreshApplications) =
       api->Hook.getData(
-        ~path="/applications/accepted",
+        ~path={apiPrefix(scope) ++ "/accepted"},
         ~decoder=Json.Decode.array(ApplicationData.Decode.acceptedSummary),
       )
 
@@ -174,62 +202,61 @@ module Accepted = {
         NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
-    <DataTable
-      data=all
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.firstName->View.option(React.string),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.lastName->View.option(React.string),
-        },
-        {
-          name: "Note",
-          minMax: ("250px", "10fr"),
-          view: r =>
-            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-              {
-                let note = if Option.getOr(r.note, "Add note") == "" {
-                  "Add note"
-                } else {
-                  Option.getOr(r.note, "Add note")
-                }
-
-                React.string(note)
+    let columns: array<DataTable.column<ApplicationData.acceptedSummary>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "2fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => viewLastName(~lastName=r.lastName, ~approvedByRepsAt=r.approvedByRepsAt),
+      },
+      {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r =>
+          <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+            {
+              let note = if Option.getOr(r.note, "Add note") == "" {
+                "Add note"
+              } else {
+                Option.getOr(r.note, "Add note")
               }
-            </a>,
-        },
-        {
-          name: "City",
-          minMax: ("250px", "2fr"),
-          view: r => r.city->View.option(React.string),
-        },
-        {
-          name: "Company Name",
-          minMax: ("250px", "1fr"),
-          view: r => r.companyName->View.option(React.string),
-        },
-        {
-          name: "Language",
-          minMax: ("125px", "1fr"),
-          view: r => React.string(r.registrationLocal->Local.toString),
-        },
-        {
-          name: "Accepted On",
-          minMax: ("150px", "1fr"),
-          view: r => React.string(r.acceptedAt->Date.toLocaleDateString),
-        },
-      ]
-    >
+
+              React.string(note)
+            }
+          </a>,
+      },
+      {
+        name: "City",
+        minMax: ("250px", "2fr"),
+        view: r => r.city->View.option(React.string),
+      },
+      {
+        name: "Company Name",
+        minMax: ("250px", "1fr"),
+        view: r => r.companyName->View.option(React.string),
+      },
+      {
+        name: "Language",
+        minMax: ("125px", "1fr"),
+        view: r => React.string(r.registrationLocal->Local.toString),
+      },
+      {
+        name: "Accepted On",
+        minMax: ("150px", "1fr"),
+        view: r => React.string(r.acceptedAt->Date.toLocaleDateString),
+      },
+    ]
+
+    <DataTable data=all columns={columns->forScope(scope)}>
       {React.string("There are no accepted applications so far.")}
     </DataTable>
   }
@@ -237,10 +264,10 @@ module Accepted = {
 
 module Rejected = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope: scope) => {
     let (all, _, refreshApplications) =
       api->Hook.getData(
-        ~path="/applications/rejected",
+        ~path={apiPrefix(scope) ++ "/rejected"},
         ~decoder=Json.Decode.array(ApplicationData.Decode.rejectedSummary),
       )
 
@@ -250,62 +277,61 @@ module Rejected = {
         NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
-    <DataTable
-      data=all
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "1fr"),
-          view: r => r.firstName->View.option(React.string),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.lastName->View.option(React.string),
-        },
-        {
-          name: "Note",
-          minMax: ("250px", "10fr"),
-          view: r =>
-            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-              {
-                let note = if Option.getOr(r.note, "Add note") == "" {
-                  "Add note"
-                } else {
-                  Option.getOr(r.note, "Add note")
-                }
-
-                React.string(note)
+    let columns: array<DataTable.column<ApplicationData.rejectedSummary>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => viewLastName(~lastName=r.lastName, ~approvedByRepsAt=r.approvedByRepsAt),
+      },
+      {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r =>
+          <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+            {
+              let note = if Option.getOr(r.note, "Add note") == "" {
+                "Add note"
+              } else {
+                Option.getOr(r.note, "Add note")
               }
-            </a>,
-        },
-        {
-          name: "City",
-          minMax: ("250px", "2fr"),
-          view: r => r.city->View.option(React.string),
-        },
-        {
-          name: "Company Name",
-          minMax: ("250px", "1fr"),
-          view: r => r.companyName->View.option(React.string),
-        },
-        {
-          name: "Language",
-          minMax: ("125px", "1fr"),
-          view: r => React.string(r.registrationLocal->Local.toString),
-        },
-        {
-          name: "Rejected On",
-          minMax: ("150px", "1fr"),
-          view: r => React.string(r.rejectedAt->Date.toLocaleDateString),
-        },
-      ]
-    >
+
+              React.string(note)
+            }
+          </a>,
+      },
+      {
+        name: "City",
+        minMax: ("250px", "2fr"),
+        view: r => r.city->View.option(React.string),
+      },
+      {
+        name: "Company Name",
+        minMax: ("250px", "1fr"),
+        view: r => r.companyName->View.option(React.string),
+      },
+      {
+        name: "Language",
+        minMax: ("125px", "1fr"),
+        view: r => React.string(r.registrationLocal->Local.toString),
+      },
+      {
+        name: "Rejected On",
+        minMax: ("150px", "1fr"),
+        view: r => React.string(r.rejectedAt->Date.toLocaleDateString),
+      },
+    ]
+
+    <DataTable data=all columns={columns->forScope(scope)}>
       {React.string("There are no rejected applications so far.")}
     </DataTable>
   }
@@ -313,10 +339,10 @@ module Rejected = {
 
 module Invalid = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope: scope) => {
     let (all, _, refreshApplications) =
       api->Hook.getData(
-        ~path="/applications/invalid",
+        ~path={apiPrefix(scope) ++ "/invalid"},
         ~decoder=Json.Decode.array(ApplicationData.Decode.invalidSummary),
       )
 
@@ -326,62 +352,61 @@ module Invalid = {
         NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
-    <DataTable
-      data=all
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "1fr"),
-          view: r => r.firstName->View.option(React.string),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.lastName->View.option(React.string),
-        },
-        {
-          name: "Note",
-          minMax: ("250px", "10fr"),
-          view: r =>
-            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-              {
-                let note = if Option.getOr(r.note, "Add note") == "" {
-                  "Add note"
-                } else {
-                  Option.getOr(r.note, "Add note")
-                }
-
-                React.string(note)
+    let columns: array<DataTable.column<ApplicationData.invalidSummary>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => viewLastName(~lastName=r.lastName, ~approvedByRepsAt=r.approvedByRepsAt),
+      },
+      {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r =>
+          <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+            {
+              let note = if Option.getOr(r.note, "Add note") == "" {
+                "Add note"
+              } else {
+                Option.getOr(r.note, "Add note")
               }
-            </a>,
-        },
-        {
-          name: "City",
-          minMax: ("250px", "2fr"),
-          view: r => r.city->View.option(React.string),
-        },
-        {
-          name: "Company Name",
-          minMax: ("250px", "1fr"),
-          view: r => r.companyName->View.option(React.string),
-        },
-        {
-          name: "Language",
-          minMax: ("125px", "1fr"),
-          view: r => React.string(r.registrationLocal->Local.toString),
-        },
-        {
-          name: "Invalidated On",
-          minMax: ("170px", "1fr"),
-          view: r => React.string(r.invalidatedAt->Date.toLocaleDateString),
-        },
-      ]
-    >
+
+              React.string(note)
+            }
+          </a>,
+      },
+      {
+        name: "City",
+        minMax: ("250px", "2fr"),
+        view: r => r.city->View.option(React.string),
+      },
+      {
+        name: "Company Name",
+        minMax: ("250px", "1fr"),
+        view: r => r.companyName->View.option(React.string),
+      },
+      {
+        name: "Language",
+        minMax: ("125px", "1fr"),
+        view: r => React.string(r.registrationLocal->Local.toString),
+      },
+      {
+        name: "Invalidated On",
+        minMax: ("170px", "1fr"),
+        view: r => React.string(r.invalidatedAt->Date.toLocaleDateString),
+      },
+    ]
+
+    <DataTable data=all columns={columns->forScope(scope)}>
       {React.string("There are no invalidated applications so far.")}
     </DataTable>
   }
@@ -389,10 +414,10 @@ module Invalid = {
 
 module All = {
   @react.component
-  let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+  let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope: scope) => {
     let (all, _, refreshApplications) =
       api->Hook.getData(
-        ~path="/applications",
+        ~path={apiPrefix(scope)},
         ~decoder=Json.Decode.array(ApplicationData.Decode.summary),
       )
 
@@ -402,57 +427,56 @@ module All = {
         NewNote.Application.modal(~api, ~modal, ~refresh=refreshApplications, uuid, note),
       )
 
-    <DataTable
-      data=all
-      columns=[
-        {
-          name: "ID",
-          minMax: ("100px", "1fr"),
-          view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
-        },
-        {
-          name: "First Name",
-          minMax: ("150px", "1fr"),
-          view: r => r.firstName->View.option(React.string),
-        },
-        {
-          name: "Last Name",
-          minMax: ("150px", "2fr"),
-          view: r => r.lastName->View.option(React.string),
-        },
-        {
-          name: "Note",
-          minMax: ("250px", "10fr"),
-          view: r =>
-            <a onClick={_ => openNewNoteModal(r.id, r.note)}>
-              {
-                let note = if Option.getOr(r.note, "Add note") == "" {
-                  "Add note"
-                } else {
-                  Option.getOr(r.note, "Add note")
-                }
-
-                React.string(note)
+    let columns: array<DataTable.column<ApplicationData.summary>> = [
+      {
+        name: "ID",
+        minMax: ("100px", "1fr"),
+        view: r => <Link.Uuid uuid={r.id} toPath={uuid => "/applications/" ++ uuid} />,
+      },
+      {
+        name: "First Name",
+        minMax: ("150px", "1fr"),
+        view: r => r.firstName->View.option(React.string),
+      },
+      {
+        name: "Last Name",
+        minMax: ("150px", "2fr"),
+        view: r => viewLastName(~lastName=r.lastName, ~approvedByRepsAt=r.approvedByRepsAt),
+      },
+      {
+        name: "Note",
+        minMax: ("250px", "10fr"),
+        view: r =>
+          <a onClick={_ => openNewNoteModal(r.id, r.note)}>
+            {
+              let note = if Option.getOr(r.note, "Add note") == "" {
+                "Add note"
+              } else {
+                Option.getOr(r.note, "Add note")
               }
-            </a>,
-        },
-        {
-          name: "City",
-          minMax: ("250px", "2fr"),
-          view: r => r.city->View.option(React.string),
-        },
-        {
-          name: "Company Name",
-          minMax: ("250px", "1fr"),
-          view: r => r.companyName->View.option(React.string),
-        },
-        {
-          name: "Language",
-          minMax: ("125px", "1fr"),
-          view: r => React.string(r.registrationLocal->Local.toString),
-        },
-      ]
-    >
+
+              React.string(note)
+            }
+          </a>,
+      },
+      {
+        name: "City",
+        minMax: ("250px", "2fr"),
+        view: r => r.city->View.option(React.string),
+      },
+      {
+        name: "Company Name",
+        minMax: ("250px", "1fr"),
+        view: r => r.companyName->View.option(React.string),
+      },
+      {
+        name: "Language",
+        minMax: ("125px", "1fr"),
+        view: r => React.string(r.registrationLocal->Local.toString),
+      },
+    ]
+
+    <DataTable data=all columns={columns->forScope(scope)}>
       {React.string("There are no applications so far.")}
     </DataTable>
   }
@@ -471,7 +495,13 @@ let urlToTab = (url: RescriptReactRouter.url): option<ApplicationData.status> =>
   }
 }
 
-let tabToUrl = (tab: option<ApplicationData.status>): string => {
+let pageUrl = scope =>
+  switch scope {
+  | Admin => "/applications"
+  | Workplace => "/my-workplace-applications"
+  }
+
+let tabToUrl = (~scope=Admin, tab: option<ApplicationData.status>): string => {
   open ApplicationData
 
   let hash = switch tab {
@@ -483,11 +513,11 @@ let tabToUrl = (tab: option<ApplicationData.status>): string => {
   | Some(Invalid) => "invalid"
   }
 
-  "/applications#" ++ hash
+  pageUrl(scope) ++ "#" ++ hash
 }
 
 @react.component
-let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
+let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope=Admin) => {
   let (activeTab, setActiveTab_) = React.useState(_ =>
     RescriptReactRouter.dangerouslyGetInitialUrl()->urlToTab
   )
@@ -498,21 +528,35 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
 
   let setActiveTab = f => {
     let newTab = f(activeTab)
-    RescriptReactRouter.push(tabToUrl(newTab))
+    RescriptReactRouter.push(tabToUrl(~scope, newTab))
   }
 
   let tabHandlers = (activeTab, setActiveTab)
 
-  let (basicStats, _, _) =
-    api->Hook.getData(
-      ~path="/stats/applications/basic",
-      ~decoder=StatsData.Applications.Decode.basic,
-    )
+  let (basicStats, _, _) = api->Hook.getData(
+    ~path=switch scope {
+    | Admin => "/stats/applications/basic"
+    | Workplace => "/stats/applications/workplace/basic"
+    },
+    ~decoder=StatsData.Applications.Decode.basic,
+  )
 
-  <Page requireAnyRole=[ListApplications]>
-    <Page.Title> {React.string("Applications")} </Page.Title>
-    {switch basicStats {
-    | Success({unverified}) =>
+  <Page
+    requireAnyRole={switch scope {
+    | Admin => [ListApplications]
+    | Workplace => [ListOwnWorkplaceApplications]
+    }}
+  >
+    <Page.Title>
+      {React.string(
+        switch scope {
+        | Admin => "Applications"
+        | Workplace => "Workplace Applications"
+        },
+      )}
+    </Page.Title>
+    {switch (scope, basicStats) {
+    | (Admin, Success({unverified})) =>
       if unverified > 0 {
         <Message.Warning>
           <Message.Title> {React.string("Some applicants might be stuck..")} </Message.Title>
@@ -574,22 +618,22 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t) => {
         </Tabbed.Tab>
       </Tabbed.Tabs>
       <Tabbed.Content tab={Some(ApplicationData.Processing)} handlers={tabHandlers}>
-        <Processing api modal />
+        <Processing api modal scope />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Unverified)} handlers={tabHandlers}>
-        <Unverified api modal />
+        <Unverified api modal scope />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Accepted)} handlers={tabHandlers}>
-        <Accepted api modal />
+        <Accepted api modal scope />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Rejected)} handlers={tabHandlers}>
-        <Rejected api modal />
+        <Rejected api modal scope />
       </Tabbed.Content>
       <Tabbed.Content tab={Some(ApplicationData.Invalid)} handlers={tabHandlers}>
-        <Invalid api modal />
+        <Invalid api modal scope />
       </Tabbed.Content>
       <Tabbed.Content tab={None} handlers={tabHandlers}>
-        <All api modal />
+        <All api modal scope />
       </Tabbed.Content>
     </div>
   </Page>

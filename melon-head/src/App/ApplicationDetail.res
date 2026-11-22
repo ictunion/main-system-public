@@ -163,7 +163,7 @@ module Actions = {
 
       <Modal.Content>
         <p>
-          {React.string("Are you shure you want to ")}
+          {React.string("Are you sure you want to ")}
           <strong> {React.string("reject the application")} </strong>
           {React.string("?")}
         </p>
@@ -216,7 +216,7 @@ module Actions = {
 
       <Modal.Content>
         <p>
-          {React.string("Are you shure you want to ")}
+          {React.string("Are you sure you want to ")}
           <strong> {React.string("invalidate the application")} </strong>
           {React.string("?")}
         </p>
@@ -322,7 +322,7 @@ module Actions = {
 
       <Modal.Content>
         <p>
-          {React.string("Are you shure you want to ")}
+          {React.string("Are you sure you want to ")}
           <strong> {React.string("manualy verify the email address for this application")} </strong>
           {React.string("?")}
         </p>
@@ -372,7 +372,7 @@ module Actions = {
 
       <Modal.Content>
         <p>
-          {React.string("Are you shure you want to ")}
+          {React.string("Are you sure you want to ")}
           <strong> {React.string("send verification email to applicant")} </strong>
           {React.string(" again?")}
         </p>
@@ -416,7 +416,7 @@ module Actions = {
 
       <Modal.Content>
         <p>
-          {React.string("Are you shure you want to ")}
+          {React.string("Are you sure you want to ")}
           <strong>
             {React.string("move this application back to processing to be re-evaluated")}
           </strong>
@@ -464,7 +464,7 @@ module Actions = {
 
       <Modal.Content>
         <p>
-          {React.string("Are you shure you want to ")}
+          {React.string("Are you sure you want to ")}
           <strong>
             {React.string("move this application back to processing to be re-evaluated")}
           </strong>
@@ -571,6 +571,108 @@ module Actions = {
   let hardDeleteModal = (~id, ~api, ~modal, ~openApplications): Modal.modalContent => {
     title: "Remove PERMANENTLY",
     content: <HardDelete api id modal openApplications />,
+  }
+
+  module Approve = {
+    @react.component
+    let make = (~api: Api.t, ~id: Uuid.t, ~modal: Modal.Interface.t, ~onApproved) => {
+      let (error, setError) = React.useState(() => None)
+
+      let doApprove = (_: JsxEvent.Mouse.t) => {
+        let req =
+          api->Api.patchJson(
+            ~path="/applications/" ++ Uuid.toString(id) ++ "/approve",
+            ~decoder=Api.Decode.acceptedResponse,
+            ~body=JSON.Encode.null,
+          )
+
+        req->Future.get(res => {
+          switch res {
+          | Ok(_) => {
+              Modal.Interface.closeModal(modal)
+              onApproved()
+            }
+          | Error(e) => setError(_ => Some(e))
+          }
+        })
+      }
+
+      <Modal.Content>
+        <p>
+          {React.string("Recommend this application for ")}
+          <strong> {React.string("acceptance")} </strong>
+          {React.string("? The union admin will then accept it and create a new member.")}
+        </p>
+        {switch error {
+        | None => React.null
+        | Some(err) => <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        }}
+        <Button.Panel>
+          <Button onClick={_ => Modal.Interface.closeModal(modal)}>
+            {React.string("Cancel")}
+          </Button>
+          <Button variant=Button.Cta onClick=doApprove> {React.string("Approve")} </Button>
+        </Button.Panel>
+      </Modal.Content>
+    }
+  }
+
+  let approveModal = (~id, ~api, ~modal, ~onApproved): Modal.modalContent => {
+    title: "Approve Application",
+    content: <Approve api id modal onApproved />,
+  }
+
+  /* What a workplace representative may do: approve (recommend) or reject.
+   Never accept, invalidate, re-evaluate or anything else -- admins only. */
+  module Workplace = {
+    @react.component
+    let make = (
+      ~id: Uuid.t,
+      ~api: Api.t,
+      ~status: ApplicationData.status,
+      ~modal: Modal.Interface.t,
+      ~setDetail,
+      ~openApplications,
+      ~vcardButton,
+      ~isApproved: bool,
+      ~onApproved,
+    ) => {
+      let rejectButton =
+        <Button
+          onClick={_ =>
+            modal->Modal.Interface.openModal(
+              rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+            )}
+          variant=Button.Danger
+        >
+          {React.string("Reject")}
+        </Button>
+
+      switch status {
+      | ApplicationData.Unverified =>
+        <Button.Panel>
+          vcardButton
+          rejectButton
+        </Button.Panel>
+      | ApplicationData.Processing =>
+        <Button.Panel>
+          vcardButton
+          rejectButton
+          {if isApproved {
+            React.null
+          } else {
+            <Button
+              onClick={_ =>
+                modal->Modal.Interface.openModal(approveModal(~id, ~api, ~modal, ~onApproved))}
+              variant=Button.Cta
+            >
+              {React.string("Approve")}
+            </Button>
+          }}
+        </Button.Panel>
+      | _ => <Button.Panel> vcardButton </Button.Panel>
+      }
+    }
   }
 
   @react.component
@@ -777,6 +879,103 @@ let viewMessage = (status, ~reject, ~resend) => {
   }
 }
 
+/* Workplace the application is assigned to. Admins with `resolve-applications`
+ (and the workplace list) can change it until the application is accepted, to
+ any workplace that is not inactive;
+ everyone else sees it read-only. */
+module WorkplaceAssignment = {
+  let viewOption = (workplace: WorkplaceData.summary) =>
+    <option key={workplace.id->Uuid.toString} value={workplace.id->Uuid.toString}>
+      {React.string(workplace.name)}
+    </option>
+
+  @react.component
+  let make = (
+    ~api: Api.t,
+    ~id: Uuid.t,
+    ~status: Api.webData<ApplicationData.status>,
+    ~assignment: Api.webData<ApplicationData.workplace>,
+    ~refresh,
+    ~canAssign: bool,
+  ) => {
+    let (error, setError) = React.useState(() => None)
+
+    let (workplaces, _, _) =
+      api->Hook.getData(
+        ~enabled=canAssign,
+        ~path="/workplaces/assignable",
+        ~decoder=Json.Decode.array(WorkplaceData.Decode.summary),
+      )
+
+    // 404 means "not assigned", so any failure reads as none here
+    let current = assignment->RemoteData.toOption
+
+    let onChange = e => {
+      let value = ReactEvent.Form.currentTarget(e)["value"]
+      let path = "/applications/" ++ Uuid.toString(id) ++ "/workplace"
+
+      let req = switch value {
+      | "" => api->Api.deleteJson(~path, ~decoder=Api.Decode.acceptedResponse, ~body=None)
+      | wid => api->Api.put(~path=path ++ "/" ++ wid, ~decoder=Api.Decode.acceptedResponse)
+      }
+
+      req->Future.get(res => {
+        switch res {
+        // 204 (nothing changed) comes back without a body
+        | Ok(_) | Error(Api.Empty) => setError(_ => None)
+        | Error(e) => setError(_ => Some(e))
+        }
+        let _ = refresh()
+      })
+    }
+
+    <>
+      <dt> {React.string("Workplace:")} </dt>
+      <dd>
+        {switch (canAssign, workplaces, assignment) {
+        | (_, _, Idle | Loading) => React.string("...")
+        | (true, Success(workplaces), _) =>
+          <select
+            key={current->Option.mapOr("", a => a.workplace.id->Uuid.toString)}
+            defaultValue={current->Option.mapOr("", a => a.workplace.id->Uuid.toString)}
+            disabled={status == Success(ApplicationData.Accepted)}
+            onChange
+          >
+            <option value=""> {React.string("(none)")} </option>
+            {switch current {
+            // still assigned to a workplace that has since become inactive
+            | Some({workplace}) if !(workplaces->Array.some(w => w.id == workplace.id)) =>
+              <option value={workplace.id->Uuid.toString}>
+                {React.string(workplace.name ++ " (inactive)")}
+              </option>
+            | _ => React.null
+            }}
+            {workplaces->Array.map(viewOption)->React.array}
+          </select>
+        | _ => React.string(current->Option.mapOr("(none)", a => a.workplace.name))
+        }}
+      </dd>
+      {current
+      ->Option.flatMap(a => a.approvedByRepsAt)
+      ->Option.mapOr(React.null, at =>
+        <dd
+          className={styles["approved"]}
+          title={"Approved by workplace representatives at " ++ at->Date.toLocaleString}
+        >
+          {React.string("✓ Approved by reps")}
+        </dd>
+      )}
+      {switch error {
+      | None => React.null
+      | Some(err) =>
+        <dd>
+          <Message.Error> {React.string(err->Api.showError)} </Message.Error>
+        </dd>
+      }}
+    </>
+  }
+}
+
 type tabs =
   | Metadata
   | Files
@@ -789,10 +988,31 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
       ~decoder=ApplicationData.Decode.detail,
     )
 
+  let session = React.useContext(SessionContext.context)
+  let hasRole = role =>
+    session->RemoteData.toOption->Option.mapOr(false, s => s->Session.hasRole(~role))
+
+  // Admins see the full record; workplace reps get it redacted from the server
+  let isAdmin = hasRole(ViewApplication)
+  let canResolve = hasRole(ResolveApplications)
+  let canResolveOwn = hasRole(ResolveOwnWorkplaceApplications)
+  let listScope = if hasRole(ListApplications) {
+    Applications.Admin
+  } else {
+    Applications.Workplace
+  }
+
   let (files, _, _) =
     api->Hook.getData(
+      ~enabled=isAdmin,
       ~path="/applications/" ++ Uuid.toString(id) ++ "/files",
       ~decoder=Json.Decode.array(Data.Decode.file),
+    )
+
+  let (assignment, _, refreshAssignment) =
+    api->Hook.getData(
+      ~path="/applications/" ++ Uuid.toString(id) ++ "/workplace",
+      ~decoder=ApplicationData.Decode.workplace,
     )
 
   let tabHandlers = Tabbed.make(Files)
@@ -800,10 +1020,17 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
   let status = RemoteData.map(detail, ApplicationData.getStatus)
 
   let openApplications = () => {
-    RescriptReactRouter.push(status->RemoteData.toOption->Applications.tabToUrl)
+    RescriptReactRouter.push(
+      status->RemoteData.toOption->Applications.tabToUrl(~scope=listScope, _),
+    )
   }
 
-  <Page requireAnyRole=[ListApplications, ViewApplication] mainResource=detail>
+  let repLayout = layout->Array.filter(group => group.label != "Address" && group.label != "Notes")
+
+  <Page
+    requireAnyRole=[ListApplications, ViewApplication, ListOwnWorkplaceApplications]
+    mainResource=detail
+  >
     <header className={styles["header"]}>
       <h1 className={styles["title"]}>
         {React.string("Application ")}
@@ -815,73 +1042,108 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
         </span>
       </h1>
       <Page.BackButton
-        name="applications" path={status->RemoteData.toOption->Applications.tabToUrl}
+        name="applications"
+        path={status->RemoteData.toOption->Applications.tabToUrl(~scope=listScope, _)}
       />
-      <h2 className={styles["status"]}>
-        {React.string("Status:")}
-        <Chip.ApplicationStatus value=status />
-      </h2>
+      <dl className={styles["headerRow"]}>
+        <dt> {React.string("Status:")} </dt>
+        <dd>
+          <Chip.ApplicationStatus value=status />
+        </dd>
+        <WorkplaceAssignment
+          api id status assignment refresh=refreshAssignment canAssign=canResolve
+        />
+      </dl>
     </header>
-    {viewMessage(
-      status,
-      ~reject=_ =>
-        modal->Modal.Interface.openModal(
-          Actions.rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
-        ),
-      ~resend=_ =>
-        modal->Modal.Interface.openModal(Actions.resendModal(~id, ~api, ~modal, ~openApplications)),
-    )}
+    {if isAdmin {
+      viewMessage(
+        status,
+        ~reject=_ =>
+          modal->Modal.Interface.openModal(
+            Actions.rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+          ),
+        ~resend=_ =>
+          modal->Modal.Interface.openModal(
+            Actions.resendModal(~id, ~api, ~modal, ~openApplications),
+          ),
+      )
+    } else {
+      React.null
+    }}
     <div className={styles["personalInfo"]}>
-      <DataGrid layout data=detail />
+      <DataGrid layout={isAdmin ? layout : repLayout} data=detail />
     </div>
-    <Tabbed.Tabs>
-      <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
-      <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
-    </Tabbed.Tabs>
-    <Tabbed.Content tab=Files handlers=tabHandlers>
-      <DataGrid
-        data=files
-        layout={[
-          {
-            label: "",
-            cells: [
+    {if isAdmin {
+      <>
+        <Tabbed.Tabs>
+          <Tabbed.Tab value=Files handlers=tabHandlers> {React.string("Files")} </Tabbed.Tab>
+          <Tabbed.Tab value=Metadata handlers=tabHandlers> {React.string("Metadata")} </Tabbed.Tab>
+        </Tabbed.Tabs>
+        <Tabbed.Content tab=Files handlers=tabHandlers>
+          <DataGrid
+            data=files
+            layout={[
               {
-                label: "Signature",
-                minmax: ("150px", "600px"),
-                view: files =>
-                  files
-                  ->Array.find(f => {
-                    f.name == "signature" && f.fileType == "png"
-                  })
-                  ->viewSignature(~api),
+                label: "",
+                cells: [
+                  {
+                    label: "Signature",
+                    minmax: ("150px", "600px"),
+                    view: files =>
+                      files
+                      ->Array.find(f => {
+                        f.name == "signature" && f.fileType == "png"
+                      })
+                      ->viewSignature(~api),
+                  },
+                  {
+                    label: "All Files",
+                    minmax: ("150px", "965px"),
+                    view: files => View.filesTable(~api, ~files),
+                  },
+                ],
               },
-              {
-                label: "All Files",
-                minmax: ("150px", "965px"),
-                view: files => View.filesTable(~api, ~files),
-              },
-            ],
-          },
-        ]}
-      />
-    </Tabbed.Content>
-    <Tabbed.Content tab=Metadata handlers=tabHandlers>
-      <div className={styles["metadata"]}>
-        <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
-        <RowBasedTable rows=metadataRows data=detail title=Some("Metadata") />
-      </div>
-    </Tabbed.Content>
+            ]}
+          />
+        </Tabbed.Content>
+        <Tabbed.Content tab=Metadata handlers=tabHandlers>
+          <div className={styles["metadata"]}>
+            <RowBasedTable rows=timeRows data=detail title=Some("Updates") />
+            <RowBasedTable rows=metadataRows data=detail title=Some("Metadata") />
+          </div>
+        </Tabbed.Content>
+      </>
+    } else {
+      // Reps get no files, updates or metadata -- same as on the member page
+      React.null
+    }}
     {switch detail {
     | Success(d) =>
-      <Actions
-        id
-        api
-        modal
-        setDetail
-        status={ApplicationData.getStatus(d)}
-        openApplications
-        vcardButton={<VCard.Application detail=d />}
-      />
+      let status = ApplicationData.getStatus(d)
+      let vcardButton = <VCard.Application detail=d />
+
+      if canResolve {
+        <Actions id api modal setDetail status openApplications vcardButton />
+      } else if canResolveOwn {
+        <Actions.Workplace
+          id
+          api
+          modal
+          setDetail
+          status
+          openApplications
+          vcardButton
+          isApproved={assignment
+          ->RemoteData.toOption
+          ->Option.flatMap(a => a.approvedByRepsAt)
+          ->Option.isSome}
+          onApproved={() => {
+            let _ = refreshAssignment()
+          }}
+        />
+      } else {
+        <Button.Panel> vcardButton </Button.Panel>
+      }
     | _ => React.null
     }}
   </Page>
