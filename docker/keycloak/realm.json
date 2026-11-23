@@ -800,7 +800,34 @@
       }
     ]
   },
+  "users": [
+    {
+      "username": "service-account-orca-service",
+      "enabled": true,
+      "serviceAccountClientId": "orca-service",
+      "clientRoles": {
+        "realm-management": ["manage-users"]
+      }
+    }
+  ],
   "clients": [
+    {
+      "id": "6d0c3a52-8f1e-4b7a-9c24-5e8b1f3a7d90",
+      "clientId": "orca-service",
+      "name": "orca-service",
+      "description": "Orca's own account for background Keycloak admin calls (creating member accounts)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "orca-service-dev-secret",
+      "bearerOnly": false,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true
+    },
     {
       "id": "be669107-79ad-403e-ac2c-66bbfe1a7fde",
       "clientId": "account",

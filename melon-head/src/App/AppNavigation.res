@@ -1,5 +1,11 @@
 @module external styles: {..} = "./AppNavigation/styles.module.scss"
 
+module NavSeprator = {
+  @react.component
+  let make = () => <li className={styles["separator"]} />
+}
+
+// Renders its separator before the link only when the link itself is visible.
 module NavItem = {
   @react.component
   let make = (
@@ -8,6 +14,7 @@ module NavItem = {
     ~session: Session.t,
     ~requiredRole=None,
     ~requiredBankRole=None,
+    ~withSeparator=true,
   ) => {
     let openRoute = (_: JsxEvent.Mouse.t) => {
       RescriptReactRouter.push(path)
@@ -35,18 +42,16 @@ module NavItem = {
     let className = styles["navItem"] ++ (isOpen ? " " ++ styles["navItemOpen"] : "")
 
     if accessible {
-      <li className onClick={openRoute}>
-        <a> {React.string(text)} </a>
-      </li>
+      <>
+        {withSeparator ? <NavSeprator /> : React.null}
+        <li className onClick={openRoute}>
+          <a> {React.string(text)} </a>
+        </li>
+      </>
     } else {
       React.null
     }
   }
-}
-
-module NavSeprator = {
-  @react.component
-  let make = () => <li className={styles["separator"]} />
 }
 
 @react.component
@@ -56,69 +61,68 @@ let make = (~isOpen: bool, ~session: Api.webData<Session.t>) => {
       {switch session {
       | Success(session) =>
         <ul className={styles["navList"]}>
-          <NavItem key="1" path="/" text="Dashboard" session />
-          <NavSeprator key="2" />
+          <NavItem key="1" path="/" text="Dashboard" session withSeparator=false />
           <NavItem
-            key="3"
+            key="2"
             path="/applications"
             text="Applications"
             session
             requiredRole=Some(Session.ListApplications)
           />
-          <NavSeprator key="4" />
           <NavItem
-            key="5" path="/members" text="Members" session requiredRole=Some(Session.ListMembers)
+            key="3" path="/members" text="Members" session requiredRole=Some(Session.ListMembers)
           />
-          <NavSeprator key="6" />
           <NavItem
-            key="7"
+            key="4"
             path="/workplaces"
             text="Workplaces"
             session
             requiredRole=Some(Session.ManageWorkplaces)
           />
-          <NavSeprator key="7.5" />
           <NavItem
-            key="7.6"
+            key="5"
             path="/missing-dues"
             text="Missing Dues"
             session
             requiredBankRole=Some(Session.PaymentHistory)
           />
-          <NavSeprator key="8" />
           <NavItem
-            key="9"
-            path="/my-workplace"
-            text="My Workplace"
-            session
-            requiredRole=Some(Session.ListOwnWorkplaceMembers)
-          />
-          <NavSeprator key="9.4" />
-          <NavItem
-            key="9.5"
+            key="6"
             path="/my-workplace-applications"
             text="Workplace Applications"
             session
             requiredRole=Some(Session.ListOwnWorkplaceApplications)
           />
-          <NavSeprator key="10" />
           <NavItem
-            key="11"
+            key="7"
+            path="/my-workplace"
+            text="Workplace Members"
+            session
+            requiredRole=Some(Session.ListOwnWorkplaceMembers)
+          />
+          <NavItem
+            key="8"
+            path="/my-workplace-missing-dues"
+            text="Workplace Missing Dues"
+            session
+            requiredRole=Some(Session.ListOwnWorkplaceMembers)
+            requiredBankRole=Some(Session.WorkplacePaymentHistory)
+          />
+          <NavItem
+            key="9"
             path="/my-workplace-settings"
-            text="My Workplace Settings"
+            text="Workplace Info"
             session
             requiredRole=Some(Session.ListOwnWorkplace)
           />
-          <NavSeprator key="12" />
           <NavItem
-            key="12.5"
+            key="10"
             path="/elected-offices"
             text="Elected Offices"
             session
             requiredRole=Some(Session.ListMembers)
           />
-          <NavSeprator key="12.6" />
-          <NavItem key="13" path="/settings" text="Settings" session />
+          <NavItem key="11" path="/settings" text="Settings" session />
         </ul>
       | Loading =>
         <div className={styles["loading"]}>

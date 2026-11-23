@@ -43,6 +43,10 @@ pub struct Config {
     pub keycloak_realm: Option<String>,
     pub keycloak_client_id: Option<String>,
     pub keycloak_members_group_id: Option<Uuid>,
+    /// Confidential client with a service account holding `realm-management/manage-users`.
+    /// Background jobs use it instead of the requesting user's short-lived token.
+    pub keycloak_service_client_id: Option<String>,
+    pub keycloak_service_client_secret: Option<String>,
     pub templates: Templates<'static>,
     /// newsletter-system base URL (API lives under `/api`); unset disables the calls
     pub newsletter_host: Option<String>,
@@ -150,6 +154,14 @@ impl Config {
         let keycloak_members_group_id: Option<Uuid> =
             figment.extract_inner("keycloak_members_group_id").ok();
 
+        let keycloak_service_client_id: Option<String> =
+            figment.extract_inner("keycloak_service_client_id").ok();
+
+        let keycloak_service_client_secret: Option<String> = figment
+            .extract_inner("keycloak_service_client_secret")
+            .ok()
+            .filter(|secret: &String| !secret.is_empty());
+
         let newsletter_host: Option<String> = figment.extract_inner("newsletter_host").ok();
 
         let bank_sync_token: Option<String> = figment.extract_inner("bank_sync_token").ok();
@@ -197,6 +209,8 @@ impl Config {
             keycloak_realm,
             keycloak_client_id,
             keycloak_members_group_id,
+            keycloak_service_client_id,
+            keycloak_service_client_secret,
             templates,
             newsletter_host,
             bank_sync_token,

@@ -229,8 +229,12 @@ async fn process_new_member_created(
     db_pool: &DbPool,
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
-    let token_string = token_opt.ok_or(ProcessingError::MissingOidToken)?;
-    let token = JwtToken::new(token_string);
+    // Prefer our own service token: the user's token is short-lived and may
+    // already be expired by the time this runs.
+    let token = match oid_provider.service_token().await? {
+        Some(token) => token,
+        None => JwtToken::new(token_opt.ok_or(ProcessingError::MissingOidToken)?),
+    };
     let oid_user = query::get_member_for_oid(db_pool, member_id).await?;
 
     let sub_uuid = match oid_provider.create_user(&token, &oid_user).await {

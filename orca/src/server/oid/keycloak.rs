@@ -3,6 +3,7 @@
 use jsonwebtoken::{Algorithm, DecodingKey, TokenData, Validation};
 use log::{debug, error, warn};
 use reqwest::Url;
+use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -22,10 +23,17 @@ pub struct KeycloakProvider {
     client_id: String,
     host: String,
     realm: String,
+    /// `(client_id, client_secret)` for the client credentials grant
+    service_account: Option<(String, String)>,
 }
 
 impl KeycloakProvider {
-    pub async fn fetch(host: &str, realm: &str, client_id: String) -> Result<Self, Error> {
+    pub async fn fetch(
+        host: &str,
+        realm: &str,
+        client_id: String,
+        service_account: Option<(String, String)>,
+    ) -> Result<Self, Error> {
         let url = keycloak_url(host, realm);
         let key = jwk::fetch_jwk(&format!("{url}/protocol/openid-connect/certs")).await?;
 
@@ -34,13 +42,55 @@ impl KeycloakProvider {
         validation.set_issuer(&[keycloak_url(host, realm)]);
         validation.set_audience(&[ORCA_AUDIENCE]);
 
-        Ok(Self {
+        let provider = Self {
             key,
             validation,
             client_id,
             host: host.into(),
             realm: realm.into(),
-        })
+            service_account,
+        };
+
+        // Fail at startup, not silently in every background job, when the
+        // service client is missing in this realm or the secret is wrong.
+        provider.service_token().await?;
+
+        Ok(provider)
+    }
+
+    /// Fresh token via the client credentials grant. Fetched per call on purpose:
+    /// it's only used by background jobs, and caching would bring back expiry issues.
+    pub async fn service_token(&self) -> Result<Option<JwtToken>, Error> {
+        #[derive(Deserialize)]
+        struct TokenResponse {
+            access_token: String,
+        }
+
+        let Some((client_id, client_secret)) = &self.service_account else {
+            return Ok(None);
+        };
+
+        let response = reqwest::Client::new()
+            .post(format!(
+                "{}/protocol/openid-connect/token",
+                keycloak_url(&self.host, &self.realm)
+            ))
+            .form(&[
+                ("grant_type", "client_credentials"),
+                ("client_id", client_id),
+                ("client_secret", client_secret),
+            ])
+            .send()
+            .await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            error!("Keycloak refused service account token: {status}");
+            return Err(Error::Proxy(status));
+        }
+
+        let body: TokenResponse = response.json().await?;
+        Ok(Some(JwtToken::new(body.access_token)))
     }
 
     // FIXME: Might be better either as a method on a newtype wrapping `TokenData`, or extension trait

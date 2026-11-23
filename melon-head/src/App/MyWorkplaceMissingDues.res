@@ -147,10 +147,16 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
 
   let (onlyNeverPaid, setOnlyNeverPaid) = React.useState(_ => false)
 
+  let (workplace, _, _) =
+    api->Hook.getData(~path="/workplaces/mine", ~decoder=WorkplaceData.Decode.summary)
+
+  let title = switch workplace {
+  | Success(w) => "Missing Dues of " ++ w.name
+  | _ => "Missing Dues"
+  }
+
   <Page requireAnyRole=[ListOwnWorkplaceMembers]>
-    <Page.Title>
-      {React.string("Missing Dues (data synced once per day every morning)")}
-    </Page.Title>
+    <Page.Title> {React.string(title ++ " (data synced once per day every morning)")} </Page.Title>
     <RequireFeature enabled=bankEnabled>
       <YearMonthFilter basePath="/my-workplace-missing-dues" year month currentYear />
       <Button.Panel>

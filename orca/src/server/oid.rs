@@ -187,12 +187,32 @@ impl Provider {
             &config.keycloak_realm,
             &config.keycloak_client_id,
         ) {
-            let k = KeycloakProvider::fetch(host, realm, client_id.clone()).await?;
+            let service_account = if let (Some(id), Some(secret)) = (
+                &config.keycloak_service_client_id,
+                &config.keycloak_service_client_secret,
+            ) {
+                Some((id.clone(), secret.clone()))
+            } else {
+                warn!(
+                    "Keycloak service account not configured. Background Keycloak calls fall back to the requesting user's token"
+                );
+                None
+            };
+            let k =
+                KeycloakProvider::fetch(host, realm, client_id.clone(), service_account).await?;
             return Ok(Provider(ProviderState::Keycloak(Box::new(k))));
         }
 
         warn!("Keycloak authorization not configured. Authorization disabled");
         Ok(Provider(ProviderState::Disconnected))
+    }
+
+    /// Token of Orca's own service account, `None` when it isn't configured.
+    pub async fn service_token(&self) -> Result<Option<JwtToken>, Error> {
+        match &self.0 {
+            ProviderState::Keycloak(k) => k.service_token().await,
+            ProviderState::Disconnected => Ok(None),
+        }
     }
 
     pub fn decode_jwt(&self, token: &JwtToken) -> Result<TokenData<JwtClaims>, Error> {

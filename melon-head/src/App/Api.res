@@ -90,28 +90,30 @@ let mapDecodingError = (res: result<'a, string>, response): result<'a, error> =>
 
 type t = {
   host: string,
-  oidcUser: Oidc.User.t,
+  oidc: Oidc.t,
 }
 
+// Read the user on every call -- silent renew swaps it without re-rendering,
+// so a user captured at render time sends an expired token.
 let getToken = (api: t) => {
-  api.oidcUser->Oidc.User.getToken
+  Oidc.getUser(api.oidc)->Oidc.User.getToken
 }
 
-let make = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
+let make = (~config: Config.t, ~oidc: Oidc.t): t => {
   {
     host: config.apiUrl,
-    oidcUser,
+    oidc,
   }
 }
 
-let makeBank = (~config: Config.t, ~oidcUser: Oidc.User.t): t => {
+let makeBank = (~config: Config.t, ~oidc: Oidc.t): t => {
   {
     // The bank API serves everything under an /api prefix; request paths stay
     // prefix-free (e.g. "/payments/..."). When bank_api_url is unset the host
     // is meaningless -- callers must gate requests on Config.bankEnabled
     // instead of relying on this falling back to a dead URL.
     host: config.bankApiUrl->Option.getOr("") ++ "/api",
-    oidcUser,
+    oidc,
   }
 }
 

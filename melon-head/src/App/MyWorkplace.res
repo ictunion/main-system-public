@@ -16,7 +16,7 @@ let make = (~api: Api.t) => {
 
   let title = switch workplace {
   | RemoteData.Success(w) => "Members of " ++ w.name
-  | _ => "My Workplace"
+  | _ => "Workplace Members"
   }
 
   <Page requireAnyRole=[ListOwnWorkplaceMembers]>

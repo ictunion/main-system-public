@@ -541,6 +541,13 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope=Admin) => {
     ~decoder=StatsData.Applications.Decode.basic,
   )
 
+  let (workplace, _, _) =
+    api->Hook.getData(
+      ~enabled=scope == Workplace,
+      ~path="/workplaces/mine",
+      ~decoder=WorkplaceData.Decode.summary,
+    )
+
   <Page
     requireAnyRole={switch scope {
     | Admin => [ListApplications]
@@ -551,7 +558,11 @@ let make = (~api: Api.t, ~modal: Modal.Interface.t, ~scope=Admin) => {
       {React.string(
         switch scope {
         | Admin => "Applications"
-        | Workplace => "Workplace Applications"
+        | Workplace =>
+          switch workplace {
+          | Success(w) => "Applications of " ++ w.name
+          | _ => "Workplace Applications"
+          }
         },
       )}
     </Page.Title>

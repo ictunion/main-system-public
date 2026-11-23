@@ -59,8 +59,10 @@ pub async fn start(config: Config) -> Result<(), StartupError> {
 
     let queue = processing::start(&config, processing_db_pool, &provider);
 
-    // This will not work, until we figure out how to provide JWT Token for Keycloak calls
-    processing::ensure_member_subs(&web_db_pool, &queue).await;
+    // Only does anything with the Keycloak service account configured.
+    // Spawned: filling the bounded queue must not hold back the listener.
+    let (subs_pool, subs_queue) = (web_db_pool.clone(), queue.clone());
+    tokio::spawn(async move { processing::ensure_member_subs(&subs_pool, &subs_queue).await });
 
     let address = SocketAddr::new(config.address, config.port);
 

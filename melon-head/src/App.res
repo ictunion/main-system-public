@@ -4,8 +4,8 @@ module ConfiguredApp = {
   @react.component
   let make = (~oidc: Oidc.t, ~config: Config.t) => {
     let oidcUser = Oidc.getUser(oidc)
-    let api = Api.make(~config, ~oidcUser)
-    let bankApi = Api.makeBank(~config, ~oidcUser)
+    let api = Api.make(~config, ~oidc)
+    let bankApi = Api.makeBank(~config, ~oidc)
     let bankEnabled = config->Config.bankEnabled
 
     let (sessionState: Api.webData<Session.t>, setSessionState) = React.useState(RemoteData.init)
