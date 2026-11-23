@@ -55,16 +55,6 @@ let make = (
                 </td>
               </tr>
               <tr>
-                <td> {React.string("realm")} </td>
-                <td className={styles["realm-roles"]}>
-                  {React.array(
-                    ses.tokenClaims.realmRoles->Array.map(r => {
-                      <ShowRole role={Session.showRealmRole(r)} key={Session.showRealmRole(r)} />
-                    }),
-                  )}
-                </td>
-              </tr>
-              <tr>
                 <td> {React.string("roles")} </td>
                 <td className={styles["roles"]}>
                   {React.array(

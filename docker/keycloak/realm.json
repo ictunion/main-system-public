@@ -608,9 +608,6 @@
       "attributes": {},
       "realmRoles": [],
       "clientRoles": {
-        "realm-management": [
-          "manage-users"
-        ],
         "orca": [
           "super-powers",
           "view-application",
@@ -815,7 +812,7 @@
       "id": "6d0c3a52-8f1e-4b7a-9c24-5e8b1f3a7d90",
       "clientId": "orca-service",
       "name": "orca-service",
-      "description": "Orca's own account for background Keycloak admin calls (creating member accounts)",
+      "description": "Orca's own account for all Keycloak admin API calls",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
       "secret": "orca-service-dev-secret",
@@ -826,7 +823,23 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
       "protocol": "openid-connect",
-      "fullScopeAllowed": true
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "service_account",
+        "web-origins",
+        "acr",
+        "kc-admin-api",
+        "roles",
+        "profile",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
     },
     {
       "id": "be669107-79ad-403e-ac2c-66bbfe1a7fde",
@@ -1270,6 +1283,28 @@
     }
   ],
   "clientScopes": [
+    {
+      "name": "kc-admin-api",
+      "description": "Grants access to the Keycloak Admin REST API by adding its required audience to the token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "admin-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-admin-api-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "lightweight.claim": "true",
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
     {
       "id": "1bdb009c-3555-40ca-9623-52192f8c7aef",
       "name": "address",

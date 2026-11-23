@@ -124,16 +124,16 @@ impl IntoResponse for SenderError {
 impl IntoResponse for oid::Error {
     fn into_response(self) -> axum::response::Response {
         use oid::Error::{
-            BadKey, BadToken, Disabled, Http, MissingOneOfRoles, MissingRealmRole, MissingRole,
-            Parsing, Proxy,
+            BadKey, BadToken, Disabled, Http, MissingOneOfRoles, MissingRole,
+            MissingServiceAccount, Parsing, Proxy,
         };
 
         warn!("JWT verification failed with {self:?}");
 
         let status = match self {
             Disabled => StatusCode::NOT_FOUND,
-            BadKey(_) | Parsing(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            MissingRole(_) | MissingRealmRole(_) | MissingOneOfRoles(_) => StatusCode::FORBIDDEN,
+            BadKey(_) | Parsing(_) | MissingServiceAccount => StatusCode::INTERNAL_SERVER_ERROR,
+            MissingRole(_) | MissingOneOfRoles(_) => StatusCode::FORBIDDEN,
             BadToken(_) => StatusCode::UNAUTHORIZED,
             Http(_) => StatusCode::BAD_GATEWAY,
             Proxy(status_code) => StatusCode::from_u16(status_code.as_u16())

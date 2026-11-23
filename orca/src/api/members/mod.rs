@@ -22,7 +22,7 @@ use crate::data::{Id, Member, MemberNumber, Office};
 use crate::db::DbPool;
 use crate::newsletter::Newsletter;
 use crate::processing::{Command, QueueSender};
-use crate::server::oid::{JwtToken, Provider, RealmManagementRole, Role, User};
+use crate::server::oid::{JwtToken, Provider, Role, User};
 use crate::validation::Validated;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -303,7 +303,7 @@ async fn accept(
     token: JwtToken,
     ApiPath(id): ApiPath<Id<Member>>,
 ) -> Response<Json<MemberDetail>> {
-    oid_provider.require_realm_role(&token, RealmManagementRole::ManageUsers)?;
+    oid_provider.require_role(&token, Role::ResolveApplications)?;
 
     let status = query::get_status_data(&db_pool, id).await?;
 
@@ -684,7 +684,7 @@ async fn remove_member(
 
     // Remove from keycloak if paired
     if let Some(uuid) = status.sub {
-        oid_provider.remove_user(&token, uuid).await?;
+        oid_provider.remove_user(uuid).await?;
     }
 
     if status.left_at.is_some() {
@@ -716,7 +716,7 @@ async fn list_candidate_users(
     let detail = query::detail(&db_pool, id).await?;
 
     match detail.email {
-        Some(email) => Ok(Json(oid_provider.get_matching_users(&token, email).await?)),
+        Some(email) => Ok(Json(oid_provider.get_matching_users(email).await?)),
         None => Ok(Json(Vec::new())),
     }
 }
@@ -741,12 +741,7 @@ async fn create_oid_account(
         return Err(ApiError::data_conflict("Member already has an OID account"));
     }
 
-    queue
-        .send(Command::NewMemberCreated(
-            id,
-            Some(token.as_str().to_owned()),
-        ))
-        .await?;
+    queue.send(Command::NewMemberCreated(id)).await?;
 
     Ok(SuccessResponse::Accepted)
 }
@@ -767,7 +762,7 @@ async fn add_to_oid_group(
         .ok_or_else(|| ApiError::data_conflict("Member has no OID account"))?;
 
     oid_provider
-        .connect_keycloak_user_and_group(&token, sub, group_id)
+        .connect_keycloak_user_and_group(sub, group_id)
         .await?;
 
     Ok(SuccessResponse::Accepted)

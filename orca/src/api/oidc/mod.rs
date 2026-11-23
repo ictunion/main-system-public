@@ -23,7 +23,7 @@ async fn list_oid_group_members(
 
     let group_id = Uuid::parse_str(&group_id).map_err(|_err| ApiError::invalid_group_id())?;
     let ids = oid_provider
-        .get_group_members(&token, group_id)
+        .get_group_members(group_id)
         .await
         .map_err(|err| match err {
             oid::Error::Proxy(s) if s.as_u16() == 404 => ApiError::oidc_group_not_found(),

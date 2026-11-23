@@ -618,12 +618,7 @@ async fn accept(
 
     newsletter.create_member(&db_pool, &token, member_id).await;
 
-    queue
-        .send(Command::NewMemberCreated(
-            member_id,
-            Some(token.as_str().to_owned()),
-        ))
-        .await?;
+    queue.send(Command::NewMemberCreated(member_id)).await?;
 
     queue.send(Command::SendNotificationToTreasurer).await?;
 

@@ -409,7 +409,7 @@ async fn assign_member_to_workplace_impl(
     })?;
 
     oid_provider
-        .connect_keycloak_user_and_group(token, keycloak_id, workplace_details.keycloak_group_id)
+        .connect_keycloak_user_and_group(keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
     // Only touch the executive group on an actual transition -- most PUTs here
@@ -419,11 +419,11 @@ async fn assign_member_to_workplace_impl(
     if let Some(keycloak_executive_group_id) = workplace_details.keycloak_executive_group_id {
         if is_representative && !was_representative {
             oid_provider
-                .connect_keycloak_user_and_group(token, keycloak_id, keycloak_executive_group_id)
+                .connect_keycloak_user_and_group(keycloak_id, keycloak_executive_group_id)
                 .await?;
         } else if !is_representative && was_representative {
             oid_provider
-                .remove_keycloak_user_from_group(token, keycloak_id, keycloak_executive_group_id)
+                .remove_keycloak_user_from_group(keycloak_id, keycloak_executive_group_id)
                 .await?;
         }
     }
@@ -503,7 +503,7 @@ async fn remove_member_from_workplace(
     })?;
 
     oid_provider
-        .remove_keycloak_user_from_group(&token, keycloak_id, workplace_details.keycloak_group_id)
+        .remove_keycloak_user_from_group(keycloak_id, workplace_details.keycloak_group_id)
         .await?;
 
     if let (true, Some(keycloak_executive_group_id)) = (
@@ -511,7 +511,7 @@ async fn remove_member_from_workplace(
         workplace_details.keycloak_executive_group_id,
     ) {
         oid_provider
-            .remove_keycloak_user_from_group(&token, keycloak_id, keycloak_executive_group_id)
+            .remove_keycloak_user_from_group(keycloak_id, keycloak_executive_group_id)
             .await?;
     }
 

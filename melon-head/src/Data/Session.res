@@ -34,16 +34,6 @@ let showOrcaRole = (r: orcaRole): string =>
   | SuperPowers => "super-powers"
   }
 
-type realmRole =
-  | UnknownRealmRole(string)
-  | ManageUsers
-
-let showRealmRole = (r: realmRole): string =>
-  switch r {
-  | UnknownRealmRole(str) => str
-  | ManageUsers => "manage-users"
-  }
-
 type bankRole =
   | UnknownBankRole(string)
   | PaymentHistory
@@ -61,7 +51,6 @@ type tokenClaims = {
   email: Email.t,
   name: option<string>,
   orcaRoles: array<orcaRole>,
-  realmRoles: array<realmRole>,
   bankRoles: array<bankRole>,
 }
 
@@ -72,11 +61,6 @@ type t = {
 
 let hasRole = (session, ~role: orcaRole): bool => {
   let allRoles = session.tokenClaims.orcaRoles
-  Array.some(allRoles, r => r == role)
-}
-
-let hasRealmRole = (session, ~role: realmRole): bool => {
-  let allRoles = session.tokenClaims.realmRoles
   Array.some(allRoles, r => r == role)
 }
 
@@ -114,24 +98,10 @@ module Decode = {
     }
   })
 
-  let realmRole = string->map(str => {
-    switch str {
-    | "manage-users" => ManageUsers
-    | _ => UnknownRealmRole(str)
-    }
-  })
-
   let orcaRoles = object(field =>
     field.optional(
       "orca",
       object(field => field.required("roles", array(orcaRole))),
-    )->Option.getOr([])
-  )
-
-  let realmRoles = object(field =>
-    field.optional(
-      "realm-management",
-      object(field => field.required("roles", array(realmRole))),
     )->Option.getOr([])
   )
 
@@ -155,7 +125,6 @@ module Decode = {
     email: field.required("email", Email.decode),
     name: field.required("name", option(string)),
     orcaRoles: field.required("resource_access", orcaRoles),
-    realmRoles: field.required("resource_access", realmRoles),
     bankRoles: field.required("resource_access", bankRoles),
   })
 

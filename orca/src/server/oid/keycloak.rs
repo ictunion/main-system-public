@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use super::{Error, JwtClaims, JwtToken, OidProvider, RealmManagementRole, Role, User};
+use super::{Error, JwtClaims, JwtToken, OidProvider, Role, User};
 use crate::server::jwk;
 
 const ORCA_AUDIENCE: &str = "orca";
@@ -24,7 +24,7 @@ pub struct KeycloakProvider {
     host: String,
     realm: String,
     /// `(client_id, client_secret)` for the client credentials grant
-    service_account: Option<(String, String)>,
+    service_account: (String, String),
 }
 
 impl KeycloakProvider {
@@ -32,7 +32,7 @@ impl KeycloakProvider {
         host: &str,
         realm: &str,
         client_id: String,
-        service_account: Option<(String, String)>,
+        service_account: (String, String),
     ) -> Result<Self, Error> {
         let url = keycloak_url(host, realm);
         let key = jwk::fetch_jwk(&format!("{url}/protocol/openid-connect/certs")).await?;
@@ -51,24 +51,48 @@ impl KeycloakProvider {
             service_account,
         };
 
-        // Fail at startup, not silently in every background job, when the
-        // service client is missing in this realm or the secret is wrong.
-        provider.service_token().await?;
+        // Fail at startup, not on every admin call, when the service client is
+        // missing in this realm, the secret is wrong, or its token is refused by
+        // the Admin API (missing `kc-admin-api` scope or `manage-users` role).
+        provider.check_admin_api().await?;
 
         Ok(provider)
     }
 
-    /// Fresh token via the client credentials grant. Fetched per call on purpose:
-    /// it's only used by background jobs, and caching would bring back expiry issues.
-    pub async fn service_token(&self) -> Result<Option<JwtToken>, Error> {
+    /// Cheapest read-only Admin API call, made with the service token.
+    async fn check_admin_api(&self) -> Result<(), Error> {
+        let token = self.service_token().await?;
+        let response = reqwest::Client::new()
+            .get(format!(
+                "{}/admin/realms/{}/users?max=1&briefRepresentation=true",
+                self.host, self.realm
+            ))
+            .header("Authorization", format!("Bearer {}", token.string))
+            .send()
+            .await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            error!(
+                "Keycloak Admin API refused the service account token: {status}. \
+                 Check that the service client has the `kc-admin-api` default client scope \
+                 and the realm-management `manage-users` role"
+            );
+            return Err(Error::Proxy(status));
+        }
+
+        Ok(())
+    }
+
+    /// Fresh token via the client credentials grant, used for every Admin API call.
+    /// Fetched per call on purpose: caching would bring back expiry issues.
+    async fn service_token(&self) -> Result<JwtToken, Error> {
         #[derive(Deserialize)]
         struct TokenResponse {
             access_token: String,
         }
 
-        let Some((client_id, client_secret)) = &self.service_account else {
-            return Ok(None);
-        };
+        let (client_id, client_secret) = &self.service_account;
 
         let response = reqwest::Client::new()
             .post(format!(
@@ -90,19 +114,12 @@ impl KeycloakProvider {
         }
 
         let body: TokenResponse = response.json().await?;
-        Ok(Some(JwtToken::new(body.access_token)))
+        Ok(JwtToken::new(body.access_token))
     }
 
     // FIXME: Might be better either as a method on a newtype wrapping `TokenData`, or extension trait
     fn has_role(&self, claims: &JwtClaims, role: &str) -> bool {
         match claims.resource_access.get(&self.client_id) {
-            Some(r) => r.roles.iter().any(|x| *x == role),
-            None => false,
-        }
-    }
-
-    fn has_realm_role(claims: &JwtClaims, role: &str) -> bool {
-        match claims.resource_access.get("realm-management") {
             Some(r) => r.roles.iter().any(|x| *x == role),
             None => false,
         }
@@ -132,19 +149,6 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    fn require_realm_role(
-        &self,
-        token: &JwtToken,
-        role: RealmManagementRole,
-    ) -> Result<TokenData<JwtClaims>, Error> {
-        let token_data = self.decode_jwt(token)?;
-        if Self::has_realm_role(&token_data.claims, role.to_json_val()) {
-            Ok(token_data)
-        } else {
-            Err(Error::MissingRealmRole(role))
-        }
-    }
-
     fn require_any_role(
         &self,
         token: &JwtToken,
@@ -162,7 +166,7 @@ impl OidProvider for KeycloakProvider {
         Err(Error::MissingOneOfRoles(roles.to_vec()))
     }
 
-    async fn create_user(&self, token: &JwtToken, user: &User) -> Result<Uuid, Error> {
+    async fn create_user(&self, user: &User) -> Result<Uuid, Error> {
         // Keycloak expects json body with data about user
         let json = json!({
             "firstName": user.first_name,
@@ -174,6 +178,7 @@ impl OidProvider for KeycloakProvider {
         });
 
         // Send request to create a new user
+        let token = self.service_token().await?;
         let client = reqwest::Client::new();
         let response = client
             .post(format!("{}/admin/realms/{}/users", self.host, self.realm))
@@ -214,8 +219,9 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn remove_user(&self, token: &JwtToken, id: Uuid) -> Result<(), Error> {
+    async fn remove_user(&self, id: Uuid) -> Result<(), Error> {
         // Send request to create a new user
+        let token = self.service_token().await?;
         let client = reqwest::Client::new();
         let response = client
             .delete(format!(
@@ -238,12 +244,9 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn get_matching_users(
-        &self,
-        token: &JwtToken,
-        email: String,
-    ) -> Result<Vec<User>, Error> {
+    async fn get_matching_users(&self, email: String) -> Result<Vec<User>, Error> {
         // query keycloak for user using email filtering
+        let token = self.service_token().await?;
         let client = reqwest::Client::new();
         let response = client
             .get(format!(
@@ -261,10 +264,10 @@ impl OidProvider for KeycloakProvider {
 
     async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
+        let token = self.service_token().await?;
         let client = reqwest::Client::new();
         let response = client
             .put(format!(
@@ -289,10 +292,10 @@ impl OidProvider for KeycloakProvider {
 
     async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
+        let token = self.service_token().await?;
         let client = reqwest::Client::new();
         let response = client
             .delete(format!(
@@ -315,16 +318,13 @@ impl OidProvider for KeycloakProvider {
         }
     }
 
-    async fn get_group_members(
-        &self,
-        token: &JwtToken,
-        group_id: Uuid,
-    ) -> Result<Vec<Uuid>, Error> {
+    async fn get_group_members(&self, group_id: Uuid) -> Result<Vec<Uuid>, Error> {
         #[derive(serde::Deserialize)]
         struct GroupMember {
             id: Uuid,
         }
 
+        let token = self.service_token().await?;
         let client = reqwest::Client::new();
         let response = client
             .get(format!(

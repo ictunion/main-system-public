@@ -27,14 +27,14 @@ use crate::config::templates;
 use crate::data::{Id, Member, RegistrationRequest, Workplace};
 use crate::db::DbPool;
 use crate::media::{ImageData, TexEscape};
-use crate::server::oid::{JwtToken, Provider};
+use crate::server::oid::Provider;
 
 #[derive(Debug)]
 pub enum Command {
     NewRegistrationRequest(Id<RegistrationRequest>, ImageData),
     ResentRegistrationEmail(Id<RegistrationRequest>),
     SendEmailAsTreasurer(String, String, String, String),
-    NewMemberCreated(Id<Member>, Option<String>),
+    NewMemberCreated(Id<Member>),
     SendNotificationToTreasurer,
     NewWorkplaceDocument(Id<Workplace>, workplace_documents::WorkplaceDocument),
 }
@@ -51,7 +51,7 @@ impl std::fmt::Display for Command {
             Self::SendEmailAsTreasurer(_, _, email, _) => {
                 write!(f, "SendEmailAsTreasurer to member with email: {email}")
             }
-            Self::NewMemberCreated(id, _) => {
+            Self::NewMemberCreated(id) => {
                 write!(f, "NewMemberCreated id: {id}")
             }
             Self::SendNotificationToTreasurer => {
@@ -111,7 +111,7 @@ pub async fn ensure_member_subs(db_pool: &DbPool, queue: &QueueSender) {
                 members.len()
             );
             for member_id in members {
-                if let Err(e) = queue.send(Command::NewMemberCreated(member_id, None)).await {
+                if let Err(e) = queue.send(Command::NewMemberCreated(member_id)).await {
                     error!("Failed to enqueue NewMemberCreated for member {member_id}: {e}");
                 }
             }
@@ -142,8 +142,6 @@ enum ProcessingError {
     MjmlRender(String),
     #[error("OID provider error: {0}")]
     Oid(#[from] crate::server::oid::Error),
-    #[error("NewMemberCreated command is missing OID token")]
-    MissingOidToken,
     #[error("TeX exited with: {0}")]
     Tex(ExitStatus),
     #[error("union_chairperson_member_id is not configured")]
@@ -207,8 +205,8 @@ async fn process(
                 .multipart(MultiPart::related().singlepart(SinglePart::html(message_html)))?;
             send_email(config, message).await?;
         }
-        NewMemberCreated(member_id, token_opt) => {
-            process_new_member_created(member_id, token_opt, config, db_pool, oid_provider).await?;
+        NewMemberCreated(member_id) => {
+            process_new_member_created(member_id, config, db_pool, oid_provider).await?;
         }
         SendNotificationToTreasurer => {
             process_confirmation_email_for_treasurer(config).await?;
@@ -224,25 +222,18 @@ async fn process(
 
 async fn process_new_member_created(
     member_id: Id<Member>,
-    token_opt: Option<String>,
     config: &Config,
     db_pool: &DbPool,
     oid_provider: &Provider,
 ) -> Result<(), ProcessingError> {
-    // Prefer our own service token: the user's token is short-lived and may
-    // already be expired by the time this runs.
-    let token = match oid_provider.service_token().await? {
-        Some(token) => token,
-        None => JwtToken::new(token_opt.ok_or(ProcessingError::MissingOidToken)?),
-    };
     let oid_user = query::get_member_for_oid(db_pool, member_id).await?;
 
-    let sub_uuid = match oid_provider.create_user(&token, &oid_user).await {
+    let sub_uuid = match oid_provider.create_user(&oid_user).await {
         Ok(uuid) => uuid,
         Err(crate::server::oid::Error::Proxy(status)) if status.as_u16() == 409 => {
             info!("Keycloak user already exists for member {member_id}, looking up by email");
             let matching = oid_provider
-                .get_matching_users(&token, oid_user.email.clone())
+                .get_matching_users(oid_user.email.clone())
                 .await?;
             matching.into_iter().find_map(|u| u.uuid()).ok_or_else(|| {
                 crate::server::oid::Error::Parsing(format!(
@@ -257,7 +248,7 @@ async fn process_new_member_created(
 
     if let Some(group_id) = config.keycloak_members_group_id {
         oid_provider
-            .connect_keycloak_user_and_group(&token, sub_uuid, group_id)
+            .connect_keycloak_user_and_group(sub_uuid, group_id)
             .await?;
     }
 
@@ -265,7 +256,7 @@ async fn process_new_member_created(
     // application on accept) -- join its group now that we have a sub.
     for group_id in query::list_member_workplace_group_ids(db_pool, member_id).await? {
         oid_provider
-            .connect_keycloak_user_and_group(&token, sub_uuid, group_id)
+            .connect_keycloak_user_and_group(sub_uuid, group_id)
             .await?;
     }
 

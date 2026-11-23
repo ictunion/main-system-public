@@ -430,10 +430,6 @@ let make = (
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ManageMembers)} />},
     ),
     (
-      "Manage realm users",
-      session => {<ViewBool value={Session.hasRealmRole(session, ~role=Session.ManageUsers)} />},
-    ),
-    (
       "List all workplaces",
       session => {<ViewBool value={Session.hasRole(session, ~role=Session.ListWorkplaces)} />},
     ),

@@ -108,19 +108,6 @@ impl Display for Role {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum RealmManagementRole {
-    ManageUsers,
-}
-
-impl RealmManagementRole {
-    fn to_json_val(self) -> &'static str {
-        match self {
-            Self::ManageUsers => "manage-users",
-        }
-    }
-}
-
 #[derive(Clone)]
 enum ProviderState {
     Keycloak(Box<KeycloakProvider>),
@@ -135,36 +122,28 @@ trait OidProvider {
 
     fn require_role(&self, token: &JwtToken, role: Role) -> Result<TokenData<JwtClaims>, Error>;
 
-    fn require_realm_role(
-        &self,
-        token: &JwtToken,
-        role: RealmManagementRole,
-    ) -> Result<TokenData<JwtClaims>, Error>;
-
     fn require_any_role(
         &self,
         token: &JwtToken,
         roles: &[Role],
     ) -> Result<TokenData<JwtClaims>, Error>;
 
-    async fn create_user(&self, token: &JwtToken, user: &User) -> Result<Uuid, Error>;
-    async fn remove_user(&self, token: &JwtToken, id: Uuid) -> Result<(), Error>;
-    async fn get_matching_users(&self, token: &JwtToken, email: String)
-    -> Result<Vec<User>, Error>;
+    // Admin API calls: made with Orca's own service account token, never the
+    // caller's. Callers must check the caller's role before calling these.
+    async fn create_user(&self, user: &User) -> Result<Uuid, Error>;
+    async fn remove_user(&self, id: Uuid) -> Result<(), Error>;
+    async fn get_matching_users(&self, email: String) -> Result<Vec<User>, Error>;
     async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error>;
     async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error>;
-    async fn get_group_members(&self, token: &JwtToken, group_id: Uuid)
-    -> Result<Vec<Uuid>, Error>;
+    async fn get_group_members(&self, group_id: Uuid) -> Result<Vec<Uuid>, Error>;
     async fn get_own_groups(&self, token: &JwtToken) -> Result<Vec<Uuid>, Error>;
 }
 
@@ -187,17 +166,13 @@ impl Provider {
             &config.keycloak_realm,
             &config.keycloak_client_id,
         ) {
-            let service_account = if let (Some(id), Some(secret)) = (
+            let (Some(id), Some(secret)) = (
                 &config.keycloak_service_client_id,
                 &config.keycloak_service_client_secret,
-            ) {
-                Some((id.clone(), secret.clone()))
-            } else {
-                warn!(
-                    "Keycloak service account not configured. Background Keycloak calls fall back to the requesting user's token"
-                );
-                None
+            ) else {
+                return Err(Error::MissingServiceAccount);
             };
+            let service_account = (id.clone(), secret.clone());
             let k =
                 KeycloakProvider::fetch(host, realm, client_id.clone(), service_account).await?;
             return Ok(Provider(ProviderState::Keycloak(Box::new(k))));
@@ -205,14 +180,6 @@ impl Provider {
 
         warn!("Keycloak authorization not configured. Authorization disabled");
         Ok(Provider(ProviderState::Disconnected))
-    }
-
-    /// Token of Orca's own service account, `None` when it isn't configured.
-    pub async fn service_token(&self) -> Result<Option<JwtToken>, Error> {
-        match &self.0 {
-            ProviderState::Keycloak(k) => k.service_token().await,
-            ProviderState::Disconnected => Ok(None),
-        }
     }
 
     pub fn decode_jwt(&self, token: &JwtToken) -> Result<TokenData<JwtClaims>, Error> {
@@ -236,17 +203,6 @@ impl Provider {
         }
     }
 
-    pub fn require_realm_role(
-        &self,
-        token: &JwtToken,
-        role: RealmManagementRole,
-    ) -> Result<TokenData<JwtClaims>, Error> {
-        match &self.0 {
-            ProviderState::Keycloak(k) => k.require_realm_role(token, role),
-            ProviderState::Disconnected => Err(Error::Disabled),
-        }
-    }
-
     pub fn require_any_role(
         &self,
         token: &JwtToken,
@@ -265,29 +221,28 @@ impl Provider {
         }
     }
 
-    pub async fn create_user(&self, token: &JwtToken, user: &User) -> Result<Uuid, Error> {
+    pub async fn create_user(&self, user: &User) -> Result<Uuid, Error> {
         match &self.0 {
-            ProviderState::Keycloak(k) => k.create_user(token, user).await,
+            ProviderState::Keycloak(k) => k.create_user(user).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
-    pub async fn remove_user(&self, token: &JwtToken, id: Uuid) -> Result<(), Error> {
+    pub async fn remove_user(&self, id: Uuid) -> Result<(), Error> {
         match &self.0 {
-            ProviderState::Keycloak(k) => k.remove_user(token, id).await,
+            ProviderState::Keycloak(k) => k.remove_user(id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
     pub async fn connect_keycloak_user_and_group(
         &self,
-        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => {
-                k.connect_keycloak_user_and_group(token, keycloak_user_id, keycloak_group_id)
+                k.connect_keycloak_user_and_group(keycloak_user_id, keycloak_group_id)
                     .await
             }
             ProviderState::Disconnected => Err(Error::Disabled),
@@ -296,37 +251,28 @@ impl Provider {
 
     pub async fn remove_keycloak_user_from_group(
         &self,
-        token: &JwtToken,
         keycloak_user_id: Uuid,
         keycloak_group_id: Uuid,
     ) -> Result<(), Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => {
-                k.remove_keycloak_user_from_group(token, keycloak_user_id, keycloak_group_id)
+                k.remove_keycloak_user_from_group(keycloak_user_id, keycloak_group_id)
                     .await
             }
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
-    pub async fn get_matching_users(
-        &self,
-        token: &JwtToken,
-        email: String,
-    ) -> Result<Vec<User>, Error> {
+    pub async fn get_matching_users(&self, email: String) -> Result<Vec<User>, Error> {
         match &self.0 {
-            ProviderState::Keycloak(k) => k.get_matching_users(token, email).await,
+            ProviderState::Keycloak(k) => k.get_matching_users(email).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
 
-    pub async fn get_group_members(
-        &self,
-        token: &JwtToken,
-        group_id: Uuid,
-    ) -> Result<Vec<Uuid>, Error> {
+    pub async fn get_group_members(&self, group_id: Uuid) -> Result<Vec<Uuid>, Error> {
         match &self.0 {
-            ProviderState::Keycloak(k) => k.get_group_members(token, group_id).await,
+            ProviderState::Keycloak(k) => k.get_group_members(group_id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -352,12 +298,12 @@ pub enum Error {
     BadToken(#[from] jsonwebtoken::errors::Error),
     #[error("Token is missing role: {0:?}")]
     MissingRole(Role),
-    #[error("Token is missing realm role {0:?}")]
-    MissingRealmRole(RealmManagementRole),
     #[error("One of roles missing: {0:?}")]
     MissingOneOfRoles(Vec<Role>),
     #[error("Keycloak is disconnected")]
     Disabled,
+    #[error("keycloak_service_client_id and keycloak_service_client_secret must be set")]
+    MissingServiceAccount,
     #[error("Http error: {0}")]
     Http(#[from] reqwest::Error),
     #[error("Parsing error: {0}")]

@@ -50,10 +50,10 @@ keycloak_host = "http://localhost:8180"
 keycloak_realm = "members"
 keycloak_client_id = "orca"
 keycloak_members_group_id = "f2d3fe95-05e0-4d00-9e8c-9a189fdbf495"
-# Confidential client whose service account has realm-management/manage-users.
-# Used by background jobs (creating member Keycloak accounts) instead of the
-# requesting user's short-lived token. Without it those jobs use the user's token
-# and fail with 401 once it expires. Set the secret via
+# Required when Keycloak is configured. Confidential client whose service account
+# has realm-management/manage-users and the kc-admin-api default client scope.
+# Every Keycloak Admin API call (creating accounts, group membership, ...) is made
+# with its token; Orca refuses to start without it. Set the secret via
 # ROCKET_KEYCLOAK_SERVICE_CLIENT_SECRET in production.
 keycloak_service_client_id = "orca-service"
 keycloak_service_client_secret = "orca-service-dev-secret"
