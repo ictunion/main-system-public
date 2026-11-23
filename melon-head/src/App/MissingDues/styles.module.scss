@@ -69,3 +69,19 @@
     justify-content: center;
     align-items: center;
 }
+
+.payment-info {
+    summary {
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    p {
+        margin: 6px 0;
+    }
+
+    ul {
+        padding: 0 0 0 24px;
+        list-style-type: disc;
+    }
+}

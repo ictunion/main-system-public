@@ -204,6 +204,47 @@ module MissedMonthsCell = {
   }
 }
 
+/* Payment instructions to pass on to members, shown on both missing-dues
+   pages. Native <details>, so it collapses without any state of its own.
+   Hidden when union_bank_account is not configured. */
+module PaymentInfo = {
+  @react.component
+  let make = (~bankAccount: option<string>) =>
+    switch bankAccount {
+    | None => React.null
+    | Some(account) =>
+      <Message.Info>
+        <details className={styles["paymentInfo"]}>
+          <summary> {React.string("How members should pay their dues")} </summary>
+          <p>
+            {React.string(
+              "We recommend setting up a repeating order for the fees to be paid monthly, by 20th of each month:",
+            )}
+          </p>
+          <ul>
+            <li> {React.string("union account: " ++ account)} </li>
+            <li> {React.string("variable symbol: member number")} </li>
+            <li> {React.string("constant symbol: 4710")} </li>
+          </ul>
+          <p>
+            {React.string("The amount to pay is described in this link: ")}
+            <a href="https://ictunion.cz/en/faq/#09-union-fees" target="_blank" rel="noreferrer">
+              {React.string("https://ictunion.cz/en/faq/#09-union-fees")}
+            </a>
+            {React.string(".")}
+          </p>
+          <p>
+            {React.string("You can also contact Treasurer at ")}
+            <a href="mailto:treasurer@ictunion.cz"> {React.string("treasurer@ictunion.cz")} </a>
+            {React.string(" or ")}
+            <a href="mailto:fees@ictunion.cz"> {React.string("fees@ictunion.cz")} </a>
+            {React.string(".")}
+          </p>
+        </details>
+      </Message.Info>
+    }
+}
+
 /* Order of the missing dues list, switched by clicking the Missed Months or
  Last Company header. One direction each, no toggling. */
 type sortBy =
@@ -558,7 +599,7 @@ let tabKey = (tab: option<MemberData.status>) =>
   }
 
 @react.component
-let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
+let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool, ~bankAccount) => {
   let currentYear = Date.make()->Date.getFullYear
 
   let url = RescriptReactRouter.useUrl()
@@ -577,6 +618,7 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
     </Page.Title>
     <RequireFeature enabled=bankEnabled>
       <SessionContext.RequireBankRole anyOf=[Session.PaymentHistory]>
+        <PaymentInfo bankAccount />
         <YearMonthFilter basePath="/missing-dues" year month currentYear />
         <Button.Panel>
           <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />

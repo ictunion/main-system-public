@@ -6,6 +6,7 @@ type t = {
   keycloakClietId: string,
   profileUrl: string,
   keycloakMembersGroupId: option<Data.Uuid.t>,
+  unionBankAccount: option<string>,
 }
 
 module Decode = {
@@ -19,6 +20,7 @@ module Decode = {
     keycloakClietId: field.required("keycloak_client_id", string),
     profileUrl: field.required("profile_url", string),
     keycloakMembersGroupId: field.optional("keycloak_members_group_id", Data.Uuid.decode),
+    unionBankAccount: field.optional("union_bank_account", string),
   })
 }
 

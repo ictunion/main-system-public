@@ -139,7 +139,7 @@ module MissingList = {
 }
 
 @react.component
-let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
+let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool, ~bankAccount) => {
   let currentYear = Date.make()->Date.getFullYear
 
   let url = RescriptReactRouter.useUrl()
@@ -158,6 +158,7 @@ let make = (~api: Api.t, ~bankApi: Api.t, ~bankEnabled: bool) => {
   <Page requireAnyRole=[ListOwnWorkplaceMembers]>
     <Page.Title> {React.string(title ++ " (data synced once per day every morning)")} </Page.Title>
     <RequireFeature enabled=bankEnabled>
+      <MissingDues.PaymentInfo bankAccount />
       <YearMonthFilter basePath="/my-workplace-missing-dues" year month currentYear />
       <Button.Panel>
         <NeverPaidFilter checked=onlyNeverPaid onChange={() => setOnlyNeverPaid(v => !v)} />
