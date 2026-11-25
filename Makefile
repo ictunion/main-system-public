@@ -28,6 +28,12 @@ migrate:
 psql:
 	PGPASSWORD=$(DB_PASSWORD) psql -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -U $(DB_SUPERUSER)
 
+.PHONY: test-all
+test-all:
+	DATABASE_URL=postgres://$(DB_SUPERUSER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME) SQLX_OFFLINE=true \
+		nix develop .#orca --command cargo test --manifest-path orca/Cargo.toml -- --include-ignored
+	cd melon-head && nix develop ..#melon-head --command sh -c 'npm test && npm run e2e'
+
 .PHONY: orca
 orca: orca/result
 	pushd orca && ./result/bin/orca

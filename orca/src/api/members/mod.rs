@@ -25,6 +25,7 @@ use crate::processing::{Command, QueueSender};
 use crate::server::oid::{JwtToken, Provider, Role, User};
 use crate::validation::Validated;
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct MemberSummary {
     pub(crate) id: Id<Member>,
@@ -182,6 +183,7 @@ async fn send_email(
     Ok(SuccessResponse::Accepted)
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct MemberDetail {
     id: Id<Member>,
@@ -337,6 +339,7 @@ async fn list_files(
     Ok(Json(files))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct Occupation {
     id: Id<Occupation>,
@@ -443,6 +446,7 @@ async fn delete_occupation(
 /// member, ...). Called "office" rather than "role" to keep it apart from
 /// Keycloak roles. An office is current until its `term_ends_on` has passed,
 /// then it is history. Records deleted as mistakes are never returned.
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct MemberOffice {
     id: Id<Office>,

@@ -238,6 +238,16 @@ impl Serialize for FileType {
     }
 }
 
+// Only the fixture contract test reads a FileType back from JSON.
+#[cfg(test)]
+impl<'de> Deserialize<'de> for FileType {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 impl Type<Postgres> for FileType {
     fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
         <&str as Type<Postgres>>::type_info()

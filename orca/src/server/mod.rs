@@ -51,6 +51,17 @@ impl Serialize for IpAddress {
     }
 }
 
+// Only the fixture contract test reads an IpAddress back from JSON.
+#[cfg(test)]
+impl<'de> serde::Deserialize<'de> for IpAddress {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        <String as serde::Deserialize>::deserialize(deserializer)?
+            .parse()
+            .map(IpAddress)
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 impl<S: Send + Sync> FromRequestParts<S> for IpAddress {
     type Rejection = ApiError;
 

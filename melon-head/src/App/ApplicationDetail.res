@@ -114,12 +114,7 @@ let viewSignature = (~api: Api.t, signature: option<Data.file>) => {
   <div className={styles["signature"]}>
     {switch signature {
     | Some(file) => {
-        let src =
-          api.host ++
-          "/files/" ++
-          file.id->Uuid.toString ++
-          "?token=" ++
-          Api.getToken(api)
+        let src = api.host ++ "/files/" ++ file.id->Uuid.toString ++ "?token=" ++ Api.getToken(api)
         <img alt="signature" src />
       }
     | None => React.string("Not Found")

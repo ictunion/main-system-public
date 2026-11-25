@@ -5,3 +5,6 @@ src/**/*.bs.js
 /config.json
 .bsb.lock
 .merlin
+test/**/*.bs.js
+/test-results
+/playwright-report

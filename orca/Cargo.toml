@@ -36,6 +36,9 @@ mrml = "6.0.1"
 thiserror = "2.0.9"
 base64 = "0.22.1"
 
+[dev-dependencies]
+tower = { version = "0.5.3", features = [ "util" ] }
+
 [lints.rust]
 ambiguous_negative_literals = "warn"
 missing_debug_implementations = "warn"

@@ -7,12 +7,14 @@
     "start": "webpack-dev-server",
     "watch": "rescript watch",
     "format": "rescript format",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "rescript build && vitest run",
+    "e2e": "playwright test"
   },
   "author": "",
   "license": "AGPL-3.0-or-later",
   "devDependencies": {
     "@glennsl/rescript-json-combinators": "^1.6.0",
+    "@playwright/test": "1.59.1",
     "@rescript/react": "^0.15.0",
     "@types/node": "^25.9.0",
     "@types/react-dom": "^19.2.3",
@@ -24,11 +26,13 @@
     "rescript": "^12.3.1",
     "rescript-future": "^3.0.0",
     "rescript-request": "^4.0.1",
+    "rescript-vitest": "^3.0.1",
     "sass": "^1.68.0",
     "sass-loader": "^13.3.2",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.5.7",
     "typescript": "^6.0.3",
+    "vitest": "^4.1.12",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.1"

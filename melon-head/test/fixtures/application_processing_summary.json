@@ -1,0 +1,14 @@
+{
+  "id": "00000000-0000-4000-8000-000000000010",
+  "email": "jana@example.com",
+  "first_name": "Jana",
+  "last_name": "Nováková",
+  "phone_number": "+420777123456",
+  "note": null,
+  "city": "Praha",
+  "company_name": "ACME s.r.o.",
+  "registration_local": "cs",
+  "created_at": "2026-05-01T10:15:30.123456Z",
+  "confirmed_at": "2026-06-02T08:00:00Z",
+  "approved_by_reps_at": null
+}

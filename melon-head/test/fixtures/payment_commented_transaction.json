@@ -1,0 +1,8 @@
+{
+  "member_number": 42,
+  "processed_transaction_id": 6,
+  "transaction_date": "2026-05-01T10:15:30.123456Z",
+  "amount": "100.00",
+  "currency": "CZK",
+  "admin_comment": "Wrong VS"
+}

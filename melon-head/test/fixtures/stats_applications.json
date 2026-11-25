@@ -1,0 +1,7 @@
+{
+  "unverified": 1,
+  "accepted": 2,
+  "rejected": 3,
+  "processing": 4,
+  "invalid": 5
+}

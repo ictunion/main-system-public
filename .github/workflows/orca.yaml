@@ -32,3 +32,83 @@ jobs:
 
       - name: Build via nix
         run: nix build .#orca-min --log-format raw
+
+  # Endpoint tests marked `#[ignore = "needs postgres"]`, see docs/testing.md.
+  # `nix flake check` above runs only the tests that need no database.
+  db-tests:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_IMAGE: postgres:15.2-alpine
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      # Same image caching as in gray-whale.yaml
+      - name: Restore postgres image cache
+        id: postgres-image-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/docker-images/postgres.tar
+          key: docker-image-${{ env.POSTGRES_IMAGE }}
+
+      - name: Load postgres image from cache
+        if: steps.postgres-image-cache.outputs.cache-hit == 'true'
+        run: docker load --input "$RUNNER_TEMP/docker-images/postgres.tar"
+
+      - name: Pull and save postgres image
+        if: steps.postgres-image-cache.outputs.cache-hit != 'true'
+        run: |
+          docker pull "$POSTGRES_IMAGE"
+          mkdir -p "$RUNNER_TEMP/docker-images"
+          docker save --output "$RUNNER_TEMP/docker-images/postgres.tar" "$POSTGRES_IMAGE"
+
+      # Started early so postgres boots while nix installs and cargo builds.
+      # Tests need a superuser: they create a template database and one per test.
+      - name: Start postgres
+        run: |
+          docker run --detach --name postgres \
+            --env POSTGRES_USER=postgres \
+            --env POSTGRES_PASSWORD=superuser \
+            --publish 5432:5432 \
+            --health-cmd pg_isready \
+            --health-interval 2s \
+            --health-timeout 5s \
+            --health-retries 15 \
+            "$POSTGRES_IMAGE"
+
+      # Nix
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            orca/target
+          key: orca-test-${{ hashFiles('orca/Cargo.lock', 'flake.lock') }}
+          restore-keys: orca-test-
+
+      # `query!` macros use the .sqlx cache, not this database, at compile time
+      - name: Build tests
+        env:
+          SQLX_OFFLINE: "true"
+        run: nix develop .#orca --command cargo test --manifest-path orca/Cargo.toml --no-run
+
+      - name: Wait for postgres
+        run: |
+          for _ in $(seq 1 30); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' postgres)" = healthy ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs postgres
+          exit 1
+
+      - name: Run all tests
+        env:
+          SQLX_OFFLINE: "true"
+          DATABASE_URL: postgres://postgres:superuser@localhost:5432/postgres
+        run: nix develop .#orca --command cargo test --manifest-path orca/Cargo.toml -- --include-ignored

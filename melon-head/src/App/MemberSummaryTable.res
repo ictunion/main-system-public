@@ -3,7 +3,8 @@ open Data
 let viewPaddedNumber = (n: int, ~isRepresentative: option<bool>=None, ()): React.element => {
   let stringified = Int.toString(n)
   let prefix = "0000000"
-  let shortenedPrefix = prefix->String.slice(~start=0, ~end=7 - String.length(stringified))
+  let shortenedPrefix =
+    prefix->String.slice(~start=0, ~end=Math.Int.max(0, 7 - String.length(stringified)))
   let style: ReactDOM.Style.t = {color: "rgba(var(--rgb_color1), 0.7)"}
 
   <span>

@@ -90,14 +90,19 @@ pub async fn get_members_without_sub(pool: &DbPool) -> sqlx::Result<Vec<Id<Membe
         .map(|ids| ids.into_iter().map(Id::from).collect())
 }
 
-pub async fn get_member_for_oid(pool: &DbPool, id: Id<Member>) -> sqlx::Result<oid::User> {
-    sqlx::query_as!(
-        oid::User,
+pub async fn get_member_for_oid(pool: &DbPool, id: Id<Member>) -> sqlx::Result<oid::NewUser> {
+    // The unused `id` column keeps this SQL, and so its .sqlx cache entry, unchanged.
+    let row = sqlx::query!(
         r#"SELECT NULL::text as id, first_name, last_name, email FROM members WHERE id = $1"#,
         id as _
     )
     .fetch_one(pool)
-    .await
+    .await?;
+    Ok(oid::NewUser {
+        email: row.email,
+        first_name: row.first_name,
+        last_name: row.last_name,
+    })
 }
 
 pub async fn assign_member_oid_sub(pool: &DbPool, id: Id<Member>, uuid: Uuid) -> sqlx::Result<()> {

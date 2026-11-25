@@ -69,7 +69,7 @@ impl std::fmt::Display for Command {
 }
 
 #[derive(Clone)]
-pub struct QueueSender(Sender<Command>);
+pub struct QueueSender(pub(crate) Sender<Command>);
 
 #[derive(Debug, Error)]
 pub enum SenderError {
@@ -235,7 +235,7 @@ async fn process_new_member_created(
             let matching = oid_provider
                 .get_matching_users(oid_user.email.clone())
                 .await?;
-            matching.into_iter().find_map(|u| u.uuid()).ok_or_else(|| {
+            matching.first().map(|u| u.id).ok_or_else(|| {
                 crate::server::oid::Error::Parsing(format!(
                     "No Keycloak user found for email of member {member_id}"
                 ))

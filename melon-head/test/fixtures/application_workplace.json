@@ -1,0 +1,19 @@
+{
+  "workplace": {
+    "id": "00000000-0000-4000-8000-000000000020",
+    "name": "ACME",
+    "email": "acme@example.com",
+    "created_at": "2026-05-01T10:15:30.123456Z",
+    "keycloak_group_id": "00000000-0000-4000-8000-000000000021",
+    "keycloak_executive_group_id": "00000000-0000-4000-8000-000000000022",
+    "announced_at": null,
+    "established_at": "2026-06-02T08:00:00Z",
+    "cancelled_at": null,
+    "newsletter_id": 7,
+    "company_id": "12345678",
+    "company_address": "Ulice 1, Praha",
+    "workplace_short_name": "ACME",
+    "member_count": 12
+  },
+  "approved_by_reps_at": null
+}

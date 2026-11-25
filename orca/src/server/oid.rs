@@ -11,6 +11,8 @@ use std::fmt::Display;
 use thiserror::Error;
 use uuid::Uuid;
 
+#[cfg(test)]
+pub(crate) mod fake;
 mod keycloak;
 
 use super::jwk;
@@ -18,18 +20,41 @@ use crate::api::ApiError;
 use crate::config;
 use keycloak::KeycloakProvider;
 
-#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
+/// A Keycloak user, as the Admin API returns it. Read with Keycloak's camelCase
+/// names, sent on to Melon Head in `snake_case`.
+#[derive(Debug, Deserialize, Serialize)]
 pub struct User {
-    pub(crate) id: Option<String>,
+    pub(crate) id: Uuid,
     pub email: String,
+    #[serde(alias = "firstName")]
     pub(crate) first_name: Option<String>,
+    #[serde(alias = "lastName")]
     pub(crate) last_name: Option<String>,
 }
 
-impl User {
-    pub fn uuid(&self) -> Option<Uuid> {
-        self.id.as_ref().and_then(|s| Uuid::parse_str(s).ok())
+#[cfg(test)]
+mod user_tests {
+    use super::User;
+
+    #[test]
+    fn reads_keycloak_names_and_sends_snake_case() {
+        let user: User = serde_json::from_str(
+            r#"{"id": "00000000-0000-4000-8000-000000000002", "email": "jana@example.com",
+                "firstName": "Jana", "lastName": "Nováková", "enabled": true}"#,
+        )
+        .unwrap();
+        let sent = serde_json::to_value(&user).unwrap();
+        assert_eq!(sent["first_name"], "Jana");
+        assert_eq!(sent["last_name"], "Nováková");
     }
+}
+
+/// A Keycloak account to create for a member; Keycloak assigns the id.
+#[derive(Debug)]
+pub struct NewUser {
+    pub email: String,
+    pub(crate) first_name: Option<String>,
+    pub(crate) last_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -111,6 +136,8 @@ impl Display for Role {
 #[derive(Clone)]
 enum ProviderState {
     Keycloak(Box<KeycloakProvider>),
+    #[cfg(test)]
+    Fake(Box<fake::FakeProvider>),
     Disconnected,
 }
 
@@ -130,7 +157,7 @@ trait OidProvider {
 
     // Admin API calls: made with Orca's own service account token, never the
     // caller's. Callers must check the caller's role before calling these.
-    async fn create_user(&self, user: &User) -> Result<Uuid, Error>;
+    async fn create_user(&self, user: &NewUser) -> Result<Uuid, Error>;
     async fn remove_user(&self, id: Uuid) -> Result<(), Error>;
     async fn get_matching_users(&self, email: String) -> Result<Vec<User>, Error>;
     async fn connect_keycloak_user_and_group(
@@ -188,6 +215,11 @@ impl Provider {
                 let res = k.decode_jwt(token)?;
                 Ok(res)
             }
+            #[cfg(test)]
+            ProviderState::Fake(f) => {
+                let res = f.decode_jwt(token)?;
+                Ok(res)
+            }
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -199,6 +231,8 @@ impl Provider {
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.require_role(token, role),
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.require_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -210,20 +244,37 @@ impl Provider {
     ) -> Result<TokenData<JwtClaims>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.require_any_role(token, role),
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.require_any_role(token, role),
             ProviderState::Disconnected => Err(Error::Disabled),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn fake(fake: fake::FakeProvider) -> Self {
+        Provider(ProviderState::Fake(Box::new(fake)))
+    }
+
+    /// As `init` returns when Keycloak is not configured
+    #[cfg(test)]
+    pub(crate) fn disconnected() -> Self {
+        Provider(ProviderState::Disconnected)
     }
 
     pub fn is_connected(&self) -> bool {
         match self.0 {
             ProviderState::Keycloak(_) => true,
+            #[cfg(test)]
+            ProviderState::Fake(_) => true,
             ProviderState::Disconnected => false,
         }
     }
 
-    pub async fn create_user(&self, user: &User) -> Result<Uuid, Error> {
+    pub async fn create_user(&self, user: &NewUser) -> Result<Uuid, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.create_user(user).await,
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.create_user(user).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -231,6 +282,8 @@ impl Provider {
     pub async fn remove_user(&self, id: Uuid) -> Result<(), Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.remove_user(id).await,
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.remove_user(id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -243,6 +296,11 @@ impl Provider {
         match &self.0 {
             ProviderState::Keycloak(k) => {
                 k.connect_keycloak_user_and_group(keycloak_user_id, keycloak_group_id)
+                    .await
+            }
+            #[cfg(test)]
+            ProviderState::Fake(f) => {
+                f.connect_keycloak_user_and_group(keycloak_user_id, keycloak_group_id)
                     .await
             }
             ProviderState::Disconnected => Err(Error::Disabled),
@@ -259,6 +317,11 @@ impl Provider {
                 k.remove_keycloak_user_from_group(keycloak_user_id, keycloak_group_id)
                     .await
             }
+            #[cfg(test)]
+            ProviderState::Fake(f) => {
+                f.remove_keycloak_user_from_group(keycloak_user_id, keycloak_group_id)
+                    .await
+            }
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -266,6 +329,8 @@ impl Provider {
     pub async fn get_matching_users(&self, email: String) -> Result<Vec<User>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.get_matching_users(email).await,
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.get_matching_users(email).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -273,6 +338,8 @@ impl Provider {
     pub async fn get_group_members(&self, group_id: Uuid) -> Result<Vec<Uuid>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.get_group_members(group_id).await,
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.get_group_members(group_id).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }
@@ -285,6 +352,8 @@ impl Provider {
     pub async fn get_own_groups(&self, token: &JwtToken) -> Result<Vec<Uuid>, Error> {
         match &self.0 {
             ProviderState::Keycloak(k) => k.get_own_groups(token).await,
+            #[cfg(test)]
+            ProviderState::Fake(f) => f.get_own_groups(token).await,
             ProviderState::Disconnected => Err(Error::Disabled),
         }
     }

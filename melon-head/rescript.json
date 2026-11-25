@@ -1,9 +1,9 @@
 {
   "name": "melon-head",
-  "sources": {
-    "dir": "src",
-    "subdirs": true
-  },
+  "sources": [
+    { "dir": "src", "subdirs": true },
+    { "dir": "test", "subdirs": true, "type": "dev" }
+  ],
   "suffix": ".bs.js",
   "package-specs": {
     "module": "esmodule",
@@ -16,5 +16,6 @@
     "@glennsl/rescript-json-combinators",
     "rescript-future",
     "rescript-request"
-  ]
+  ],
+  "dev-dependencies": ["rescript-vitest"]
 }

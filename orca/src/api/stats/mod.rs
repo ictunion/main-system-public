@@ -12,8 +12,9 @@ use crate::api::{AppState, applications};
 use crate::db::DbPool;
 use crate::server::oid::{JwtToken, Provider};
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize)]
-struct ApplicationsBasicStats {
+pub(crate) struct ApplicationsBasicStats {
     unverified: i64,
     accepted: i64,
     rejected: i64,
@@ -57,8 +58,9 @@ async fn count_applications(
     })
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize)]
-struct MembersBasicStats {
+pub(crate) struct MembersBasicStats {
     new: i64,
     current: i64,
     past: i64,
@@ -91,8 +93,9 @@ async fn members_basic_stats(
     }))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize)]
-struct WorkplacesBasicStats {
+pub(crate) struct WorkplacesBasicStats {
     current: i64,
     past: i64,
     active: i64,

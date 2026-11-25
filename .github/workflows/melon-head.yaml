@@ -16,3 +16,56 @@ jobs:
       - name: Build via nix
         working-directory: melon-head
         run: nix build .#melon-head
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: melon-head
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: melon-head/package-lock.json
+
+      - run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  # Inside the melon-head dev shell, as locally: Chromium comes from nixpkgs
+  # (playwright-driver.browsers), matching the pinned @playwright/test.
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: melon-head
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      # setup-node's npm cache, done by hand since node comes from the dev shell
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('melon-head/package-lock.json') }}
+
+      - run: nix develop .#melon-head --command npm ci
+
+      # The bundle imports config.json at build time
+      - run: cp config.example.json config.json
+
+      - name: Run Playwright flows
+        run: nix develop .#melon-head --command npm run e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: melon-head/test-results

@@ -24,6 +24,7 @@ use crate::api::extract::{ApiJson, ApiPath};
 
 mod query;
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationSummary {
     id: Id<RegistrationRequest>,
@@ -51,6 +52,7 @@ async fn list(
     Ok(Json(summaries))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationUnverifiedSummary {
     id: Id<RegistrationRequest>,
@@ -79,6 +81,7 @@ async fn list_unverified(
     Ok(Json(summaries))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationAcceptedSummary {
     id: Id<RegistrationRequest>,
@@ -108,6 +111,7 @@ async fn list_accepted(
     Ok(Json(summaries))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationRejectedSummary {
     id: Id<RegistrationRequest>,
@@ -136,6 +140,7 @@ async fn list_rejected(
     Ok(Json(summaries))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationProcessingSummary {
     id: Id<RegistrationRequest>,
@@ -164,6 +169,7 @@ async fn list_processing(
     Ok(Json(summaries))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationInvalidSummary {
     id: Id<RegistrationRequest>,
@@ -192,6 +198,7 @@ async fn list_invalid(
     Ok(Json(summaries))
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct ApplicationDetail {
     id: Id<RegistrationRequest>,
@@ -730,6 +737,7 @@ pub struct ApplicationWorkplaceRow {
     approved_by_reps_at: Option<DateTime<Utc>>,
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize)]
 pub struct ApplicationWorkplace {
     workplace: WorkplaceSummary,

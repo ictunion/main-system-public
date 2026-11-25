@@ -11,5 +11,6 @@
     "lib": [ "ESNext", "dom" ],
     "strict": true,
     "noUncheckedIndexedAccess": true
-  }
+  },
+  "include": ["src"]
 }

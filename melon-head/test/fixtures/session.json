@@ -1,0 +1,27 @@
+{
+  "token_claims": {
+    "sub": "00000000-0000-4000-8000-000000000002",
+    "resource_access": {
+      "orca": {
+        "roles": [
+          "list-members",
+          "manage-notes",
+          "some-new-role"
+        ]
+      },
+      "bank-system": {
+        "roles": [
+          "payment-history"
+        ]
+      },
+      "account": {
+        "roles": [
+          "view-profile"
+        ]
+      }
+    },
+    "email": "admin@example.com",
+    "name": "Admin"
+  },
+  "member_id": null
+}

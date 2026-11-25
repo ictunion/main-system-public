@@ -23,6 +23,7 @@ pub struct File {
     created_at: DateTime<Utc>,
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct FileInfo {
     pub(crate) id: Id<File>,

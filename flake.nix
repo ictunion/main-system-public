@@ -91,7 +91,7 @@
           };
         melon-head-stuff =
           let
-            buildInputs = [ ];
+            buildInputs = with pkgs; [ nodejs_24 ];
             config = builtins.fromJSON (builtins.readFile ./melon-head/config.example.json);
           in
           {
@@ -100,6 +100,10 @@
               mkShell {
                 name = "ict-union-melon-head-dev";
                 inherit buildInputs;
+                # Browsers downloaded by `npx playwright install` don't run on NixOS.
+                # @playwright/test in package.json must match playwright-driver's version.
+                PLAYWRIGHT_BROWSERS_PATH = "${playwright-driver.browsers}";
+                PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
               };
             package = pkgs.callPackage ./melon-head { inherit config; };
           };
@@ -108,6 +112,7 @@
         devShells = {
           orca = orca-stuff.devShell;
           gray-whale = gray-whale-stuff.devShell;
+          melon-head = melon-head-stuff.devShell;
           default = pkgs.mkShell {
             packages = with pkgs; [
               refinery-cli

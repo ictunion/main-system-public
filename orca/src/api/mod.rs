@@ -13,16 +13,28 @@ use tokio::task::JoinError;
 use validator::ValidationError;
 
 pub(crate) mod applications;
+#[cfg(test)]
+mod auth_tests;
+#[cfg(test)]
+mod contract_tests;
+#[cfg(test)]
+mod edge_tests;
 pub(crate) mod errors;
 pub(crate) mod extract;
 mod files;
 mod members;
+#[cfg(test)]
+mod mutation_tests;
 mod notes;
 mod oidc;
 mod registration;
+#[cfg(test)]
+mod scope_tests;
 mod session;
 mod stats;
 mod sync;
+#[cfg(test)]
+mod test_support;
 mod workplaces;
 
 use crate::api::errors::error_response;

@@ -139,6 +139,7 @@ fn missing_target_as_not_found(err: sqlx::Error) -> ApiError {
     err.into()
 }
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct NoteDetail {
     id: Id<Note>,
@@ -153,6 +154,7 @@ pub struct NoteDetail {
 
 /// One row per target that has at least one note. Only what the table cell
 /// shows; the full thread is loaded when the drawer opens.
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct NoteSummary {
     target_id: Uuid,

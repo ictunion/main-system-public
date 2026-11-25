@@ -1,0 +1,16 @@
+{
+  "processed_transaction_id": 5,
+  "transaction_date": "2026-05-01T10:15:30.123456Z",
+  "amount": "150.00",
+  "currency": "CZK",
+  "covered_months": [
+    {
+      "year": 2026,
+      "month": 4
+    },
+    {
+      "year": 2026,
+      "month": 5
+    }
+  ]
+}

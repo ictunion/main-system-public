@@ -1,5 +1,6 @@
 @use "sass:map";
 @use 'sass:color';
+@use 'sass:string';
 
 $colors-light: (
     color0: #000000,
@@ -14,13 +15,14 @@ $colors-light: (
 );
 
 @function hexToRGB($hex) {
-  @return red($hex), green($hex), blue($hex);
+  @return color.channel($hex, "red", $space: rgb), color.channel($hex, "green", $space: rgb),
+    color.channel($hex, "blue", $space: rgb);
 }
 
 @mixin generate_colors($colors) {
   // Colors
   @each $color, $value in $colors {
-    @if str-slice(#{$value}, 1, 1) == "#" {
+    @if string.slice(#{$value}, 1, 1) == "#" {
       --#{$color}: #{$value};
     } @else {
       --#{$color}: var(--#{$value});
@@ -29,7 +31,7 @@ $colors-light: (
 
   // RGB Colors
   @each $color, $value in $colors {
-    @if str-slice(#{$value}, 1, 1) == "#" {
+    @if string.slice(#{$value}, 1, 1) == "#" {
       --rgb_#{$color}: #{hexToRGB($value)};
     } @else {
       --rgb_#{$color}: var(--rgb_#{$value});

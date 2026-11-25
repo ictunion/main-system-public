@@ -10,8 +10,9 @@ use crate::data::{Id, Member};
 use crate::db::DbPool;
 use crate::server::oid::{JwtClaims, JwtToken, Provider};
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize)]
-struct SessionInfo {
+pub(crate) struct SessionInfo {
     token_claims: JwtClaims,
     member_id: Option<Id<Member>>,
 }

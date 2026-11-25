@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
-use super::{Error, JwtClaims, JwtToken, OidProvider, Role, User};
+use super::{Error, JwtClaims, JwtToken, NewUser, OidProvider, Role, User};
 use crate::server::jwk;
 
 const ORCA_AUDIENCE: &str = "orca";
@@ -57,6 +57,25 @@ impl KeycloakProvider {
         provider.check_admin_api().await?;
 
         Ok(provider)
+    }
+
+    /// Token checks (`decode_jwt`, `require_role`) of the real provider, but
+    /// with an HS256 shared secret instead of Keycloak's JWKS. Admin API calls
+    /// are never made on it: `FakeProvider` answers those.
+    #[cfg(test)]
+    pub(super) fn for_test(secret: &[u8], issuer: &str) -> Self {
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_issuer(&[issuer]);
+        validation.set_audience(&[ORCA_AUDIENCE]);
+
+        Self {
+            key: DecodingKey::from_secret(secret),
+            validation,
+            client_id: ORCA_AUDIENCE.into(),
+            host: String::new(),
+            realm: String::new(),
+            service_account: (String::new(), String::new()),
+        }
     }
 
     /// Cheapest read-only Admin API call, made with the service token.
@@ -166,7 +185,7 @@ impl OidProvider for KeycloakProvider {
         Err(Error::MissingOneOfRoles(roles.to_vec()))
     }
 
-    async fn create_user(&self, user: &User) -> Result<Uuid, Error> {
+    async fn create_user(&self, user: &NewUser) -> Result<Uuid, Error> {
         // Keycloak expects json body with data about user
         let json = json!({
             "firstName": user.first_name,
@@ -248,11 +267,10 @@ impl OidProvider for KeycloakProvider {
         // query keycloak for user using email filtering
         let token = self.service_token().await?;
         let client = reqwest::Client::new();
+        // .query() encodes the email; a raw `+` would reach Keycloak as a space.
         let response = client
-            .get(format!(
-                "{}/admin/realms/{}/users?exact=true&email={}",
-                self.host, self.realm, email,
-            ))
+            .get(format!("{}/admin/realms/{}/users", self.host, self.realm))
+            .query(&[("exact", "true"), ("email", email.as_str())])
             .header("Authorization", format!("Bearer {}", token.string))
             .send()
             .await?;

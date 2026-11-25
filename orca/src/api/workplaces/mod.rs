@@ -25,6 +25,7 @@ use validator::{Validate, ValidationErrors};
 
 pub mod query;
 
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct WorkplaceSummary {
     id: Id<Workplace>,
@@ -77,6 +78,7 @@ async fn list_assignable(
 /// which adds date of birth, home address and postal code. `member_number` is
 /// included: it is the human-readable identifier members quote for payments, so
 /// a rep needs to see it.
+#[cfg_attr(test, derive(serde::Deserialize))]
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct WorkplaceMemberSummary {
     id: Id<Member>,
