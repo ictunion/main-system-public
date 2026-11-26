@@ -16,6 +16,7 @@ module DatePicker = {
     ~showMonthDropdown: option<unit>=?,
     ~showYearDropdown: option<unit>=?,
     ~isClearable: option<unit>=?,
+    ~required: bool=?,
   ) => React.element = "default"
 }
 
@@ -79,6 +80,7 @@ module TextField = {
     ~placeholder: string,
     ~value,
     ~onInput: string => unit,
+    ~required=false,
   ): React.element => {
     let setValue = event => {
       let newVal = ReactEvent.Form.currentTarget(event)["value"]
@@ -88,7 +90,7 @@ module TextField = {
     <Field>
       <Label>
         {React.string(label)}
-        <input placeholder value onInput=setValue />
+        <input placeholder value onInput=setValue required />
       </Label>
     </Field>
   }
@@ -272,7 +274,7 @@ module LanguageSelect = {
 
 module Date = {
   @react.component
-  let make = (~value: option<Date.t>, ~onChange, ~label: string) => {
+  let make = (~value: option<Date.t>, ~onChange, ~label: string, ~required=false) => {
     <Field>
       <Label>
         {React.string(label)}
@@ -288,6 +290,7 @@ module Date = {
             showMonthDropdown=Some()
             showYearDropdown=Some()
             isClearable=Some()
+            required
           />
         </div>
       </Label>

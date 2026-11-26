@@ -509,7 +509,7 @@ async fn workplace_create_document() {
     .await
     .expect("make the member a representative");
 
-    let document = json!({ "document_type": "member_confirmation", "workplace_short_name": "W" });
+    let document = json!({ "document_type": "member_confirmation", "workplace_short_name": "W", "signature_date": "2026-01-01" });
     let uri = format!("/workplaces/{}/files", workplace.id);
     let (status, body) = app.admin_call(Method::POST, &uri, Some(document)).await;
     assert_eq!(status, StatusCode::ACCEPTED, "{body}");

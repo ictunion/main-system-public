@@ -354,12 +354,12 @@ async fn workplace_document_preconditions() {
     .execute(app.admin())
     .await
     .expect("make the member a representative");
-    let confirmation =
-        || json!({ "document_type": "member_confirmation", "workplace_short_name": "W" });
+    let confirmation = || json!({ "document_type": "member_confirmation", "workplace_short_name": "W", "signature_date": "2026-01-01" });
     let entrustment = json!({
         "document_type": "entrustment",
         "workplace_short_name": "W",
         "meeting_date": "2026-01-01",
+        "signature_date": "2026-01-02",
         "company_address": "Street 1",
         "company_id": "12345678",
         "removed_member_ids": [Uuid::new_v4()],

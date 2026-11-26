@@ -22,12 +22,22 @@ pub enum WorkplaceDocument {
         /// Members who are no longer on the committee as of the meeting date.
         /// When not empty the entrustment gets an extra section listing them.
         removed_members: Vec<Uuid>,
+        /// Printed next to the chairperson's signature
+        signature_date: NaiveDate,
     },
     /// Confirmation that representatives are members of the union.
     /// Short name isn't printed, only used for the file name.
-    MemberConfirmation { workplace_short_name: String },
+    MemberConfirmation {
+        workplace_short_name: String,
+        /// Printed next to the chairperson's signature
+        signature_date: NaiveDate,
+    },
     /// Notification to the employer that the union operates at the workplace (§ 286 zákoníku práce)
-    WorkplaceAnnouncement(EmployerInput),
+    WorkplaceAnnouncement {
+        employer: EmployerInput,
+        /// Printed next to the chairperson's signature
+        signature_date: NaiveDate,
+    },
 }
 
 impl WorkplaceDocument {
@@ -36,7 +46,7 @@ impl WorkplaceDocument {
         match self {
             Self::Entrustment { .. } => "entrustment",
             Self::MemberConfirmation { .. } => "member_confirmation",
-            Self::WorkplaceAnnouncement(_) => "workplace_announcement",
+            Self::WorkplaceAnnouncement { .. } => "workplace_announcement",
         }
     }
 
@@ -44,7 +54,7 @@ impl WorkplaceDocument {
         match self {
             Self::Entrustment { .. } => include_str!("../../latex/entrustment.tex"),
             Self::MemberConfirmation { .. } => include_str!("../../latex/member_confirmation.tex"),
-            Self::WorkplaceAnnouncement(_) => {
+            Self::WorkplaceAnnouncement { .. } => {
                 include_str!("../../latex/workplace_announcement.tex")
             }
         }
@@ -53,11 +63,12 @@ impl WorkplaceDocument {
     /// Short name of the workplace as entered by whoever requested the document
     fn workplace_short_name(&self) -> &str {
         match self {
-            Self::Entrustment { employer, .. } | Self::WorkplaceAnnouncement(employer) => {
+            Self::Entrustment { employer, .. } | Self::WorkplaceAnnouncement { employer, .. } => {
                 &employer.workplace_short_name
             }
             Self::MemberConfirmation {
                 workplace_short_name,
+                ..
             } => workplace_short_name,
         }
     }
@@ -110,18 +121,25 @@ pub(super) async fn process_new_document(
             employer,
             meeting_date,
             removed_members,
+            signature_date,
         } => {
             let company_name = query::get_workplace_name(db_pool, workplace_id).await?;
             tex_header.push_str(&print_employer_tex_header(employer, &company_name));
             tex_header.push_str(&print_meeting_date_tex_header(*meeting_date));
+            tex_header.push_str(&print_signature_date_tex_header(*signature_date));
 
             if !removed_members.is_empty() {
                 let removed = query::list_members_by_ids(db_pool, removed_members).await?;
                 tex_header.push_str(&print_removed_members_tex_header(&removed));
             }
         }
-        WorkplaceDocument::MemberConfirmation { .. } => {}
-        WorkplaceDocument::WorkplaceAnnouncement(employer) => {
+        WorkplaceDocument::MemberConfirmation { signature_date, .. } => {
+            tex_header.push_str(&print_signature_date_tex_header(*signature_date));
+        }
+        WorkplaceDocument::WorkplaceAnnouncement {
+            employer,
+            signature_date,
+        } => {
             let chairperson_email = config
                 .union_chairperson_email
                 .as_deref()
@@ -129,6 +147,7 @@ pub(super) async fn process_new_document(
             let company_name = query::get_workplace_name(db_pool, workplace_id).await?;
             tex_header.push_str(&print_employer_tex_header(employer, &company_name));
             tex_header.push_str(&print_chairperson_email_tex_header(chairperson_email));
+            tex_header.push_str(&print_signature_date_tex_header(*signature_date));
         }
     }
 
@@ -301,6 +320,17 @@ fn print_meeting_date_tex_header(meeting_date: NaiveDate) -> String {
     )
 }
 
+fn print_signature_date_tex_header(signature_date: NaiveDate) -> String {
+    format!(
+        "\
+\\def\\SignatureDateCs{{{}}}
+\\def\\SignatureDateEn{{{}}}
+",
+        format_date_cs(signature_date),
+        format_date_en(signature_date),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,6 +355,16 @@ mod tests {
             "\\RemovedMemberstrue\n\
 \\def\\RemovedMembersCs{Hana Pokorová, \\mbox{nar.~28.~2.~1998}}\n\
 \\def\\RemovedMembersEn{Hana Pokorová, \\mbox{born~28~February~1998}}\n"
+        );
+    }
+
+    #[test]
+    fn signature_date_header_is_plain_tex_lines() {
+        let date = NaiveDate::from_ymd_opt(2026, 11, 26).unwrap();
+        assert_eq!(
+            print_signature_date_tex_header(date),
+            "\\def\\SignatureDateCs{26.~11.~2026}\n\
+\\def\\SignatureDateEn{26~November~2026}\n"
         );
     }
 

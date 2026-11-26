@@ -287,6 +287,7 @@ module GenerateDocument = {
       detail.workplaceShortName->Option.getOr("")
     )
     let (meetingDate, setMeetingDate) = React.useState(() => None)
+    let (signatureDate, setSignatureDate) = React.useState(() => Some(Date.make()))
     let (companyAddress, setCompanyAddress) = React.useState(() =>
       detail.companyAddress->Option.getOr("")
     )
@@ -379,6 +380,10 @@ module GenerateDocument = {
           [
             ("document_type", Json.Encode.string(documentType)),
             ("workplace_short_name", Json.Encode.string(shortName)),
+            (
+              "signature_date",
+              Json.Encode.option(Json.Encode.string)(signatureDate->Option.map(localDay)),
+            ),
           ],
           employerInputs,
           meetingInputs,
@@ -431,6 +436,7 @@ module GenerateDocument = {
       <Form.TextField
         label="Workplace Short Name"
         placeholder="ACME CZ"
+        required=true
         value=shortName
         onInput={v => setShortName(_ => v)}
       />
@@ -438,6 +444,7 @@ module GenerateDocument = {
         <>
           <Form.Date
             label="Members' Meeting Date"
+            required=true
             value=meetingDate
             onChange={date => setMeetingDate(_ => Some(date))}
           />
@@ -487,17 +494,26 @@ module GenerateDocument = {
       } else {
         React.null
       }}
+      <Form.Date
+        label="Date of Signature"
+        required=true
+        value=signatureDate
+        // the picker is clearable and then passes null
+        onChange={date => setSignatureDate(_ => Nullable.make(date)->Nullable.toOption)}
+      />
       {if needsEmployer {
         <>
           <Form.TextField
             label="Company Address"
             placeholder="Vinohradská 1234/56, 120 00 Praha 2"
+            required=true
             value=companyAddress
             onInput={v => setCompanyAddress(_ => v)}
           />
           <Form.TextField
             label="Company ID (IČ)"
             placeholder="12345678"
+            required=true
             value=companyId
             onInput={v => setCompanyId(_ => v)}
           />

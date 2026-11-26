@@ -555,9 +555,9 @@ async fn list_files(
 /// `document_type` selects the variant, the rest of the body are its inputs:
 ///
 /// ```json
-/// { "document_type": "entrustment", "workplace_short_name": "ACME CZ", ... }
-/// { "document_type": "member_confirmation", "workplace_short_name": "ACME CZ" }
-/// { "document_type": "workplace_announcement", "workplace_short_name": "ACME CZ", ... }
+/// { "document_type": "entrustment", "workplace_short_name": "ACME CZ", "signature_date": "2026-11-26", ... }
+/// { "document_type": "member_confirmation", "workplace_short_name": "ACME CZ", "signature_date": "2026-11-26" }
+/// { "document_type": "workplace_announcement", "workplace_short_name": "ACME CZ", "signature_date": "2026-11-26", ... }
 /// ```
 #[derive(Debug, Deserialize)]
 #[serde(tag = "document_type", rename_all = "snake_case")]
@@ -599,6 +599,8 @@ pub struct NewEntrustment {
     workplace_short_name: Option<String>,
     #[validate(required)]
     meeting_date: Option<NaiveDate>,
+    #[validate(required)]
+    signature_date: Option<NaiveDate>,
     /// Members no longer on the committee, listed in an extra section when not empty
     #[serde(default)]
     removed_member_ids: Vec<Uuid>,
@@ -621,6 +623,7 @@ impl NewEntrustment {
     fn into_document(self) -> Option<WorkplaceDocument> {
         Some(WorkplaceDocument::Entrustment {
             meeting_date: self.meeting_date?,
+            signature_date: self.signature_date?,
             removed_members: self.removed_member_ids,
             employer: employer_input(
                 self.workplace_short_name,
@@ -637,6 +640,8 @@ pub struct NewMemberConfirmation {
     #[validate(required)]
     #[validate(custom(function = "super::validate_non_empty"))]
     workplace_short_name: Option<String>,
+    #[validate(required)]
+    signature_date: Option<NaiveDate>,
 }
 
 impl NewMemberConfirmation {
@@ -644,6 +649,7 @@ impl NewMemberConfirmation {
     fn into_document(self) -> Option<WorkplaceDocument> {
         Some(WorkplaceDocument::MemberConfirmation {
             workplace_short_name: self.workplace_short_name?.trim().to_string(),
+            signature_date: self.signature_date?,
         })
     }
 }
@@ -659,16 +665,21 @@ pub struct NewWorkplaceAnnouncement {
     #[validate(required)]
     #[validate(custom(function = "super::validate_non_empty"))]
     company_id: Option<String>,
+    #[validate(required)]
+    signature_date: Option<NaiveDate>,
 }
 
 impl NewWorkplaceAnnouncement {
     /// `None` only when called on data which didn't pass validation
     fn into_document(self) -> Option<WorkplaceDocument> {
-        Some(WorkplaceDocument::WorkplaceAnnouncement(employer_input(
-            self.workplace_short_name,
-            self.company_address,
-            self.company_id,
-        )?))
+        Some(WorkplaceDocument::WorkplaceAnnouncement {
+            employer: employer_input(
+                self.workplace_short_name,
+                self.company_address,
+                self.company_id,
+            )?,
+            signature_date: self.signature_date?,
+        })
     }
 }
 

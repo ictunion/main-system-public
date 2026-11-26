@@ -413,7 +413,7 @@ fn routes() -> Vec<Route> {
             M::POST,
             "/workplaces/{workplace_id}/files",
             Any(&[ManageWorkplaces]),
-            || json!({ "document_type": "member_confirmation", "workplace_short_name": "ACME" }),
+            || json!({ "document_type": "member_confirmation", "workplace_short_name": "ACME", "signature_date": "2026-01-01" }),
         ),
     ]
 }
