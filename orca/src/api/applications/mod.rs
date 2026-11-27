@@ -676,7 +676,15 @@ async fn resend_email(
     token: JwtToken,
     ApiPath(id): ApiPath<Id<RegistrationRequest>>,
 ) -> Response<SuccessResponse> {
-    oid_provider.require_role(&token, Role::ResolveApplications)?;
+    application_scope(
+        &db_pool,
+        &oid_provider,
+        &token,
+        id,
+        &[Role::ResolveApplications],
+        Role::ResolveOwnWorkplaceApplications,
+    )
+    .await?;
 
     query::get_application_status_data(&db_pool, id)
         .await?

@@ -648,6 +648,13 @@ module Actions = {
         <Button.Panel>
           vcardButton
           rejectButton
+          <Button
+            onClick={_ =>
+              modal->Modal.Interface.openModal(resendModal(~id, ~api, ~modal, ~openApplications))}
+            variant=Button.Normal
+          >
+            {React.string("Re-send Email")}
+          </Button>
         </Button.Panel>
       | ApplicationData.Processing =>
         <Button.Panel>
@@ -786,7 +793,7 @@ module Actions = {
   }
 }
 
-let viewMessage = (status, ~reject, ~resend) => {
+let viewMessage = (status, ~showSteps, ~reject, ~resend, ~verify) => {
   open ApplicationData
 
   switch status {
@@ -800,75 +807,81 @@ let viewMessage = (status, ~reject, ~resend) => {
           " status. This means it was succefully submitted but applicant never clicked on verication link in the email.",
         )}
       </p>
-      <p>
-        <strong> {React.string("These are the recommended steps to take:")} </strong>
-      </p>
-      <ol>
-        <li>
-          {React.string(
-            "When was this application submitted? Was email verification sent? Have a look into ",
-          )}
-          <code> {React.string("Metadata")} </code>
-          {React.string(" tab bellow.")}
-        </li>
-        <li>
-          {React.string(
-            "If it's very recent, and verification was sent, you should just give them more time to verify the email.",
-          )}
-        </li>
-        <li>
-          {React.string("If we miss ")}
-          <code> {React.string("Verification Sent")} </code>
-          {React.string(" then there is most likely an ")}
-          <strong> {React.string("issue on our side")} </strong>
-          {React.string(". Try to ")}
-          <a onClick=resend> {React.string("re-send the confirmation email")} </a>
-          {React.string(" and check that it was sent successfully after a minute or so.")}
-        </li>
-        <li>
-          {React.string("Applications that are already a few days old deserve more attention:")}
+      {if showSteps {
+        <>
+          <p>
+            <strong> {React.string("These are the recommended steps to take:")} </strong>
+          </p>
           <ol>
             <li>
-              {React.string("
-                    Review the application to check it's not a spam. If it
-                ")}
-              <strong> {React.string("looks like a spam then you should report it")} </strong>
-              {React.string(" and ")}
-              <a onClick=reject> {React.string("invalidate")} </a>
-              {React.string(" since it's ilegitimate.")}
+              {React.string(
+                "When was this application submitted? Was email verification sent? Have a look into ",
+              )}
+              <code> {React.string("Metadata")} </code>
+              {React.string(" tab bellow.")}
             </li>
             <li>
-              {React.string("
+              {React.string(
+                "If it's very recent, and verification was sent, you should just give them more time to verify the email.",
+              )}
+            </li>
+            <li>
+              {React.string("If we miss ")}
+              <code> {React.string("Verification Sent")} </code>
+              {React.string(" then there is most likely an ")}
+              <strong> {React.string("issue on our side")} </strong>
+              {React.string(". Try to ")}
+              <a onClick=resend> {React.string("re-send the confirmation email")} </a>
+              {React.string(" and check that it was sent successfully after a minute or so.")}
+            </li>
+            <li>
+              {React.string("Applications that are already a few days old deserve more attention:")}
+              <ol>
+                <li>
+                  {React.string("
+                    Review the application to check it's not a spam. If it
+                ")}
+                  <strong> {React.string("looks like a spam then you should report it")} </strong>
+                  {React.string(" and ")}
+                  <a onClick=reject> {React.string("invalidate")} </a>
+                  {React.string(" since it's ilegitimate.")}
+                </li>
+                <li>
+                  {React.string("
                     Check for a duplicates.
                     Applicant might had just found a mistake in this application and decided to create a new one.
                     If that's the case you should just
                 ")}
-              <a onClick=reject> {React.string("invalidate this version of application")} </a>
-              {React.string(".")}
-            </li>
-            <li>
-              {React.string("
+                  <a onClick=reject> {React.string("invalidate this version of application")} </a>
+                  {React.string(".")}
+                </li>
+                <li>
+                  {React.string("
                     If everything looks legitimate you can
                 ")}
-              <a onClick=resend> {React.string("re-send the verification email again")} </a>
-              {React.string(".")}
-            </li>
-            <li>
-              <strong> {React.string("Get in touch with the applicant")} </strong>
-              {React.string(" and try to sort thigs out over the phone. You can also ")}
-              <a> {React.string("mark application as verified")} </a>
-              {React.string(" manually if necessary.")}
-            </li>
-            <li>
-              {React.string("
+                  <a onClick=resend> {React.string("re-send the verification email again")} </a>
+                  {React.string(".")}
+                </li>
+                <li>
+                  <strong> {React.string("Get in touch with the applicant")} </strong>
+                  {React.string(" and try to sort thigs out over the phone. You can also ")}
+                  <a onClick=verify> {React.string("mark application as verified")} </a>
+                  {React.string(" manually if necessary.")}
+                </li>
+                <li>
+                  {React.string("
                     If nothing worked then there is nothing we can do but to
                 ")}
-              <a onClick=reject> {React.string("invalidate the application")} </a>
-              {React.string(".")}
+                  <a onClick=reject> {React.string("invalidate the application")} </a>
+                  {React.string(".")}
+                </li>
+              </ol>
             </li>
           </ol>
-        </li>
-      </ol>
+        </>
+      } else {
+        React.null
+      }}
     </Message.Warning>
   | _ => React.null
   }
@@ -1050,21 +1063,19 @@ let make = (~id: Uuid.t, ~api: Api.t, ~modal: Modal.Interface.t) => {
         />
       </dl>
     </header>
-    {if isAdmin {
-      viewMessage(
-        status,
-        ~reject=_ =>
-          modal->Modal.Interface.openModal(
-            Actions.rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
-          ),
-        ~resend=_ =>
-          modal->Modal.Interface.openModal(
-            Actions.resendModal(~id, ~api, ~modal, ~openApplications),
-          ),
-      )
-    } else {
-      React.null
-    }}
+    {viewMessage(
+      status,
+      // Reps only get the status explanation, not the admin playbook
+      ~showSteps=canResolve,
+      ~reject=_ =>
+        modal->Modal.Interface.openModal(
+          Actions.rejectModal(~id, ~api, ~setDetail, ~modal, ~openApplications),
+        ),
+      ~verify=_ =>
+        modal->Modal.Interface.openModal(Actions.verifyModal(~id, ~api, ~setDetail, ~modal)),
+      ~resend=_ =>
+        modal->Modal.Interface.openModal(Actions.resendModal(~id, ~api, ~modal, ~openApplications)),
+    )}
     <div className={styles["personalInfo"]}>
       <DataGrid layout={isAdmin ? layout : repLayout} data=detail />
     </div>

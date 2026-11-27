@@ -350,3 +350,38 @@ async fn rep_resolves_only_own_applications() {
     assert_eq!(untouched["rejected_at"], Value::Null);
     f.app.drain_queue();
 }
+
+#[tokio::test]
+#[ignore = "needs postgres, see docs/testing.md"]
+async fn rep_resends_email_only_for_own_applications() {
+    let mut f = Fixture::new().await;
+    let roles = &[Role::ResolveOwnWorkplaceApplications];
+    let own = f
+        .app
+        .insert_application("unverified1", Some(f.own.id), State::Unverified)
+        .await;
+    let other = f
+        .app
+        .insert_application("unverified2", Some(f.other.id), State::Unverified)
+        .await;
+
+    assert_eq!(
+        f.status(
+            Method::POST,
+            &format!("/applications/{other}/resend-email"),
+            roles
+        )
+        .await,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        f.status(
+            Method::POST,
+            &format!("/applications/{own}/resend-email"),
+            roles
+        )
+        .await,
+        StatusCode::ACCEPTED
+    );
+    f.app.drain_queue();
+}

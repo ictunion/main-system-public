@@ -172,7 +172,7 @@ fn routes() -> Vec<Route> {
         route(
             M::POST,
             "/applications/{id}/resend-email",
-            Any(&[ResolveApplications]),
+            Any(&[ResolveApplications, ResolveOwnWorkplaceApplications]),
         ),
         route(M::DELETE, "/applications/{id}/hard", Any(&[SuperPowers])),
         with_body(
