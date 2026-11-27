@@ -14,7 +14,7 @@ use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{Method, Request, StatusCode};
 use serde_json::Value;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::{Connection, PgConnection};
+use sqlx::{AssertSqlSafe, Connection, PgConnection};
 use tokio::sync::{Mutex, OnceCell, mpsc};
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -263,7 +263,7 @@ impl TestApp {
     }
 
     /// Result of a `SELECT count(*) … $1` query
-    pub(crate) async fn count(&self, sql: &str, id: Uuid) -> i64 {
+    pub(crate) async fn count(&self, sql: &'static str, id: Uuid) -> i64 {
         sqlx::query_scalar(sql)
             .bind(id)
             .fetch_one(self.admin())
@@ -442,9 +442,11 @@ impl Drop for TestApp {
 /// `WITH (FORCE)` closes the app's still open connections
 async fn drop_database(server: &PgConnectOptions, name: &str) -> sqlx::Result<()> {
     let mut conn = PgConnection::connect_with(server).await?;
-    sqlx::raw_sql(&format!(r#"DROP DATABASE IF EXISTS "{name}" WITH (FORCE)"#))
-        .execute(&mut conn)
-        .await?;
+    sqlx::raw_sql(AssertSqlSafe(format!(
+        r#"DROP DATABASE IF EXISTS "{name}" WITH (FORCE)"#
+    )))
+    .execute(&mut conn)
+    .await?;
     conn.close().await
 }
 
@@ -461,9 +463,9 @@ async fn test_database() -> (PgConnectOptions, String) {
     let mut conn = PgConnection::connect_with(server)
         .await
         .expect("connect to DATABASE_URL");
-    sqlx::raw_sql(&format!(
+    sqlx::raw_sql(AssertSqlSafe(format!(
         r#"CREATE DATABASE "{name}" TEMPLATE "{TEMPLATE_DB}""#
-    ))
+    )))
     .execute(&mut conn)
     .await
     .expect("clone the template database");
@@ -486,12 +488,14 @@ async fn create_template() -> PgConnectOptions {
             .await
             .expect("list old test databases");
     for name in stale {
-        sqlx::raw_sql(&format!(r#"DROP DATABASE "{name}" WITH (FORCE)"#))
-            .execute(&mut conn)
-            .await
-            .expect("drop an old test database");
+        sqlx::raw_sql(AssertSqlSafe(format!(
+            r#"DROP DATABASE "{name}" WITH (FORCE)"#
+        )))
+        .execute(&mut conn)
+        .await
+        .expect("drop an old test database");
     }
-    sqlx::raw_sql(&format!(r#"CREATE DATABASE "{TEMPLATE_DB}""#))
+    sqlx::raw_sql(AssertSqlSafe(format!(r#"CREATE DATABASE "{TEMPLATE_DB}""#)))
         .execute(&mut conn)
         .await
         .expect("create the template database");
@@ -502,7 +506,7 @@ async fn create_template() -> PgConnectOptions {
         .expect("connect to the template database");
     for path in migrations() {
         let sql = std::fs::read_to_string(&path).expect("readable migration");
-        sqlx::raw_sql(&adapt_migration(&sql))
+        sqlx::raw_sql(AssertSqlSafe(adapt_migration(&sql)))
             .execute(&mut template)
             .await
             .unwrap_or_else(|err| panic!("migration {} failed: {err}", path.display()));

@@ -129,9 +129,9 @@ async fn member_actions_in_the_wrong_state_conflict() {
     let unpaired = app.insert_member("unpaired", None).await;
     app.set_sub(paired).await;
     for (id, column) in [(onboarded, "onboarding_finished_at"), (past, "left_at")] {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE members SET {column} = now() WHERE id = $1"
-        ))
+        )))
         .bind(id)
         .execute(app.admin())
         .await

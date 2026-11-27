@@ -6,62 +6,124 @@
       {
         "ordinal": 0,
         "name": "id!",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "email",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "email"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "first_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "first_name"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "last_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "last_name"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "phone_number",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "phone_number"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "note",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 6,
         "name": "city",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 7,
         "name": "company_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "company_name"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "registration_local!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "registration_local"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "created_at!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "invalidated_at!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_invalid",
+            "name": "invalidated_at"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "approved_by_reps_at?",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "registration_requests_workplaces",
+            "name": "approved_by_reps_at"
+          }
+        }
       }
     ],
     "parameters": {

@@ -2,6 +2,8 @@
   description = "ITC Union application and member management system";
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    # sqlx-cli 0.9 (matching orca's sqlx) is only in unstable so far
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     crane.url = "github:ipetkov/crane";
     rust-overlay.url = "github:oxalica/rust-overlay";
@@ -13,6 +15,7 @@
   outputs =
     {
       nixpkgs,
+      nixpkgs-unstable,
       flake-utils,
       crane,
       rust-overlay,
@@ -57,7 +60,10 @@
               mkShell {
                 name = "ict-union-orca-dev-env";
                 inherit buildInputs;
-                packages = [ rust-analyzer sqlx-cli ];
+                packages = [
+                  rust-analyzer
+                  nixpkgs-unstable.legacyPackages.${system}.sqlx-cli
+                ];
                 OSFONTDIR = "${pkgs.ibm-plex}/share/fonts/opentype";
               };
             package = orcaPkgs.orca;

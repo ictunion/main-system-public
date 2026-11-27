@@ -73,8 +73,8 @@ where
     }
 }
 
-impl<'q, T> Encode<'q, Postgres> for Id<T> {
-    fn encode(self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>) -> EncodeResult
+impl<T> Encode<'_, Postgres> for Id<T> {
+    fn encode(self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer) -> EncodeResult
     where
         Self: Sized,
     {
@@ -83,7 +83,7 @@ impl<'q, T> Encode<'q, Postgres> for Id<T> {
 
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer,
     ) -> EncodeResult {
         <Uuid as Encode<Postgres>>::encode(self.0, buf)
     }
@@ -158,8 +158,8 @@ where
     }
 }
 
-impl<'q> Encode<'q, Postgres> for MemberNumber {
-    fn encode(self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>) -> EncodeResult
+impl Encode<'_, Postgres> for MemberNumber {
+    fn encode(self, buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer) -> EncodeResult
     where
         Self: Sized,
     {
@@ -168,7 +168,7 @@ impl<'q> Encode<'q, Postgres> for MemberNumber {
 
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer,
     ) -> EncodeResult {
         <i32 as Encode<Postgres>>::encode(self.0, buf)
     }
@@ -271,10 +271,10 @@ where
     }
 }
 
-impl<'q> Encode<'q, Postgres> for FileType {
+impl Encode<'_, Postgres> for FileType {
     fn encode_by_ref(
         &self,
-        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer<'q>,
+        buf: &mut <Postgres as sqlx::Database>::ArgumentBuffer,
     ) -> EncodeResult {
         <&str as Encode<Postgres>>::encode(self.extension(), buf)
     }

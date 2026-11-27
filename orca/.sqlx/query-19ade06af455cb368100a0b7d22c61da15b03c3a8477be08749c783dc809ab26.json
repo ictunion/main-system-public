@@ -6,57 +6,123 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "member_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "member_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "member_number",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "members",
+            "name": "member_number"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "first_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "members",
+            "name": "first_name"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "last_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "members",
+            "name": "last_name"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "title",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "title"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "elected_by",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "elected_by"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "elected_on",
-        "type_info": "Date"
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "elected_on"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "term_ends_on",
-        "type_info": "Date"
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "term_ends_on"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "updated_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "member_offices",
+            "name": "updated_at"
+          }
+        }
       }
     ],
     "parameters": {

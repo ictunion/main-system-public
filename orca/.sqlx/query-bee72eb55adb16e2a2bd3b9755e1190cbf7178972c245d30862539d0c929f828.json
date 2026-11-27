@@ -6,72 +6,151 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "email",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "email"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "created_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "keycloak_group_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "keycloak_group_id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "keycloak_executive_group_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "keycloak_executive_group_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "announced_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "announced_at"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "established_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "established_at"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "cancelled_at",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "cancelled_at"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "newsletter_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "newsletter_id"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "company_id",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "company_id"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "company_address",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "company_address"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "workplace_short_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workplaces",
+            "name": "workplace_short_name"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "member_count!: i64",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       }
     ],
     "parameters": {
